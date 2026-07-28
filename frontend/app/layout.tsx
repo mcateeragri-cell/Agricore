@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
-import Sidebar from "../Components/Sidebar";
+import AppShell from "../Components/AppShell";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -19,6 +19,7 @@ export const metadata: Metadata = {
     default: "AgriCore",
     template: "%s | AgriCore",
   },
+
   description:
     "Agricultural engineering CRM for customers, machines, jobs, quotes and invoices.",
 
@@ -48,6 +49,7 @@ export const metadata: Metadata = {
         type: "image/png",
       },
     ],
+
     apple: [
       {
         url: "/apple-touch-icon.png",
@@ -61,17 +63,14 @@ export const metadata: Metadata = {
 type RootLayoutProps = Readonly<{
   children: React.ReactNode;
 }>;
+
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <div className="flex min-h-screen bg-slate-100">
-          <Sidebar />
-
-          <main className="min-w-0 flex-1">{children}</main>
-        </div>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );
