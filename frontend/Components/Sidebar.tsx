@@ -190,15 +190,24 @@ export default function Sidebar() {
   const loadCurrentUser = useCallback(async () => {
     setLoading(true);
 
-    try {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+   try {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
 
-      if (userError) {
-        throw userError;
-      }
+  if (userError) {
+    if (userError.name === "AuthSessionMissingError") {
+      return;
+    }
+
+    console.error("Unable to load current user:", userError);
+    return;
+  }
+
+  if (!user) {
+    return;
+  }
 
       if (!user) {
         setUserState(initialUserState);

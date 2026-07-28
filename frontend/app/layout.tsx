@@ -21,12 +21,46 @@ export const metadata: Metadata = {
   },
   description:
     "Agricultural engineering CRM for customers, machines, jobs, quotes and invoices.",
+
+  applicationName: "AgriCore",
+  manifest: "/manifest.webmanifest",
+
+  appleWebApp: {
+    capable: true,
+    title: "AgriCore",
+    statusBarStyle: "black-translucent",
+  },
+
+  formatDetection: {
+    telephone: false,
+  },
+
+  icons: {
+    icon: [
+      {
+        url: "/icons/icon-192.png",
+        sizes: "192x192",
+        type: "image/png",
+      },
+      {
+        url: "/icons/icon-512.png",
+        sizes: "512x512",
+        type: "image/png",
+      },
+    ],
+    apple: [
+      {
+        url: "/apple-touch-icon.png",
+        sizes: "180x180",
+        type: "image/png",
+      },
+    ],
+  },
 };
 
 type RootLayoutProps = Readonly<{
   children: React.ReactNode;
 }>;
-
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en">
