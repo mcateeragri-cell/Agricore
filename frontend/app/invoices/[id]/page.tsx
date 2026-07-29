@@ -5,6 +5,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useParams } from "next/navigation";
@@ -131,6 +132,20 @@ type SendResponse = {
   error?: string;
 };
 
+type CheckPaymentResponse =
+  | {
+      success: true;
+      state: string;
+      isPaid: boolean;
+      invoiceStatus: string;
+      amountPaid: number;
+      paidAt: string | null;
+    }
+  | {
+      success: false;
+      error: string;
+    };
+
 export default function InvoiceDetailPage() {
   const params = useParams<{ id: string }>();
 
@@ -223,6 +238,9 @@ export default function InvoiceDetailPage() {
     includePaymentLinkInEmail,
     setIncludePaymentLinkInEmail,
   ] = useState(true);
+
+  const lastAutomaticallyCheckedOrder =
+    useRef<string | null>(null);
 
   const loadInvoice = useCallback(async () => {
     if (!invoiceId) {
@@ -603,67 +621,185 @@ export default function InvoiceDetailPage() {
   }
 
   async function createPaymentLink() {
-  if (!invoiceId) {
-    return;
-  }
-
-  setActionLoading("payment");
-  setError("");
-  setMessage("");
-
-  try {
-    const saved = await saveInvoice();
-
-    if (!saved) {
+    if (!invoiceId) {
       return;
     }
 
-    const response = await fetch(
-      "/api/payments/revolut/create",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+    setActionLoading("payment");
+    setError("");
+    setMessage("");
+
+    try {
+      const saved = await saveInvoice();
+
+      if (!saved) {
+        return;
+      }
+
+      const response = await fetch(
+        "/api/payments/revolut/create",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            invoiceId,
+            forceNew: true,
+          }),
         },
-        body: JSON.stringify({
-          invoiceId,
-          forceNew: true,
-        }),
-      },
-    );
-
-    const body = await response.json();
-
-    if (
-      !response.ok ||
-      !body.success ||
-      !body.paymentUrl
-    ) {
-      throw new Error(
-        body.error ??
-          "Unable to create payment link.",
       );
+
+      const body = await response.json();
+
+      if (
+        !response.ok ||
+        !body.success ||
+        !body.paymentUrl
+      ) {
+        throw new Error(
+          body.error ??
+            "Unable to create payment link.",
+        );
+      }
+
+      setMessage(
+        "New payment link created.",
+      );
+
+      window.open(
+        body.paymentUrl,
+        "_blank",
+        "noopener,noreferrer",
+      );
+
+      lastAutomaticallyCheckedOrder.current =
+        null;
+
+      await loadInvoice();
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Unable to create payment link.",
+      );
+    } finally {
+      setActionLoading("");
+    }
+  }
+
+  const checkPaymentStatus = useCallback(
+    async (silent = false) => {
+      if (!invoiceId) {
+        return;
+      }
+
+      if (!silent) {
+        setActionLoading("payment-check");
+        setError("");
+        setMessage("");
+      }
+
+      try {
+        const response = await fetch(
+          "/api/payments/revolut/check",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              invoiceId,
+            }),
+          },
+        );
+
+        const body =
+          (await response.json()) as CheckPaymentResponse;
+
+        if (!response.ok || !body.success) {
+          throw new Error(
+            body.success === false
+              ? body.error
+              : "Unable to check payment status.",
+          );
+        }
+
+        if (body.isPaid) {
+          setMessage(
+            "Payment received. Invoice marked as paid.",
+          );
+
+          await loadInvoice();
+          return;
+        }
+
+        setInvoice((currentInvoice) =>
+          currentInvoice
+            ? {
+                ...currentInvoice,
+                revolut_order_state:
+                  body.state,
+              }
+            : currentInvoice,
+        );
+
+        if (!silent) {
+          setMessage(
+            `Current Revolut status: ${displayStatus(
+              body.state,
+            )}.`,
+          );
+        }
+      } catch (caughtError) {
+        if (!silent) {
+          setError(
+            caughtError instanceof Error
+              ? caughtError.message
+              : "Unable to check payment status.",
+          );
+        } else {
+          console.error(
+            "Automatic Revolut payment check failed:",
+            caughtError,
+          );
+        }
+      } finally {
+        if (!silent) {
+          setActionLoading("");
+        }
+      }
+    },
+    [invoiceId, loadInvoice],
+  );
+
+  useEffect(() => {
+    if (
+      !invoice?.revolut_order_id ||
+      invoice.status === "paid" ||
+      invoice.status === "void"
+    ) {
+      return;
     }
 
-    setMessage("New payment link created.");
+    if (
+      lastAutomaticallyCheckedOrder.current ===
+      invoice.revolut_order_id
+    ) {
+      return;
+    }
 
-    window.open(
-      body.paymentUrl,
-      "_blank",
-      "noopener,noreferrer",
-    );
+    lastAutomaticallyCheckedOrder.current =
+      invoice.revolut_order_id;
 
-    await loadInvoice();
-  } catch (caughtError) {
-    setError(
-      caughtError instanceof Error
-        ? caughtError.message
-        : "Unable to create payment link.",
-    );
-  } finally {
-    setActionLoading("");
-  }
-}
+    void checkPaymentStatus(true);
+  }, [
+    checkPaymentStatus,
+    invoice?.revolut_order_id,
+    invoice?.status,
+  ]);
 
   function openSendModal() {
     if (!invoice) {
@@ -1112,6 +1248,13 @@ export default function InvoiceDetailPage() {
             onCopyPaymentLink={() =>
               void copyPaymentLink()
             }
+            onCheckPaymentStatus={() =>
+              void checkPaymentStatus()
+            }
+            checkingPayment={
+              actionLoading ===
+              "payment-check"
+            }
             onMarkPaid={() =>
               void saveInvoice("paid")
             }
@@ -1223,6 +1366,8 @@ function InvoiceTab({
   onRemoveItem,
   onCreatePaymentLink,
   onCopyPaymentLink,
+  onCheckPaymentStatus,
+  checkingPayment,
   onMarkPaid,
 }: {
   invoice: InvoiceRow;
@@ -1289,6 +1434,8 @@ function InvoiceTab({
   ) => void;
   onCreatePaymentLink: () => void;
   onCopyPaymentLink: () => void;
+  onCheckPaymentStatus: () => void;
+  checkingPayment: boolean;
   onMarkPaid: () => void;
 }) {
   return (
@@ -1840,14 +1987,56 @@ function InvoiceTab({
                 >
                   Generate new link
                 </button>
+
+                <button
+                  type="button"
+                  disabled={
+                    checkingPayment ||
+                    !invoice.revolut_order_id
+                  }
+                  onClick={
+                    onCheckPaymentStatus
+                  }
+                  className="w-full rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {checkingPayment
+                    ? "Checking payment…"
+                    : "Check payment status"}
+                </button>
+
+                {invoice.revolut_order_state ? (
+                  <p className="text-center text-xs text-slate-500">
+                    Revolut status:{" "}
+                    <strong className="text-slate-700">
+                      {displayStatus(
+                        invoice.revolut_order_state,
+                      )}
+                    </strong>
+                  </p>
+                ) : null}
               </div>
             ) : (
-              <div className="mt-3">
+              <div className="mt-3 space-y-2">
                 <RevolutPayButton
                   invoiceId={invoice.id}
                   existingPaymentUrl={invoice.payment_url}
                   disabled={isLocked}
                 />
+
+                {invoice.revolut_order_id ? (
+                  <button
+                    type="button"
+                    disabled={checkingPayment}
+                    onClick={
+                      onCheckPaymentStatus
+                    }
+                    className="w-full rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {checkingPayment
+                      ? "Checking payment…"
+                      : "Check payment status"}
+                  </button>
+                ) : null}
               </div>
             )}
           </div>
