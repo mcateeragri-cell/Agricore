@@ -1,30 +1,79 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import Sidebar from "./Sidebar";
+import { useCallback, useEffect, useState } from "react";
+
+import DesktopSidebar from "./navigation/desktop-sidebar";
+import MobileBottomNav from "./navigation/mobile-bottom-nav";
+import MobileDrawer from "./navigation/mobile-drawer";
+import MobileTopBar from "./navigation/mobile-top-bar";
+import { useNavigationUser } from "./navigation/use-navigation-user";
 
 type AppShellProps = Readonly<{
   children: React.ReactNode;
 }>;
 
-const publicRoutes = ["/login", "/forgot-password", "/reset-password"];
+const publicRoutes = [
+  "/login",
+  "/forgot-password",
+  "/reset-password",
+];
 
-export default function AppShell({ children }: AppShellProps) {
+export default function AppShell({
+  children,
+}: AppShellProps) {
   const pathname = usePathname();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { userState, loading } = useNavigationUser();
 
   const isPublicRoute = publicRoutes.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`)
+    (route) =>
+      pathname === route ||
+      pathname.startsWith(`${route}/`),
   );
+
+  const closeMobileMenu = useCallback(() => {
+    setMobileMenuOpen(false);
+  }, []);
+
+  useEffect(() => {
+    closeMobileMenu();
+  }, [pathname, closeMobileMenu]);
 
   if (isPublicRoute) {
     return <>{children}</>;
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-100">
-      <Sidebar />
+    <div className="min-h-dvh bg-slate-100 lg:flex">
+      <DesktopSidebar
+        pathname={pathname}
+        userState={userState}
+        loading={loading}
+      />
 
-      <main className="min-w-0 flex-1">{children}</main>
+      <div className="min-w-0 flex-1">
+        <MobileTopBar
+          onOpenMenu={() => setMobileMenuOpen(true)}
+        />
+
+        <main className="min-w-0 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">
+          {children}
+        </main>
+      </div>
+
+      <MobileDrawer
+        open={mobileMenuOpen}
+        pathname={pathname}
+        userState={userState}
+        loading={loading}
+        onClose={closeMobileMenu}
+      />
+
+      <MobileBottomNav
+        pathname={pathname}
+        onOpenMore={() => setMobileMenuOpen(true)}
+      />
     </div>
   );
 }
