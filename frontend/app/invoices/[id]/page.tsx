@@ -603,66 +603,67 @@ export default function InvoiceDetailPage() {
   }
 
   async function createPaymentLink() {
-    if (!invoiceId) {
+  if (!invoiceId) {
+    return;
+  }
+
+  setActionLoading("payment");
+  setError("");
+  setMessage("");
+
+  try {
+    const saved = await saveInvoice();
+
+    if (!saved) {
       return;
     }
 
-    setActionLoading("payment");
-    setError("");
-    setMessage("");
-
-    try {
-      const saved =
-        await saveInvoice();
-
-      if (!saved) {
-        return;
-      }
-
-      const response = await fetch(
-        `/api/invoices/${invoiceId}/payment-link`,
-        {
-          method: "POST",
+    const response = await fetch(
+      "/api/payments/revolut/create",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          invoiceId,
+          forceNew: true,
+        }),
+      },
+    );
+
+    const body = await response.json();
+
+    if (
+      !response.ok ||
+      !body.success ||
+      !body.paymentUrl
+    ) {
+      throw new Error(
+        body.error ??
+          "Unable to create payment link.",
       );
-
-      const body =
-        (await response.json()) as {
-          paymentUrl?: string;
-          error?: string;
-        };
-
-      if (
-        !response.ok ||
-        !body.paymentUrl
-      ) {
-        throw new Error(
-          body.error ??
-            "Unable to create payment link.",
-        );
-      }
-
-      setMessage(
-        "Payment link created.",
-      );
-
-      window.open(
-        body.paymentUrl,
-        "_blank",
-        "noopener,noreferrer",
-      );
-
-      await loadInvoice();
-    } catch (caughtError) {
-      setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : "Unable to create payment link.",
-      );
-    } finally {
-      setActionLoading("");
     }
+
+    setMessage("New payment link created.");
+
+    window.open(
+      body.paymentUrl,
+      "_blank",
+      "noopener,noreferrer",
+    );
+
+    await loadInvoice();
+  } catch (caughtError) {
+    setError(
+      caughtError instanceof Error
+        ? caughtError.message
+        : "Unable to create payment link.",
+    );
+  } finally {
+    setActionLoading("");
   }
+}
 
   function openSendModal() {
     if (!invoice) {

@@ -16,6 +16,9 @@ export type RevolutOrder = {
 export type CreateRevolutOrderInput = {
   amountMinor: number; currency: string; merchantOrderReference: string; description: string; customerEmail?: string | null; redirectUrl: string;
 };
-export type CreatePaymentLinkRequest = { invoiceId: string };
+export type CreatePaymentLinkRequest = {
+  invoiceId: string;
+  forceNew?: boolean;
+};
 export type CreatePaymentLinkResponse = { success: boolean; paymentUrl?: string; revolutOrderId?: string; state?: RevolutOrderState; error?: string };
 export type RevolutWebhookPayload = { event: RevolutWebhookEvent; order_id: string; merchant_order_ext_ref?: string };

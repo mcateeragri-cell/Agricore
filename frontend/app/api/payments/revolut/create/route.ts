@@ -25,12 +25,35 @@ export async function POST(request: NextRequest) {
     const invoice = data as PaymentInvoiceRow;
 
     if (invoice.status === "paid" || invoice.status === "void") return NextResponse.json<CreatePaymentLinkResponse>({ success: false, error: `A payment link cannot be created for a ${invoice.status} invoice.` }, { status: 409 });
-    if (invoice.payment_url && invoice.revolut_order_id && !["CANCELLED", "FAILED"].includes(invoice.revolut_order_state ?? "")) return NextResponse.json<CreatePaymentLinkResponse>({ success: true, paymentUrl: invoice.payment_url, revolutOrderId: invoice.revolut_order_id, state: invoice.revolut_order_state ?? "PENDING" });
+    if (
+  !body.forceNew &&
+  invoice.payment_url &&
+  invoice.revolut_order_id &&
+  !["CANCELLED", "FAILED"].includes(invoice.revolut_order_state ?? "")
+) {
+  return NextResponse.json<CreatePaymentLinkResponse>({
+    success: true,
+    paymentUrl: invoice.payment_url,
+    revolutOrderId: invoice.revolut_order_id,
+    state: invoice.revolut_order_state ?? "PENDING",
+  });
+}
 
     const outstanding = Math.max(0, asNumber(invoice.total) - asNumber(invoice.amount_paid));
     const order = await createRevolutOrder({ amountMinor: toMinorUnits(outstanding), currency: "GBP", merchantOrderReference: buildInvoiceReference(invoice.invoice_number, invoice.id), description: `Invoice ${invoice.invoice_number}`, customerEmail: invoice.customer_email, redirectUrl: `${getAppUrl()}/invoices/${invoice.id}?payment=return` });
     if (!order.checkout_url) throw new Error("Revolut created the order but did not return a checkout URL.");
-
+if (outstanding <= 0) {
+  return NextResponse.json<CreatePaymentLinkResponse>(
+    {
+      success: false,
+      error:
+        "This invoice has no outstanding balance.",
+    },
+    {
+      status: 409,
+    },
+  );
+}
     const { error: updateError } = await supabase.from("invoices").update({ payment_url: order.checkout_url, payment_provider: "revolut", revolut_order_id: order.id, revolut_order_state: order.state }).eq("id", invoice.id);
     if (updateError) throw new Error(`Payment order was created, but the invoice could not be updated: ${updateError.message}`);
 
