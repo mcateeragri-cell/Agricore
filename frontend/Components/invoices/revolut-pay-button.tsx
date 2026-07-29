@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type {
-  CreatePaymentLinkResponse,
-} from "@/lib/payments/types";
+import type { CreatePaymentLinkResponse } from "@/lib/payments/types";
 
 type Props = {
   invoiceId: string;
@@ -20,19 +18,12 @@ export default function RevolutPayButton({
   className = "",
   onCreated,
 }: Props) {
-  const [paymentUrl, setPaymentUrl] =
-    useState(existingPaymentUrl ?? "");
-
-  const [loading, setLoading] =
-    useState(false);
-
-  const [error, setError] =
-    useState("");
+  const [paymentUrl, setPaymentUrl] = useState(existingPaymentUrl ?? "");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    setPaymentUrl(
-      existingPaymentUrl ?? "",
-    );
+    setPaymentUrl(existingPaymentUrl ?? "");
   }, [existingPaymentUrl]);
 
   async function handleClick() {
@@ -43,57 +34,72 @@ export default function RevolutPayButton({
     setError("");
 
     if (paymentUrl) {
-      window.open(
-        paymentUrl,
-        "_blank",
-        "noopener,noreferrer",
-      );
-
+      window.open(paymentUrl, "_blank", "noopener,noreferrer");
       return;
     }
 
     setLoading(true);
 
     try {
-      const response = await fetch(
-        "/api/payments/revolut/create",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body: JSON.stringify({
-            invoiceId,
-          }),
+      const response = await fetch("/api/payments/revolut/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
         },
-      );
+        credentials: "same-origin",
+        body: JSON.stringify({
+          invoiceId,
+        }),
+      });
 
-      const body =
-        (await response.json()) as CreatePaymentLinkResponse;
+      const contentType = response.headers.get("content-type") ?? "";
+      const responseText = await response.text();
 
-      if (
-        !response.ok ||
-        !body.success ||
-        !body.paymentUrl
-      ) {
+      if (!contentType.includes("application/json")) {
+        console.error("Non-JSON Revolut API response:", {
+          status: response.status,
+          url: response.url,
+          redirected: response.redirected,
+          contentType,
+          responseText: responseText.slice(0, 500),
+        });
+
+        if (
+          response.redirected ||
+          response.url.includes("/login") ||
+          responseText.includes("<!DOCTYPE")
+        ) {
+          throw new Error(
+            "The payment request was redirected to an HTML page. Please sign in again, then retry.",
+          );
+        }
+
         throw new Error(
-          body.error ??
-            "Unable to create the Revolut payment link.",
+          `The payment service returned an unexpected response (${response.status}). Check the Vercel runtime logs.`,
+        );
+      }
+
+      let body: CreatePaymentLinkResponse;
+
+      try {
+        body = JSON.parse(responseText) as CreatePaymentLinkResponse;
+      } catch {
+        throw new Error(
+          `The payment service returned invalid JSON (${response.status}).`,
+        );
+      }
+
+      if (!response.ok || !body.success || !body.paymentUrl) {
+        throw new Error(
+          body.error ?? "Unable to create the Revolut payment link.",
         );
       }
 
       setPaymentUrl(body.paymentUrl);
+      onCreated?.(body.paymentUrl);
 
-      onCreated?.(
-        body.paymentUrl,
-      );
-
-      window.open(
-        body.paymentUrl,
-        "_blank",
-        "noopener,noreferrer",
-      );
+      window.open(body.paymentUrl, "_blank", "noopener,noreferrer");
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -114,9 +120,7 @@ export default function RevolutPayButton({
       <button
         type="button"
         disabled={disabled || loading}
-        onClick={() =>
-          void handleClick()
-        }
+        onClick={() => void handleClick()}
         className={buttonClassName}
       >
         {loading
@@ -127,7 +131,7 @@ export default function RevolutPayButton({
       </button>
 
       {error ? (
-        <p className="text-sm font-medium text-red-700">
+        <p role="alert" className="text-sm font-medium text-red-700">
           {error}
         </p>
       ) : null}
