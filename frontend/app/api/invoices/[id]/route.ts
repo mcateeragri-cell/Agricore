@@ -288,12 +288,12 @@ export async function PATCH(
       existingInvoice.subtotal,
     );
 
-    let vatRate = clampNumber(
-      body.vatRate,
-      0,
-      100,
-      safeMoney(existingInvoice.vat_rate),
-    );
+    const vatRate = clampNumber(
+  body.vatRate,
+  0,
+  100,
+  safeMoney(existingInvoice.vat_rate),
+);
 
     let vatAmount = safeMoney(
       existingInvoice.vat_amount,

@@ -347,9 +347,9 @@ function getStatusClasses(status: string) {
     case "completed":
       return "bg-green-100 text-green-700";
     case "cancelled":
-      return "bg-gray-100 text-gray-600";
+      return "bg-gray-100 text-slate-600 dark:text-slate-400";
     default:
-      return "bg-gray-100 text-gray-700";
+      return "bg-gray-100 text-slate-700 dark:text-slate-300";
   }
 }
 
@@ -360,7 +360,7 @@ function getPriorityClasses(priority: string) {
     case "high":
       return "bg-orange-100 text-orange-700";
     case "low":
-      return "bg-gray-100 text-gray-600";
+      return "bg-gray-100 text-slate-600 dark:text-slate-400";
     default:
       return "bg-green-50 text-green-700";
   }
@@ -1322,7 +1322,7 @@ async function handleCreateInvoice() {
 }
   if (loading) {
     return (
-      <div className="py-20 text-center text-gray-500">
+      <div className="py-20 text-center text-slate-600 dark:text-slate-400">
         Loading job card...
       </div>
     );
@@ -1330,7 +1330,7 @@ async function handleCreateInvoice() {
 
   if (errorMessage && !job) {
     return (
-      <div className="w-full space-y-6 px-5 py-5 lg:px-7">
+      <div className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-8">
         <Link
           href="/jobs"
           className="text-sm font-semibold text-[#103d2e]"
@@ -1374,7 +1374,7 @@ async function handleCreateInvoice() {
 
   return (
     <>
-      <div className="w-full space-y-6 px-5 py-5 lg:px-7">
+      <div className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-start 2xl:justify-between">
           <div className="min-w-0">
             <Link
@@ -1385,7 +1385,7 @@ async function handleCreateInvoice() {
             </Link>
 
             <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
                 {job.job_number}
               </h1>
 
@@ -1406,7 +1406,7 @@ async function handleCreateInvoice() {
               </span>
             </div>
 
-            <p className="mt-2 text-gray-500">
+            <p className="mt-2 text-slate-600 dark:text-slate-400">
               {customerName} · {machineName}
             </p>
           </div>
@@ -1418,7 +1418,7 @@ async function handleCreateInvoice() {
               disabled={
                 refreshing || savingJob || timerBusy
               }
-              className="rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-900/60 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {refreshing ? "Refreshing..." : "Refresh"}
             </button>
@@ -1482,11 +1482,11 @@ async function handleCreateInvoice() {
             >
               <Card>
                 <div className="border-b pb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">
+                  <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                     Job Control
                   </h2>
 
-                  <p className="mt-1 text-sm text-gray-500">
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                     Update the status, priority and assigned
                     engineer.
                   </p>
@@ -1496,7 +1496,7 @@ async function handleCreateInvoice() {
                   <div>
                     <label
                       htmlFor="status"
-                      className="mb-2 block text-sm font-semibold text-gray-700"
+                      className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300"
                     >
                       Status
                     </label>
@@ -1507,7 +1507,7 @@ async function handleCreateInvoice() {
                       onChange={(event) =>
                         setStatus(event.target.value)
                       }
-                      className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-900 outline-none transition focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
+                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
                     >
                       <option value="open">Open</option>
                       <option value="in_progress">
@@ -1531,7 +1531,7 @@ async function handleCreateInvoice() {
                   <div>
                     <label
                       htmlFor="priority"
-                      className="mb-2 block text-sm font-semibold text-gray-700"
+                      className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300"
                     >
                       Priority
                     </label>
@@ -1542,7 +1542,7 @@ async function handleCreateInvoice() {
                       onChange={(event) =>
                         setPriority(event.target.value)
                       }
-                      className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-900 outline-none transition focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
+                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
                     >
                       <option value="low">Low</option>
                       <option value="normal">
@@ -1558,7 +1558,7 @@ async function handleCreateInvoice() {
                   <div>
                     <label
                       htmlFor="engineer"
-                      className="mb-2 block text-sm font-semibold text-gray-700"
+                      className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300"
                     >
                       Engineer
                     </label>
@@ -1569,7 +1569,7 @@ async function handleCreateInvoice() {
                       onChange={(event) =>
                         setEngineerName(event.target.value)
                       }
-                      className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-900 outline-none transition focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
+                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
                     >
                       <option value="">Unassigned</option>
                       <option value="James McAteer">
@@ -1584,7 +1584,7 @@ async function handleCreateInvoice() {
                   <div>
                     <label
                       htmlFor="machineHours"
-                      className="mb-2 block text-sm font-semibold text-gray-700"
+                      className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300"
                     >
                       Machine Hours
                     </label>
@@ -1598,18 +1598,18 @@ async function handleCreateInvoice() {
                       onChange={(event) =>
                         setMachineHours(event.target.value)
                       }
-                      className="w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-900 outline-none transition focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
+                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
                     />
                   </div>
                 </div>
               </Card>
 
               <Card>
-                <h2 className="text-lg font-semibold text-gray-900">
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                   Fault Reported
                 </h2>
 
-                <p className="mt-1 text-sm text-gray-500">
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                   The customer’s reported fault or requested
                   work.
                 </p>
@@ -1621,17 +1621,17 @@ async function handleCreateInvoice() {
                   }
                   rows={4}
                   required
-                  className="mt-4 w-full resize-y rounded-xl border border-gray-300 px-4 py-3 text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
+                  className="mt-4 w-full resize-y rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition placeholder:text-gray-400 focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
                   placeholder="Enter the reported fault..."
                 />
               </Card>
 
               <Card>
-                <h2 className="text-lg font-semibold text-gray-900">
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                   Diagnosis
                 </h2>
 
-                <p className="mt-1 text-sm text-gray-500">
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                   Record tests carried out, findings and
                   confirmed faults.
                 </p>
@@ -1642,17 +1642,17 @@ async function handleCreateInvoice() {
                     setDiagnosis(event.target.value)
                   }
                   rows={5}
-                  className="mt-4 w-full resize-y rounded-xl border border-gray-300 px-4 py-3 text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
+                  className="mt-4 w-full resize-y rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition placeholder:text-gray-400 focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
                   placeholder="Enter diagnostic findings..."
                 />
               </Card>
 
               <Card>
-                <h2 className="text-lg font-semibold text-gray-900">
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                   Work Carried Out
                 </h2>
 
-                <p className="mt-1 text-sm text-gray-500">
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                   Record repairs, adjustments and testing
                   completed.
                 </p>
@@ -1663,17 +1663,17 @@ async function handleCreateInvoice() {
                     setWorkCarriedOut(event.target.value)
                   }
                   rows={6}
-                  className="mt-4 w-full resize-y rounded-xl border border-gray-300 px-4 py-3 text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
+                  className="mt-4 w-full resize-y rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition placeholder:text-gray-400 focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
                   placeholder="Describe the work carried out..."
                 />
               </Card>
 
               <Card>
-                <h2 className="text-lg font-semibold text-gray-900">
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                   Internal Notes
                 </h2>
 
-                <p className="mt-1 text-sm text-gray-500">
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                   Private notes for engineers and office
                   staff.
                 </p>
@@ -1684,7 +1684,7 @@ async function handleCreateInvoice() {
                     setInternalNotes(event.target.value)
                   }
                   rows={4}
-                  className="mt-4 w-full resize-y rounded-xl border border-gray-300 px-4 py-3 text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
+                  className="mt-4 w-full resize-y rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition placeholder:text-gray-400 focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
                   placeholder="Enter internal notes..."
                 />
               </Card>
@@ -1693,11 +1693,11 @@ async function handleCreateInvoice() {
             <Card>
               <div className="flex flex-col gap-4 border-b pb-5 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900">
+                  <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                     Labour
                   </h2>
 
-                  <p className="mt-1 text-sm text-gray-500">
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                     Record engineer time spent on this job.
                   </p>
                 </div>
@@ -1730,7 +1730,7 @@ async function handleCreateInvoice() {
                   <button
                     type="button"
                     onClick={openAddLabourModal}
-                    className="rounded-xl border border-[#103d2e] bg-white px-4 py-2.5 text-sm font-semibold text-[#103d2e] transition hover:bg-green-50"
+                    className="rounded-xl border border-[#103d2e] bg-white dark:bg-slate-950 px-4 py-2.5 text-sm font-semibold text-[#103d2e] transition hover:bg-green-50"
                   >
                     + Add Labour
                   </button>
@@ -1761,7 +1761,7 @@ async function handleCreateInvoice() {
               <div className="mt-5 overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
                   <thead>
-                    <tr className="text-xs uppercase tracking-wide text-gray-500">
+                    <tr className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">
                       <th className="px-3 py-3 font-semibold">
                         Date
                       </th>
@@ -1809,7 +1809,7 @@ async function handleCreateInvoice() {
                       <tr>
                         <td
                           colSpan={isAdmin ? 10 : 7}
-                          className="px-3 py-10 text-center text-gray-500"
+                          className="px-3 py-10 text-center text-slate-600 dark:text-slate-400"
                         >
                           No labour has been recorded yet.
                         </td>
@@ -1823,13 +1823,13 @@ async function handleCreateInvoice() {
                         return (
                           <tr
                             key={entry.id}
-                            className="align-top text-gray-700"
+                            className="align-top text-slate-700 dark:text-slate-300"
                           >
                             <td className="whitespace-nowrap px-3 py-4">
                               {formatDate(entry.labour_date)}
                             </td>
 
-                            <td className="whitespace-nowrap px-3 py-4 font-medium text-gray-900">
+                            <td className="whitespace-nowrap px-3 py-4 font-medium text-slate-900 dark:text-slate-100">
                               {entry.engineer_name}
                             </td>
 
@@ -1847,7 +1847,7 @@ async function handleCreateInvoice() {
                               {asNumber(entry.break_minutes)} min
                             </td>
 
-                            <td className="whitespace-nowrap px-3 py-4 font-semibold text-gray-900">
+                            <td className="whitespace-nowrap px-3 py-4 font-semibold text-slate-900 dark:text-slate-100">
                               {formatHours(entry.hours)}
                             </td>
 
@@ -1857,7 +1857,7 @@ async function handleCreateInvoice() {
                                   {formatCurrency(rate)}
                                 </td>
 
-                                <td className="whitespace-nowrap px-3 py-4 font-semibold text-gray-900">
+                                <td className="whitespace-nowrap px-3 py-4 font-semibold text-slate-900 dark:text-slate-100">
                                   {entry.entry_status === "running"
                                     ? "—"
                                     : formatCurrency(value)}
@@ -1905,7 +1905,7 @@ async function handleCreateInvoice() {
                                     onClick={() =>
                                       openEditLabourModal(entry)
                                     }
-                                    className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50"
+                                    className="rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-900/60"
                                   >
                                     Edit
                                   </button>
@@ -1940,12 +1940,12 @@ async function handleCreateInvoice() {
               </div>
 
               <div className="mt-5 flex flex-col gap-3 border-t pt-5 sm:flex-row sm:items-end sm:justify-end">
-                <div className="rounded-xl bg-gray-50 px-5 py-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <div className="rounded-xl bg-slate-50 dark:bg-slate-900 px-5 py-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                     Total Hours
                   </p>
 
-                  <p className="mt-1 text-xl font-bold text-gray-900">
+                  <p className="mt-1 text-xl font-bold text-slate-900 dark:text-slate-100">
                     {totalLabourHours.toFixed(2)} hrs
                   </p>
                 </div>
@@ -1966,11 +1966,11 @@ async function handleCreateInvoice() {
             <Card>
   <div className="flex flex-col gap-4 border-b pb-5 md:flex-row md:items-center md:justify-between">
     <div>
-      <h2 className="text-lg font-semibold text-gray-900">
+      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
         Parts Used
       </h2>
 
-      <p className="mt-1 text-sm text-gray-500">
+      <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
         Record parts, materials and consumables used on this
         job.
       </p>
@@ -1979,7 +1979,7 @@ async function handleCreateInvoice() {
     <button
       type="button"
       onClick={openAddPartModal}
-      className="rounded-xl border border-[#103d2e] bg-white px-4 py-2.5 text-sm font-semibold text-[#103d2e] transition hover:bg-green-50"
+      className="rounded-xl border border-[#103d2e] bg-white dark:bg-slate-950 px-4 py-2.5 text-sm font-semibold text-[#103d2e] transition hover:bg-green-50"
     >
       + Add Part
     </button>
@@ -1988,7 +1988,7 @@ async function handleCreateInvoice() {
   <div className="mt-5 overflow-x-auto">
     <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
       <thead>
-        <tr className="text-xs uppercase tracking-wide text-gray-500">
+        <tr className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">
           <th className="px-3 py-3 font-semibold">
             Qty
           </th>
@@ -2038,7 +2038,7 @@ async function handleCreateInvoice() {
           <tr>
             <td
               colSpan={isAdmin ? 9 : 5}
-              className="px-3 py-10 text-center text-gray-500"
+              className="px-3 py-10 text-center text-slate-600 dark:text-slate-400"
             >
               No parts have been added to this job.
             </td>
@@ -2056,9 +2056,9 @@ async function handleCreateInvoice() {
             return (
               <tr
                 key={part.id}
-                className="align-top text-gray-700"
+                className="align-top text-slate-700 dark:text-slate-300"
               >
-                <td className="whitespace-nowrap px-3 py-4 font-semibold text-gray-900">
+                <td className="whitespace-nowrap px-3 py-4 font-semibold text-slate-900 dark:text-slate-100">
                   {quantity}
                 </td>
 
@@ -2067,12 +2067,12 @@ async function handleCreateInvoice() {
                 </td>
 
                 <td className="min-w-64 px-3 py-4">
-                  <p className="font-medium text-gray-900">
+                  <p className="font-medium text-slate-900 dark:text-slate-100">
                     {part.description}
                   </p>
 
                   {part.notes && (
-                    <p className="mt-1 text-xs text-gray-500">
+                    <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
                       {part.notes}
                     </p>
                   )}
@@ -2088,7 +2088,7 @@ async function handleCreateInvoice() {
                   {formatCurrency(price)}
                 </td>
 
-                <td className="whitespace-nowrap px-3 py-4 font-semibold text-gray-900">
+                <td className="whitespace-nowrap px-3 py-4 font-semibold text-slate-900 dark:text-slate-100">
                   {formatCurrency(salesTotal)}
                 </td>
 
@@ -2109,7 +2109,7 @@ async function handleCreateInvoice() {
                           onClick={() =>
                             openEditPartModal(part)
                           }
-                          className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50"
+                          className="rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-900/60"
                         >
                           Edit
                         </button>
@@ -2142,12 +2142,12 @@ async function handleCreateInvoice() {
 
   <div className="mt-5 flex flex-col gap-3 border-t pt-5 sm:flex-row sm:items-end sm:justify-end">
     {isAdmin && (
-      <div className="rounded-xl bg-gray-50 px-5 py-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+      <div className="rounded-xl bg-slate-50 dark:bg-slate-900 px-5 py-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
           Parts Cost
         </p>
 
-        <p className="mt-1 text-xl font-bold text-gray-900">
+        <p className="mt-1 text-xl font-bold text-slate-900 dark:text-slate-100">
           {formatCurrency(totalPartsCost)}
         </p>
       </div>
@@ -2193,14 +2193,14 @@ async function handleCreateInvoice() {
 
           <aside className="space-y-5">
             <Card>
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                 Customer
               </h2>
 
               <div className="mt-4 space-y-3 text-sm">
                 <div>
-                  <p className="text-gray-500">Name</p>
-                  <p className="font-semibold text-gray-900">
+                  <p className="text-slate-600 dark:text-slate-400">Name</p>
+                  <p className="font-semibold text-slate-900 dark:text-slate-100">
                     {customerName}
                   </p>
                 </div>
@@ -2208,11 +2208,11 @@ async function handleCreateInvoice() {
                 {contactName &&
                   customer?.business_name && (
                     <div>
-                      <p className="text-gray-500">
+                      <p className="text-slate-600 dark:text-slate-400">
                         Contact
                       </p>
 
-                      <p className="font-medium text-gray-900">
+                      <p className="font-medium text-slate-900 dark:text-slate-100">
                         {contactName}
                       </p>
                     </div>
@@ -2220,7 +2220,7 @@ async function handleCreateInvoice() {
 
                 {customer?.phone && (
                   <div>
-                    <p className="text-gray-500">
+                    <p className="text-slate-600 dark:text-slate-400">
                       Phone
                     </p>
 
@@ -2235,7 +2235,7 @@ async function handleCreateInvoice() {
 
                 {customer?.email && (
                   <div>
-                    <p className="text-gray-500">
+                    <p className="text-slate-600 dark:text-slate-400">
                       Email
                     </p>
 
@@ -2260,28 +2260,28 @@ async function handleCreateInvoice() {
             </Card>
 
             <Card>
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                 Machine
               </h2>
 
               <div className="mt-4 space-y-3 text-sm">
                 <div>
-                  <p className="text-gray-500">
+                  <p className="text-slate-600 dark:text-slate-400">
                     Machine
                   </p>
 
-                  <p className="font-semibold text-gray-900">
+                  <p className="font-semibold text-slate-900 dark:text-slate-100">
                     {machineName}
                   </p>
                 </div>
 
                 {machine?.registration && (
                   <div>
-                    <p className="text-gray-500">
+                    <p className="text-slate-600 dark:text-slate-400">
                       Registration
                     </p>
 
-                    <p className="font-medium text-gray-900">
+                    <p className="font-medium text-slate-900 dark:text-slate-100">
                       {machine.registration.toUpperCase()}
                     </p>
                   </div>
@@ -2289,11 +2289,11 @@ async function handleCreateInvoice() {
 
                 {machine?.serial_number && (
                   <div>
-                    <p className="text-gray-500">
+                    <p className="text-slate-600 dark:text-slate-400">
                       Serial Number
                     </p>
 
-                    <p className="break-all font-medium text-gray-900">
+                    <p className="break-all font-medium text-slate-900 dark:text-slate-100">
                       {machine.serial_number}
                     </p>
                   </div>
@@ -2311,37 +2311,37 @@ async function handleCreateInvoice() {
             </Card>
 
             <Card>
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                 Job Dates
               </h2>
 
               <div className="mt-4 space-y-3 text-sm">
                 <div>
-                  <p className="text-gray-500">
+                  <p className="text-slate-600 dark:text-slate-400">
                     Opened
                   </p>
 
-                  <p className="font-medium text-gray-900">
+                  <p className="font-medium text-slate-900 dark:text-slate-100">
                     {formatDate(job.opened_date)}
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-gray-500">
+                  <p className="text-slate-600 dark:text-slate-400">
                     Completed
                   </p>
 
-                  <p className="font-medium text-gray-900">
+                  <p className="font-medium text-slate-900 dark:text-slate-100">
                     {formatDate(job.completed_date)}
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-gray-500">
+                  <p className="text-slate-600 dark:text-slate-400">
                     Invoice Status
                   </p>
 
-                  <p className="font-medium text-gray-900">
+                  <p className="font-medium text-slate-900 dark:text-slate-100">
                     {linkedInvoice
                       ? formatLabel(linkedInvoice.status)
                       : job.invoice_status
@@ -2350,8 +2350,8 @@ async function handleCreateInvoice() {
                   </p>
                 </div>
 
-                <div className="border-t border-gray-200 pt-4">
-                  <p className="text-gray-500">
+                <div className="border-t border-slate-200 dark:border-slate-800 pt-4">
+                  <p className="text-slate-600 dark:text-slate-400">
                     Invoice
                   </p>
 
@@ -2362,7 +2362,7 @@ async function handleCreateInvoice() {
                           {linkedInvoice.invoice_number}
                         </p>
 
-                        <p className="mt-1 text-xs text-gray-500">
+                        <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
                           Total: {formatCurrency(
                             asNumber(linkedInvoice.total)
                           )}
@@ -2427,7 +2427,7 @@ async function handleCreateInvoice() {
                       </button>
                     </div>
                   ) : (
-                    <p className="mt-1 text-xs text-gray-500">
+                    <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
                       Complete and save the job before
                       invoicing.
                     </p>
@@ -2435,11 +2435,11 @@ async function handleCreateInvoice() {
                 </div>
 
                 <div>
-                  <p className="text-gray-500">
+                  <p className="text-slate-600 dark:text-slate-400">
                     Last Updated
                   </p>
 
-                  <p className="font-medium text-gray-900">
+                  <p className="font-medium text-slate-900 dark:text-slate-100">
                     {formatDate(job.updated_at)}
                   </p>
                 </div>
@@ -2451,17 +2451,17 @@ async function handleCreateInvoice() {
 
       {labourModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white dark:bg-slate-950 shadow-2xl">
             <form onSubmit={handleSaveLabour}>
               <div className="flex items-start justify-between border-b px-6 py-5">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900">
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
                     {labourForm.id
                       ? "Edit Labour Entry"
                       : "Add Labour Entry"}
                   </h2>
 
-                  <p className="mt-1 text-sm text-gray-500">
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                     Worked hours are calculated automatically.
                   </p>
                 </div>
@@ -2469,7 +2469,7 @@ async function handleCreateInvoice() {
                 <button
                   type="button"
                   onClick={closeLabourModal}
-                  className="rounded-lg px-3 py-1.5 text-xl text-gray-500 hover:bg-gray-100"
+                  className="rounded-lg px-3 py-1.5 text-xl text-slate-600 dark:text-slate-400 hover:bg-gray-100"
                 >
                   ×
                 </button>
@@ -2478,7 +2478,7 @@ async function handleCreateInvoice() {
               <div className="space-y-5 px-6 py-6">
                 <div className="grid gap-5 md:grid-cols-2">
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-gray-700">
+                    <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                       Engineer
                     </label>
 
@@ -2491,7 +2491,7 @@ async function handleCreateInvoice() {
                         }))
                       }
                       disabled={!isAdmin}
-                      className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15 disabled:bg-gray-100"
+                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15 disabled:bg-gray-100"
                     >
                       <option value="James McAteer">
                         James McAteer
@@ -2503,7 +2503,7 @@ async function handleCreateInvoice() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-gray-700">
+                    <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                       Date
                     </label>
 
@@ -2516,12 +2516,12 @@ async function handleCreateInvoice() {
                           labourDate: event.target.value,
                         }))
                       }
-                      className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
+                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-3 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
                     />
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-gray-700">
+                    <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                       Start Time
                     </label>
 
@@ -2534,12 +2534,12 @@ async function handleCreateInvoice() {
                           startTime: event.target.value,
                         }))
                       }
-                      className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
+                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-3 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
                     />
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-gray-700">
+                    <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                       Finish Time
                     </label>
 
@@ -2552,12 +2552,12 @@ async function handleCreateInvoice() {
                           finishTime: event.target.value,
                         }))
                       }
-                      className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
+                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-3 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
                     />
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-gray-700">
+                    <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                       Break Minutes
                     </label>
 
@@ -2572,18 +2572,18 @@ async function handleCreateInvoice() {
                           breakMinutes: event.target.value,
                         }))
                       }
-                      className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
+                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-3 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
                     />
                   </div>
 
                   {isAdmin && (
                     <div>
-                      <label className="mb-2 block text-sm font-semibold text-gray-700">
+                      <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                         Hourly Rate
                       </label>
 
                       <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 dark:text-slate-400">
                           £
                         </span>
 
@@ -2599,7 +2599,7 @@ async function handleCreateInvoice() {
                                 event.target.value,
                             }))
                           }
-                          className="w-full rounded-xl border border-gray-300 py-3 pl-8 pr-4 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
+                          className="w-full rounded-xl border border-slate-300 dark:border-slate-700 py-3 pl-8 pr-4 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
                         />
                       </div>
                     </div>
@@ -2607,7 +2607,7 @@ async function handleCreateInvoice() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-gray-700">
+                  <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                     Work Description
                   </label>
 
@@ -2621,13 +2621,13 @@ async function handleCreateInvoice() {
                       }))
                     }
                     placeholder="Describe the work completed during this time..."
-                    className="w-full resize-y rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
+                    className="w-full resize-y rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-3 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
                   />
                 </div>
 
                 {labourForm.id && isAdmin && (
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-gray-700">
+                    <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                       Reason for Adjustment
                     </label>
 
@@ -2670,12 +2670,12 @@ async function handleCreateInvoice() {
                   )}
               </div>
 
-              <div className="flex justify-end gap-3 border-t bg-gray-50 px-6 py-5">
+              <div className="flex justify-end gap-3 border-t bg-slate-50 dark:bg-slate-900 px-6 py-5">
                 <button
                   type="button"
                   onClick={closeLabourModal}
                   disabled={savingLabour}
-                  className="rounded-xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-5 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900/60 disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -2698,15 +2698,15 @@ async function handleCreateInvoice() {
       )}
       {partModalOpen && (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-    <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+    <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white dark:bg-slate-950 shadow-2xl">
       <form onSubmit={handleSavePart}>
         <div className="flex items-start justify-between border-b px-6 py-5">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
               {partForm.id ? "Edit Part" : "Add Part"}
             </h2>
 
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
               Add parts, oil, materials or consumables used on
               this job.
             </p>
@@ -2715,7 +2715,7 @@ async function handleCreateInvoice() {
           <button
             type="button"
             onClick={closePartModal}
-            className="rounded-lg px-3 py-1.5 text-xl text-gray-500 hover:bg-gray-100"
+            className="rounded-lg px-3 py-1.5 text-xl text-slate-600 dark:text-slate-400 hover:bg-gray-100"
           >
             ×
           </button>
@@ -2724,7 +2724,7 @@ async function handleCreateInvoice() {
         <div className="space-y-5 px-6 py-6">
           <div className="grid gap-5 md:grid-cols-2">
             <div className="md:col-span-2">
-              <label className="mb-2 block text-sm font-semibold text-gray-700">
+              <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                 Select From Stock
               </label>
 
@@ -2758,7 +2758,7 @@ async function handleCreateInvoice() {
                     supplier: selectedItem.supplier ?? "",
                   }));
                 }}
-                className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
               >
                 <option value="">Manual / one-off part</option>
 
@@ -2774,7 +2774,7 @@ async function handleCreateInvoice() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold text-gray-700">
+              <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                 Quantity
               </label>
 
@@ -2789,12 +2789,12 @@ async function handleCreateInvoice() {
                     quantity: event.target.value,
                   }))
                 }
-                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-3 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
               />
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold text-gray-700">
+              <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                 Part Number
               </label>
 
@@ -2808,18 +2808,18 @@ async function handleCreateInvoice() {
                   }))
                 }
                 placeholder="For example: 84283746"
-                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-3 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
               />
             </div>
 
             {isAdmin && (
               <div>
-                <label className="mb-2 block text-sm font-semibold text-gray-700">
+                <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                   Unit Cost
                 </label>
 
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 dark:text-slate-400">
                     £
                   </span>
 
@@ -2834,19 +2834,19 @@ async function handleCreateInvoice() {
                         unitCost: event.target.value,
                       }))
                     }
-                    className="w-full rounded-xl border border-gray-300 py-3 pl-8 pr-4 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 py-3 pl-8 pr-4 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
                   />
                 </div>
               </div>
             )}
 
             <div>
-              <label className="mb-2 block text-sm font-semibold text-gray-700">
+              <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                 Unit Selling Price
               </label>
 
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 dark:text-slate-400">
                   £
                 </span>
 
@@ -2861,14 +2861,14 @@ async function handleCreateInvoice() {
                       unitPrice: event.target.value,
                     }))
                   }
-                  className="w-full rounded-xl border border-gray-300 py-3 pl-8 pr-4 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 py-3 pl-8 pr-4 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
                 />
               </div>
             </div>
 
             {isAdmin && (
               <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-semibold text-gray-700">
+                <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                   Supplier
                 </label>
 
@@ -2882,14 +2882,14 @@ async function handleCreateInvoice() {
                     }))
                   }
                   placeholder="Supplier name"
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-3 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
                 />
               </div>
             )}
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-semibold text-gray-700">
+            <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
               Description
             </label>
 
@@ -2904,12 +2904,12 @@ async function handleCreateInvoice() {
                 }))
               }
               placeholder="For example: Engine oil filter"
-              className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
+              className="w-full rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-3 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
             />
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-semibold text-gray-700">
+            <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
               Notes
             </label>
 
@@ -2923,7 +2923,7 @@ async function handleCreateInvoice() {
                 }))
               }
               placeholder="Optional fitting or warranty notes..."
-              className="w-full resize-y rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
+              className="w-full resize-y rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-3 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
             />
           </div>
 
@@ -2943,12 +2943,12 @@ async function handleCreateInvoice() {
           )}
         </div>
 
-        <div className="flex justify-end gap-3 border-t bg-gray-50 px-6 py-5">
+        <div className="flex justify-end gap-3 border-t bg-slate-50 dark:bg-slate-900 px-6 py-5">
           <button
             type="button"
             onClick={closePartModal}
             disabled={savingPart}
-            className="rounded-xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-5 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900/60 disabled:opacity-50"
           >
             Cancel
           </button>

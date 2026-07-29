@@ -111,7 +111,7 @@ function getStatusClasses(status: string) {
       return "bg-slate-100 text-slate-600 ring-slate-200";
 
     default:
-      return "bg-slate-100 text-slate-700 ring-slate-200";
+      return "bg-slate-100 text-slate-700 dark:text-slate-300 ring-slate-200";
   }
 }
 
@@ -318,9 +318,9 @@ export default function JobsPage() {
     priorityFilter !== "all";
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-5 sm:px-6 lg:px-8">
+    <main className="min-h-dvh bg-[var(--background)] text-[var(--foreground)] px-4 py-5 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-[1600px]">
-        <header className="rounded-3xl border border-slate-200 bg-white px-5 py-5 shadow-sm sm:px-6 lg:px-8 lg:py-7">
+        <header className="rounded-3xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950 px-5 py-5 shadow-sm sm:px-6 lg:px-8 lg:py-7">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-start gap-4">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-[#103d2e] ring-1 ring-emerald-100">
@@ -332,11 +332,11 @@ export default function JobsPage() {
                   Workshop control
                 </p>
 
-                <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+                <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100 sm:text-4xl">
                   Jobs
                 </h1>
 
-                <p className="mt-1 text-sm text-slate-500 sm:text-base">
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400 sm:text-base">
                   Manage workshop jobs and
                   field-service work from one place.
                 </p>
@@ -356,6 +356,7 @@ export default function JobsPage() {
         <section className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <MetricCard
             label="All jobs"
+            trend="Total job cards"
             value={jobs.length}
             description="Total job cards"
             icon={<ClipboardIcon />}
@@ -363,6 +364,7 @@ export default function JobsPage() {
 
           <MetricCard
             label="Open jobs"
+            trend="Require action"
             value={openJobs}
             description="Still requiring action"
             icon={<ClockIcon />}
@@ -370,6 +372,7 @@ export default function JobsPage() {
 
           <MetricCard
             label="In progress"
+            trend="Currently active"
             value={activeJobs}
             description="Currently being worked on"
             icon={<SpannerIcon />}
@@ -377,13 +380,14 @@ export default function JobsPage() {
 
           <MetricCard
             label="Completed"
+            trend="Finished work"
             value={completedJobs}
             description="Finished job cards"
             icon={<CheckIcon />}
           />
         </section>
 
-        <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <section className="mt-5 rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950 p-4 shadow-sm sm:p-5">
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_220px_auto]">
             <div className="relative">
               <SearchIcon />
@@ -462,7 +466,7 @@ export default function JobsPage() {
                   ? clearFilters
                   : () => void loadJobs()
               }
-              className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+              className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-bold text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-900/60 dark:bg-slate-900"
             >
               {filtersAreActive
                 ? "Clear filters"
@@ -471,14 +475,14 @@ export default function JobsPage() {
           </div>
         </section>
 
-        <section className="mt-5 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <section className="mt-5 overflow-hidden rounded-3xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950 shadow-sm">
           <div className="flex flex-col gap-3 border-b border-slate-200 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <div>
-              <h2 className="text-xl font-bold text-slate-950">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
                 Recent Jobs
               </h2>
 
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                 {filteredJobs.length}{" "}
                 {filteredJobs.length === 1
                   ? "job"
@@ -496,7 +500,7 @@ export default function JobsPage() {
           </div>
 
           {loading ? (
-            <div className="px-6 py-20 text-center text-slate-500">
+            <div className="px-6 py-20 text-center text-slate-600 dark:text-slate-400">
               Loading jobs...
             </div>
           ) : errorMessage ? (
@@ -527,11 +531,11 @@ export default function JobsPage() {
                 <ClipboardIcon />
               </div>
 
-              <h3 className="mt-4 text-lg font-semibold text-slate-950">
+              <h3 className="mt-4 text-lg font-semibold text-slate-900 dark:text-slate-100">
                 No jobs yet
               </h3>
 
-              <p className="mt-2 text-sm text-slate-500">
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
                 Create your first job card to
                 begin recording workshop work.
               </p>
@@ -545,11 +549,11 @@ export default function JobsPage() {
             </div>
           ) : filteredJobs.length === 0 ? (
             <div className="px-6 py-20 text-center">
-              <h3 className="text-lg font-semibold text-slate-950">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                 No matching jobs
               </h3>
 
-              <p className="mt-2 text-sm text-slate-500">
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
                 Try changing or clearing the
                 current filters.
               </p>
@@ -557,23 +561,23 @@ export default function JobsPage() {
               <button
                 type="button"
                 onClick={clearFilters}
-                className="mt-5 rounded-xl border border-slate-300 px-5 py-3 text-sm font-bold text-slate-700"
+                className="mt-5 rounded-xl border border-slate-300 px-5 py-3 text-sm font-bold text-slate-700 dark:text-slate-300"
               >
                 Clear Filters
               </button>
             </div>
           ) : (
-            <div className="space-y-3 bg-slate-50 p-3 sm:p-4">
+            <div className="space-y-3 bg-slate-50 dark:bg-slate-900 p-3 sm:p-4">
               {filteredJobs.map((job) => (
                 <Link
                   key={job.id}
                   href={`/jobs/${job.id}`}
-                  className="group block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md sm:p-6"
+                  className="group block rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950 p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md sm:p-6"
                 >
                   <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-lg font-bold text-slate-950">
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
                           {job.jobNumber}
                         </h3>
 
@@ -622,8 +626,8 @@ export default function JobsPage() {
                     </div>
 
                     <div className="flex shrink-0 items-center justify-between gap-5 border-t border-slate-100 pt-4 lg:min-w-[250px] lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
-                      <div className="text-sm text-slate-500">
-                        <p className="font-semibold text-slate-700">
+                      <div className="text-sm text-slate-600 dark:text-slate-400">
+                        <p className="font-semibold text-slate-700 dark:text-slate-300">
                           {job.openedDate
                             ? new Date(
                                 job.openedDate,
@@ -657,26 +661,28 @@ function MetricCard({
   label,
   value,
   description,
+  trend,
   icon,
 }: {
   label: string;
   value: number;
   description: string;
+  trend?: string;
   icon: React.ReactNode;
 }) {
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <article className="rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950 p-5 shadow-sm">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-slate-500">
+          <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">
             {label}
           </p>
 
-          <p className="mt-2 text-3xl font-bold text-slate-950">
+          <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-slate-100">
             {value}
           </p>
 
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
             {description}
           </p>
         </div>

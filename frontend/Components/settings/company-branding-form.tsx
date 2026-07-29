@@ -1,12 +1,23 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useEffect, useState } from "react";
+import {
+  ChangeEvent,
+  FormEvent,
+  useEffect,
+  useState,
+} from "react";
+
 import type { CompanySettings } from "@/app/api/_company/types";
 
 type ApiResponse = {
   settings: CompanySettings;
   logoUrl: string | null;
 };
+
+type MessageState = {
+  type: "success" | "error";
+  text: string;
+} | null;
 
 const EMPTY: CompanySettings = {
   id: 1,
@@ -34,87 +45,265 @@ const EMPTY: CompanySettings = {
   updated_at: "",
 };
 
+const companyFields: Array<{
+  key: keyof CompanySettings;
+  label: string;
+  type?: "text" | "email" | "tel" | "url";
+  autoComplete?: string;
+}> = [
+  {
+    key: "address_line_1",
+    label: "Address line 1",
+    autoComplete: "address-line1",
+  },
+  {
+    key: "address_line_2",
+    label: "Address line 2",
+    autoComplete: "address-line2",
+  },
+  {
+    key: "town_city",
+    label: "Town / city",
+    autoComplete: "address-level2",
+  },
+  {
+    key: "county",
+    label: "County",
+    autoComplete: "address-level1",
+  },
+  {
+    key: "postcode",
+    label: "Postcode",
+    autoComplete: "postal-code",
+  },
+  {
+    key: "phone",
+    label: "Phone",
+    type: "tel",
+    autoComplete: "tel",
+  },
+  {
+    key: "email",
+    label: "Email",
+    type: "email",
+    autoComplete: "email",
+  },
+  {
+    key: "website",
+    label: "Website",
+    type: "url",
+    autoComplete: "url",
+  },
+  {
+    key: "vat_number",
+    label: "VAT number",
+  },
+  {
+    key: "company_registration",
+    label: "Company registration",
+  },
+];
+
+const paymentFields: Array<{
+  key: keyof CompanySettings;
+  label: string;
+  autoComplete?: string;
+}> = [
+  {
+    key: "bank_name",
+    label: "Bank name",
+  },
+  {
+    key: "account_name",
+    label: "Account name",
+  },
+  {
+    key: "sort_code",
+    label: "Sort code",
+  },
+  {
+    key: "account_number",
+    label: "Account number",
+  },
+];
+
+function normaliseNullableValue(value: string) {
+  const trimmed = value.trim();
+  return trimmed === "" ? null : trimmed;
+}
+
 export default function CompanyBrandingForm() {
-  const [settings, setSettings] = useState<CompanySettings>(EMPTY);
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [settings, setSettings] =
+    useState<CompanySettings>(EMPTY);
+  const [logoUrl, setLogoUrl] = useState<string | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
+  const [uploadingLogo, setUploadingLogo] =
+    useState(false);
+  const [removingLogo, setRemovingLogo] =
+    useState(false);
+  const [message, setMessage] =
+    useState<MessageState>(null);
+
 
   useEffect(() => {
-    void loadSettings();
-  }, []);
+    if (!message || message.type === "error") {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setMessage(null);
+    }, 4000);
+
+    return () => window.clearTimeout(timeout);
+  }, [message]);
 
   async function loadSettings() {
     setLoading(true);
-    setMessage("");
+    setMessage(null);
 
     try {
-      const response = await fetch("/api/settings/company", {
-        cache: "no-store",
-      });
-      const data = (await response.json()) as ApiResponse & { error?: string };
+      const response = await fetch(
+        "/api/settings/company",
+        {
+          cache: "no-store",
+        },
+      );
 
-      if (!response.ok) throw new Error(data.error ?? "Unable to load settings");
+      const data = (await response.json()) as ApiResponse & {
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(
+          data.error ?? "Unable to load settings",
+        );
+      }
 
       setSettings(data.settings);
       setLogoUrl(data.logoUrl);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to load settings");
+      setMessage({
+        type: "error",
+        text:
+          error instanceof Error
+            ? error.message
+            : "Unable to load settings",
+      });
     } finally {
       setLoading(false);
     }
   }
+     useEffect(() => {
+    void loadSettings();
+  }, []);
 
   function update<K extends keyof CompanySettings>(
     key: K,
-    value: CompanySettings[K]
+    value: CompanySettings[K],
   ) {
-    setSettings((current) => ({ ...current, [key]: value }));
+    setSettings((current) => ({
+      ...current,
+      [key]: value,
+    }));
   }
 
-  async function save(event: FormEvent<HTMLFormElement>) {
+  function updateNullableText(
+    key: keyof CompanySettings,
+    value: string,
+  ) {
+    setSettings((current) => ({
+      ...current,
+      [key]: normaliseNullableValue(value),
+    }));
+  }
+
+  async function save(
+    event: FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
     setSaving(true);
-    setMessage("");
+    setMessage(null);
 
     try {
-      const response = await fetch("/api/settings/company", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
-      });
+      const response = await fetch(
+        "/api/settings/company",
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(settings),
+        },
+      );
 
       const data = (await response.json()) as {
         settings?: CompanySettings;
         error?: string;
       };
 
-      if (!response.ok) throw new Error(data.error ?? "Unable to save settings");
-      if (data.settings) setSettings(data.settings);
+      if (!response.ok) {
+        throw new Error(
+          data.error ?? "Unable to save settings",
+        );
+      }
 
-      setMessage("Company settings saved.");
+      if (data.settings) {
+        setSettings(data.settings);
+      }
+
+      setMessage({
+        type: "success",
+        text: "Company settings saved successfully.",
+      });
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to save settings");
+      setMessage({
+        type: "error",
+        text:
+          error instanceof Error
+            ? error.message
+            : "Unable to save settings",
+      });
     } finally {
       setSaving(false);
     }
   }
 
-  async function uploadLogo(event: ChangeEvent<HTMLInputElement>) {
+  async function uploadLogo(
+    event: ChangeEvent<HTMLInputElement>,
+  ) {
     const file = event.target.files?.[0];
-    if (!file) return;
 
-    setMessage("");
+    if (!file) {
+      return;
+    }
+
+    setMessage(null);
+
+    if (file.size > 3 * 1024 * 1024) {
+      setMessage({
+        type: "error",
+        text: "The logo must be 3 MB or smaller.",
+      });
+      event.target.value = "";
+      return;
+    }
 
     const formData = new FormData();
     formData.append("logo", file);
 
+    setUploadingLogo(true);
+
     try {
-      const response = await fetch("/api/settings/company/logo", {
-        method: "POST",
-        body: formData,
-      });
+      const response = await fetch(
+        "/api/settings/company/logo",
+        {
+          method: "POST",
+          body: formData,
+        },
+      );
 
       const data = (await response.json()) as {
         logoUrl?: string | null;
@@ -122,238 +311,500 @@ export default function CompanyBrandingForm() {
         error?: string;
       };
 
-      if (!response.ok) throw new Error(data.error ?? "Unable to upload logo");
+      if (!response.ok) {
+        throw new Error(
+          data.error ?? "Unable to upload logo",
+        );
+      }
 
       setLogoUrl(data.logoUrl ?? null);
       setSettings((current) => ({
         ...current,
-        logo_path: data.logoPath ?? current.logo_path,
+        logo_path:
+          data.logoPath ?? current.logo_path,
       }));
-      setMessage("Logo uploaded.");
+
+      setMessage({
+        type: "success",
+        text: "Company logo uploaded successfully.",
+      });
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to upload logo");
+      setMessage({
+        type: "error",
+        text:
+          error instanceof Error
+            ? error.message
+            : "Unable to upload logo",
+      });
     } finally {
+      setUploadingLogo(false);
       event.target.value = "";
     }
   }
 
   async function removeLogo() {
-    const response = await fetch("/api/settings/company/logo", {
-      method: "DELETE",
-    });
+    setRemovingLogo(true);
+    setMessage(null);
 
-    const data = (await response.json()) as { error?: string };
+    try {
+      const response = await fetch(
+        "/api/settings/company/logo",
+        {
+          method: "DELETE",
+        },
+      );
 
-    if (!response.ok) {
-      setMessage(data.error ?? "Unable to remove logo");
-      return;
+      const data = (await response.json()) as {
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(
+          data.error ?? "Unable to remove logo",
+        );
+      }
+
+      setLogoUrl(null);
+      setSettings((current) => ({
+        ...current,
+        logo_path: null,
+      }));
+
+      setMessage({
+        type: "success",
+        text: "Company logo removed.",
+      });
+    } catch (error) {
+      setMessage({
+        type: "error",
+        text:
+          error instanceof Error
+            ? error.message
+            : "Unable to remove logo",
+      });
+    } finally {
+      setRemovingLogo(false);
     }
-
-    setLogoUrl(null);
-    setSettings((current) => ({ ...current, logo_path: null }));
-    setMessage("Logo removed.");
   }
+
+  const inputClass =
+    "w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-900 outline-none placeholder:text-slate-500 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500";
+
+  const labelClass =
+    "mb-1.5 block text-sm font-bold text-slate-800 dark:text-slate-200";
+
+  const sectionClass =
+    "rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-950";
 
   if (loading) {
-    return <p className="text-sm text-slate-600">Loading company settings…</p>;
+    return (
+      <div className={sectionClass}>
+        <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+          Loading company settings…
+        </p>
+      </div>
+    );
   }
-
-  const input =
-    "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100";
-  const label = "mb-1 block text-sm font-medium text-slate-700";
 
   return (
     <form onSubmit={save} className="space-y-6">
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">Logo and colours</h2>
+      {message && (
+        <div
+          role={message.type === "error" ? "alert" : "status"}
+          className={
+            message.type === "success"
+              ? "rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-200"
+              : "rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200"
+          }
+        >
+          {message.text}
+        </div>
+      )}
 
-        <div className="mt-4 flex flex-wrap items-center gap-5">
-          <div className="flex h-24 w-56 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50 p-3">
-            {logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={logoUrl}
-                alt="Company logo"
-                className="max-h-full max-w-full object-contain"
-              />
-            ) : (
-              <span className="text-sm text-slate-500">No logo uploaded</span>
-            )}
-          </div>
+      <section className={sectionClass}>
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+            Brand identity
+          </p>
 
-          <div className="space-y-2">
-            <label className="inline-flex cursor-pointer rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">
-              Upload logo
-              <input
-                type="file"
-                accept="image/png,image/jpeg"
-                onChange={uploadLogo}
-                className="hidden"
-              />
-            </label>
+          <h2 className="mt-1 text-xl font-bold text-slate-900 dark:text-slate-100">
+            Logo and colours
+          </h2>
 
-            {logoUrl && (
-              <button
-                type="button"
-                onClick={removeLogo}
-                className="ml-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-              >
-                Remove
-              </button>
-            )}
+          <p className="mt-2 text-sm font-medium leading-6 text-slate-600 dark:text-slate-400">
+            These colours and your logo are used on customer
+            documents generated by AgriCore.
+          </p>
+        </div>
 
-            <p className="text-xs text-slate-500">
+        <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/70">
+            <div className="flex min-h-40 items-center justify-center rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={logoUrl}
+                  alt="Company logo"
+                  className="max-h-32 max-w-full object-contain"
+                />
+              ) : (
+                <div className="text-center">
+                  <p className="font-bold text-slate-800 dark:text-slate-200">
+                    No logo uploaded
+                  </p>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                    Upload a PNG or JPEG logo.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+              <label className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white">
+                {uploadingLogo
+                  ? "Uploading…"
+                  : logoUrl
+                    ? "Replace logo"
+                    : "Upload logo"}
+
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg"
+                  onChange={uploadLogo}
+                  disabled={uploadingLogo || removingLogo}
+                  className="hidden"
+                />
+              </label>
+
+              {logoUrl && (
+                <button
+                  type="button"
+                  onClick={removeLogo}
+                  disabled={
+                    removingLogo || uploadingLogo
+                  }
+                  className="min-h-11 rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-bold text-slate-800 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900"
+                >
+                  {removingLogo
+                    ? "Removing…"
+                    : "Remove logo"}
+                </button>
+              )}
+            </div>
+
+            <p className="mt-3 text-xs font-medium text-slate-600 dark:text-slate-400">
               PNG is recommended. Maximum file size: 3 MB.
             </p>
+          </div>
+
+          <div
+            className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950"
+            aria-label="Brand preview"
+          >
+            <div
+              className="p-5"
+              style={{
+                backgroundColor:
+                  settings.primary_colour,
+              }}
+            >
+              <p className="text-xs font-bold uppercase tracking-wide text-white/80">
+                Document preview
+              </p>
+
+              <p className="mt-1 text-xl font-bold text-white">
+                {settings.company_name ||
+                  "Your company name"}
+              </p>
+
+              <p className="mt-1 text-sm font-medium text-white/85">
+                {settings.contact_line ||
+                  "Company contact details"}
+              </p>
+            </div>
+
+            <div
+              className="space-y-3 p-5"
+              style={{
+                backgroundColor:
+                  settings.secondary_colour,
+              }}
+            >
+              <div className="h-2 w-3/4 rounded bg-slate-900/20" />
+              <div className="h-2 w-full rounded bg-slate-900/15" />
+              <div className="h-2 w-5/6 rounded bg-slate-900/15" />
+
+              <div className="pt-3">
+                <div
+                  className="inline-flex rounded-lg px-4 py-2 text-sm font-bold text-white"
+                  style={{
+                    backgroundColor:
+                      settings.primary_colour,
+                  }}
+                >
+                  Sample action
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <label>
-            <span className={label}>Primary colour</span>
+            <span className={labelClass}>
+              Primary colour
+            </span>
+
             <div className="flex gap-2">
               <input
                 type="color"
                 value={settings.primary_colour}
-                onChange={(e) => update("primary_colour", e.target.value)}
-                className="h-10 w-12 rounded border border-slate-300"
+                onChange={(event) =>
+                  update(
+                    "primary_colour",
+                    event.target.value,
+                  )
+                }
+                className="h-11 w-14 shrink-0 cursor-pointer rounded-lg border border-slate-300 bg-white p-1 dark:border-slate-700 dark:bg-slate-900"
+                aria-label="Choose primary colour"
               />
+
               <input
-                className={input}
+                className={inputClass}
                 value={settings.primary_colour}
-                onChange={(e) => update("primary_colour", e.target.value)}
+                onChange={(event) =>
+                  update(
+                    "primary_colour",
+                    event.target.value,
+                  )
+                }
+                maxLength={7}
+                spellCheck={false}
               />
             </div>
           </label>
 
           <label>
-            <span className={label}>Secondary colour</span>
+            <span className={labelClass}>
+              Secondary colour
+            </span>
+
             <div className="flex gap-2">
               <input
                 type="color"
                 value={settings.secondary_colour}
-                onChange={(e) => update("secondary_colour", e.target.value)}
-                className="h-10 w-12 rounded border border-slate-300"
+                onChange={(event) =>
+                  update(
+                    "secondary_colour",
+                    event.target.value,
+                  )
+                }
+                className="h-11 w-14 shrink-0 cursor-pointer rounded-lg border border-slate-300 bg-white p-1 dark:border-slate-700 dark:bg-slate-900"
+                aria-label="Choose secondary colour"
               />
+
               <input
-                className={input}
+                className={inputClass}
                 value={settings.secondary_colour}
-                onChange={(e) => update("secondary_colour", e.target.value)}
+                onChange={(event) =>
+                  update(
+                    "secondary_colour",
+                    event.target.value,
+                  )
+                }
+                maxLength={7}
+                spellCheck={false}
               />
             </div>
           </label>
         </div>
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">Company details</h2>
+      <section className={sectionClass}>
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+            Business information
+          </p>
 
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <h2 className="mt-1 text-xl font-bold text-slate-900 dark:text-slate-100">
+            Company details
+          </h2>
+
+          <p className="mt-2 text-sm font-medium leading-6 text-slate-600 dark:text-slate-400">
+            Enter the details that should appear on invoices,
+            quotes, reports and customer emails.
+          </p>
+        </div>
+
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <label className="sm:col-span-2">
-            <span className={label}>Company name</span>
+            <span className={labelClass}>
+              Company name
+            </span>
+
             <input
               required
-              className={input}
+              className={inputClass}
               value={settings.company_name}
-              onChange={(e) => update("company_name", e.target.value)}
+              onChange={(event) =>
+                update(
+                  "company_name",
+                  event.target.value,
+                )
+              }
+              autoComplete="organization"
             />
           </label>
 
           <label className="sm:col-span-2">
-            <span className={label}>Contact line</span>
+            <span className={labelClass}>
+              Contact line
+            </span>
+
             <input
-              className={input}
+              className={inputClass}
               value={settings.contact_line}
-              onChange={(e) => update("contact_line", e.target.value)}
+              onChange={(event) =>
+                update(
+                  "contact_line",
+                  event.target.value,
+                )
+              }
+              placeholder="For example: Agricultural engineering and field service"
             />
           </label>
 
-          {[
-            ["address_line_1", "Address line 1"],
-            ["address_line_2", "Address line 2"],
-            ["town_city", "Town / city"],
-            ["county", "County"],
-            ["postcode", "Postcode"],
-            ["phone", "Phone"],
-            ["email", "Email"],
-            ["website", "Website"],
-            ["vat_number", "VAT number"],
-            ["company_registration", "Company registration"],
-          ].map(([key, title]) => (
-            <label key={key}>
-              <span className={label}>{title}</span>
-              <input
-                className={input}
-                value={(settings[key as keyof CompanySettings] as string | null) ?? ""}
-                onChange={(e) =>
-                  update(key as keyof CompanySettings, e.target.value as never)
-                }
-              />
-            </label>
-          ))}
+          {companyFields.map(
+            ({
+              key,
+              label,
+              type = "text",
+              autoComplete,
+            }) => (
+              <label key={key}>
+                <span className={labelClass}>
+                  {label}
+                </span>
+
+                <input
+                  type={type}
+                  className={inputClass}
+                  value={
+                    (settings[key] as string | null) ??
+                    ""
+                  }
+                  onChange={(event) =>
+                    updateNullableText(
+                      key,
+                      event.target.value,
+                    )
+                  }
+                  autoComplete={autoComplete}
+                />
+              </label>
+            ),
+          )}
         </div>
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">
-          Invoice and payment details
-        </h2>
+      <section className={sectionClass}>
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+            Finance
+          </p>
 
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <h2 className="mt-1 text-xl font-bold text-slate-900 dark:text-slate-100">
+            Invoice and payment details
+          </h2>
+
+          <p className="mt-2 text-sm font-medium leading-6 text-slate-600 dark:text-slate-400">
+            Configure payment terms, bank details and the
+            footer shown on customer invoices.
+          </p>
+        </div>
+
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <label>
-            <span className={label}>Payment terms (days)</span>
+            <span className={labelClass}>
+              Payment terms (days)
+            </span>
+
             <input
               type="number"
               min={0}
-              className={input}
+              max={365}
+              className={inputClass}
               value={settings.payment_terms_days}
-              onChange={(e) =>
-                update("payment_terms_days", Number(e.target.value))
+              onChange={(event) =>
+                update(
+                  "payment_terms_days",
+                  Number(event.target.value),
+                )
               }
+              inputMode="numeric"
             />
           </label>
 
-          {[
-            ["bank_name", "Bank name"],
-            ["account_name", "Account name"],
-            ["sort_code", "Sort code"],
-            ["account_number", "Account number"],
-          ].map(([key, title]) => (
-            <label key={key}>
-              <span className={label}>{title}</span>
-              <input
-                className={input}
-                value={(settings[key as keyof CompanySettings] as string | null) ?? ""}
-                onChange={(e) =>
-                  update(key as keyof CompanySettings, e.target.value as never)
-                }
-              />
-            </label>
-          ))}
+          {paymentFields.map(
+            ({ key, label, autoComplete }) => (
+              <label key={key}>
+                <span className={labelClass}>
+                  {label}
+                </span>
+
+                <input
+                  className={inputClass}
+                  value={
+                    (settings[key] as string | null) ??
+                    ""
+                  }
+                  onChange={(event) =>
+                    updateNullableText(
+                      key,
+                      event.target.value,
+                    )
+                  }
+                  autoComplete={autoComplete}
+                />
+              </label>
+            ),
+          )}
 
           <label className="sm:col-span-2">
-            <span className={label}>Invoice footer</span>
+            <span className={labelClass}>
+              Invoice footer
+            </span>
+
             <textarea
-              rows={3}
-              className={input}
+              rows={4}
+              className={`${inputClass} resize-y`}
               value={settings.invoice_footer ?? ""}
-              onChange={(e) => update("invoice_footer", e.target.value)}
+              onChange={(event) =>
+                updateNullableText(
+                  "invoice_footer",
+                  event.target.value,
+                )
+              }
               placeholder="Thank you for your business."
             />
           </label>
         </div>
       </section>
 
-      <div className="flex items-center gap-4">
+      <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur sm:flex sm:items-center sm:justify-between lg:bottom-4 dark:border-slate-800 dark:bg-slate-950/95">
+        <p className="mb-3 text-sm font-medium text-slate-600 sm:mb-0 dark:text-slate-400">
+          Save your changes before leaving this page.
+        </p>
+
         <button
           type="submit"
-          disabled={saving}
-          className="rounded-lg bg-emerald-800 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+          disabled={saving || uploadingLogo || removingLogo}
+          className="min-h-11 w-full rounded-lg bg-emerald-800 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
         >
-          {saving ? "Saving…" : "Save company settings"}
+          {saving
+            ? "Saving…"
+            : "Save company settings"}
         </button>
-
-        {message && <p className="text-sm text-slate-600">{message}</p>}
       </div>
     </form>
   );

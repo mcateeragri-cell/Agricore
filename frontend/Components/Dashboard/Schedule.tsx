@@ -1,45 +1,85 @@
+import Link from "next/link";
+
+type ScheduleItem = {
+  time: string;
+  title: string;
+  location: string;
+  colour: string;
+};
+
+const schedule: ScheduleItem[] = [
+  {
+    time: "08:30",
+    title: "New Holland T7.200 diagnostics",
+    location: "R. Davidson & Sons",
+    colour: "border-blue-500",
+  },
+  {
+    time: "12:00",
+    title: "Collect hydraulic parts",
+    location: "Banbridge supplier",
+    colour: "border-amber-500",
+  },
+  {
+    time: "14:30",
+    title: "JCB telehandler service",
+    location: "Hillview Farm",
+    colour: "border-emerald-500",
+  },
+];
+
 export default function Schedule() {
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex items-center justify-between">
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
+      <header className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-800">
         <div>
-          <h2 className="font-bold">Today&apos;s schedule</h2>
-          <p className="text-xs text-slate-500">Tuesday, 21 July</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+            Planner
+          </p>
+
+          <h2 className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">
+            Today&apos;s schedule
+          </h2>
+
+          <p className="mt-1 text-sm font-medium text-slate-600 dark:text-slate-400">
+            Tuesday, 21 July
+          </p>
         </div>
 
-        <button
-          type="button"
-          className="text-sm font-semibold text-[#176b4d]"
+        <Link
+          href="/calendar"
+          className="rounded-lg px-3 py-2 text-sm font-bold text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
         >
           Calendar
-        </button>
+        </Link>
+      </header>
+
+      <div className="divide-y divide-slate-200 dark:divide-slate-800">
+        {schedule.map((item) => (
+          <article
+            key={`${item.time}-${item.title}`}
+            className="flex gap-4 p-5 transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/60"
+          >
+            <div className="w-16 shrink-0">
+              <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                {item.time}
+              </p>
+            </div>
+
+            <div
+              className={`flex-1 border-l-4 ${item.colour} pl-4`}
+            >
+              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                {item.title}
+              </h3>
+
+              <p className="mt-1 text-sm font-medium text-slate-600 dark:text-slate-400">
+                {item.location}
+              </p>
+            </div>
+          </article>
+        ))}
       </div>
-
-      <div className="mt-5 space-y-4">
-        <div className="border-l-4 border-blue-500 pl-4">
-          <p className="text-xs font-semibold text-slate-500">08:30</p>
-          <p className="mt-1 text-sm font-bold">
-            New Holland T7.200 diagnostics
-          </p>
-          <p className="text-xs text-slate-500">R. Davidson & Sons</p>
-        </div>
-
-        <div className="border-l-4 border-amber-500 pl-4">
-          <p className="text-xs font-semibold text-slate-500">12:00</p>
-          <p className="mt-1 text-sm font-bold">
-            Collect hydraulic parts
-          </p>
-          <p className="text-xs text-slate-500">Banbridge supplier</p>
-        </div>
-
-        <div className="border-l-4 border-emerald-500 pl-4">
-          <p className="text-xs font-semibold text-slate-500">14:30</p>
-          <p className="mt-1 text-sm font-bold">
-            JCB telehandler service
-          </p>
-          <p className="text-xs text-slate-500">Hillview Farm</p>
-        </div>
-      </div>
-    </article>
+    </section>
   );
 }

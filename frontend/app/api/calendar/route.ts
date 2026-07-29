@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import {
+  createClient,
+  type SupabaseClient,
+} from "@supabase/supabase-js";
 
 import type {
   CalendarCustomer,
@@ -17,7 +20,7 @@ type DatabaseRow = Record<string, unknown>;
 
 // Deliberately kept untyped here because Supabase 2.110 generates
 // incompatible generic signatures when no generated Database type exists.
-type AdminSupabaseClient = any;
+type AdminSupabaseClient = SupabaseClient;
 
 const TECHNICIAN_COLOURS = [
   "#166534",

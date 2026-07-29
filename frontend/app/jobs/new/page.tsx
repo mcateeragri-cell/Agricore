@@ -195,29 +195,29 @@ export default function NewJobPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
             New Job
           </h1>
 
-          <p className="mt-1 text-gray-500">
-            Create a new workshop or field-service job card.
+          <p className="mt-1 text-slate-600 dark:text-slate-400">
+            Create a workshop or field-service job with customer, machine and engineer details.
           </p>
         </div>
 
         <Link
           href="/jobs"
-          className="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+          className="inline-flex items-center justify-center rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-900/60"
         >
           Back to Jobs
         </Link>
       </div>
 
-      <Card>
+      <Card className="rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
         {loadingData ? (
-          <div className="py-12 text-center text-gray-500">
+          <div className="py-12 text-center text-slate-600 dark:text-slate-400">
             Loading customers and machines...
           </div>
         ) : (
@@ -234,7 +234,7 @@ export default function NewJobPage() {
               <div>
                 <label
                   htmlFor="customer"
-                  className="mb-2 block text-sm font-semibold text-gray-700"
+                  className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300"
                 >
                   Customer
                 </label>
@@ -245,7 +245,7 @@ export default function NewJobPage() {
                   onChange={(event) =>
                     handleCustomerChange(event.target.value)
                   }
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-900 outline-none transition focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
                   required
                 >
                   <option value="">Select customer</option>
@@ -272,7 +272,7 @@ export default function NewJobPage() {
               <div>
                 <label
                   htmlFor="machine"
-                  className="mb-2 block text-sm font-semibold text-gray-700"
+                  className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300"
                 >
                   Machine
                 </label>
@@ -284,7 +284,7 @@ export default function NewJobPage() {
                     handleMachineChange(event.target.value)
                   }
                   disabled={!customerId}
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-900 outline-none transition disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500 focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-slate-600 dark:text-slate-400 focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
                   required
                 >
                   <option value="">
@@ -322,7 +322,7 @@ export default function NewJobPage() {
               <div>
                 <label
                   htmlFor="engineer"
-                  className="mb-2 block text-sm font-semibold text-gray-700"
+                  className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300"
                 >
                   Engineer
                 </label>
@@ -333,7 +333,7 @@ export default function NewJobPage() {
                   onChange={(event) =>
                     setEngineerName(event.target.value)
                   }
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-900 outline-none transition focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
                 >
                   <option value="James McAteer">
                     James McAteer
@@ -346,7 +346,7 @@ export default function NewJobPage() {
               <div>
                 <label
                   htmlFor="machineHours"
-                  className="mb-2 block text-sm font-semibold text-gray-700"
+                  className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300"
                 >
                   Machine Hours
                 </label>
@@ -361,13 +361,13 @@ export default function NewJobPage() {
                     setMachineHours(event.target.value)
                   }
                   placeholder="e.g. 8498"
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition placeholder:text-gray-400 focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
                 />
               </div>
             </div>
 
             <div>
-              <p className="mb-3 block text-sm font-semibold text-gray-700">
+              <p className="mb-3 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                 Priority
               </p>
 
@@ -394,7 +394,7 @@ export default function NewJobPage() {
                     className={`cursor-pointer rounded-xl border p-4 transition ${
                       priority === option.value
                         ? "border-[#103d2e] bg-[#103d2e]/5 ring-1 ring-[#103d2e]"
-                        : "border-gray-200 hover:border-gray-300"
+                        : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:border-slate-700"
                     }`}
                   >
                     <div className="flex items-start gap-3">
@@ -410,11 +410,11 @@ export default function NewJobPage() {
                       />
 
                       <div>
-                        <p className="font-semibold text-gray-900">
+                        <p className="font-semibold text-slate-900 dark:text-slate-100">
                           {option.label}
                         </p>
 
-                        <p className="mt-1 text-xs text-gray-500">
+                        <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
                           {option.description}
                         </p>
                       </div>
@@ -427,7 +427,7 @@ export default function NewJobPage() {
             <div>
               <label
                 htmlFor="faultReported"
-                className="mb-2 block text-sm font-semibold text-gray-700"
+                className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300"
               >
                 Fault Reported / Work Requested
               </label>
@@ -438,9 +438,9 @@ export default function NewJobPage() {
                 onChange={(event) =>
                   setFaultReported(event.target.value)
                 }
-                rows={6}
+                rows={8}
                 placeholder="Describe the customer's reported fault or the work requested..."
-                className="w-full resize-y rounded-xl border border-gray-300 px-4 py-3 text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
+                className="w-full resize-y rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition placeholder:text-gray-400 focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
                 required
               />
             </div>
@@ -448,7 +448,7 @@ export default function NewJobPage() {
             <div className="flex flex-col-reverse gap-3 border-t pt-6 sm:flex-row sm:justify-end">
               <Link
                 href="/jobs"
-                className="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+                className="inline-flex items-center justify-center rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-5 py-3 text-sm font-semibold text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-900/60"
               >
                 Cancel
               </Link>

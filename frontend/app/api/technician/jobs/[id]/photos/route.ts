@@ -1,12 +1,15 @@
 import { randomUUID } from "crypto";
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import {
+  createClient,
+  type SupabaseClient,
+} from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-type AdminSupabaseClient = any;
+type AdminSupabaseClient = SupabaseClient;
 type RouteContext = {
   params: Promise<{
     id: string;

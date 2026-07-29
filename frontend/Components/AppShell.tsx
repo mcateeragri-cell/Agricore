@@ -45,19 +45,31 @@ export default function AppShell({
   }
 
   return (
-    <div className="min-h-dvh bg-slate-100 lg:flex">
+    <div
+      className="min-h-dvh w-full min-w-0 overflow-x-clip lg:flex"
+      style={{
+        backgroundColor: "var(--background)",
+        color: "var(--text-primary)",
+      }}
+    >
       <DesktopSidebar
         pathname={pathname}
         userState={userState}
         loading={loading}
       />
 
-      <div className="min-w-0 flex-1">
+      <div className="w-full min-w-0 flex-1">
         <MobileTopBar
           onOpenMenu={() => setMobileMenuOpen(true)}
         />
 
-        <main className="min-w-0 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">
+        <main
+          className="w-full min-w-0 overflow-x-clip pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0"
+          style={{
+            backgroundColor: "var(--background)",
+            color: "var(--text-primary)",
+          }}
+        >
           {children}
         </main>
       </div>
