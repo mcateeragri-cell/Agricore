@@ -19,9 +19,7 @@ const publicRoutes = [
   "/reset-password",
 ];
 
-export default function AppShell({
-  children,
-}: AppShellProps) {
+export default function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -35,8 +33,7 @@ export default function AppShell({
 
   const isPublicRoute = publicRoutes.some(
     (route) =>
-      pathname === route ||
-      pathname.startsWith(`${route}/`),
+      pathname === route || pathname.startsWith(`${route}/`),
   );
 
   const closeMobileMenu = useCallback(() => {
@@ -47,18 +44,10 @@ export default function AppShell({
     closeMobileMenu();
   }, [pathname, closeMobileMenu]);
 
-  if (isPublicRoute) {
-    return <>{children}</>;
-  }
+  if (isPublicRoute) return <>{children}</>;
 
   return (
-    <div
-      className="min-h-dvh w-full min-w-0 overflow-x-clip lg:flex"
-      style={{
-        backgroundColor: "var(--background)",
-        color: "var(--text-primary)",
-      }}
-    >
+    <div className="min-h-dvh w-full min-w-0 overflow-x-clip lg:flex">
       <DesktopSidebar
         pathname={pathname}
         userState={userState}
@@ -69,17 +58,9 @@ export default function AppShell({
       />
 
       <div className="w-full min-w-0 flex-1">
-        <MobileTopBar
-          onOpenMenu={() => setMobileMenuOpen(true)}
-        />
+        <MobileTopBar onOpenMenu={() => setMobileMenuOpen(true)} />
 
-        <main
-          className="w-full min-w-0 overflow-x-clip pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0"
-          style={{
-            backgroundColor: "var(--background)",
-            color: "var(--text-primary)",
-          }}
-        >
+        <main className="w-full min-w-0 overflow-x-clip pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0">
           {children}
         </main>
       </div>

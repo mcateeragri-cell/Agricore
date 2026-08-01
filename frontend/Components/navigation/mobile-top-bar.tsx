@@ -12,12 +12,12 @@ export default function MobileTopBar({
   onOpenMenu,
 }: MobileTopBarProps) {
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur lg:hidden">
+    <header className="agricore-glass sticky top-0 z-30 border-x-0 border-t-0 lg:hidden">
       <div className="flex min-h-16 items-center gap-3 px-3 pt-[env(safe-area-inset-top)]">
         <button
           type="button"
           onClick={onOpenMenu}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-700 transition active:bg-slate-100"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--border-soft)] bg-[var(--surface-muted)] text-[var(--text-primary)] transition active:scale-95 active:bg-[var(--surface-strong)]"
           aria-label="Open navigation menu"
         >
           <SidebarIcon name="menu" className="h-6 w-6" />

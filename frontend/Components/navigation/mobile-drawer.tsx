@@ -34,18 +34,14 @@ export default function MobileDrawer({
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    if (!open) {
-      return;
-    }
+    if (!open) return;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     closeButtonRef.current?.focus();
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onClose();
-      }
+      if (event.key === "Escape") onClose();
     }
 
     window.addEventListener("keydown", handleKeyDown);
@@ -66,7 +62,7 @@ export default function MobileDrawer({
       <button
         type="button"
         onClick={onClose}
-        className={`absolute inset-0 bg-slate-950/55 transition-opacity ${
+        className={`absolute inset-0 bg-slate-950/65 backdrop-blur-sm transition-opacity ${
           open ? "opacity-100" : "opacity-0"
         }`}
         aria-label="Close navigation menu"
@@ -77,7 +73,7 @@ export default function MobileDrawer({
         role="dialog"
         aria-modal="true"
         aria-label="Navigation"
-        className={`absolute inset-y-0 left-0 flex w-[min(88vw,22rem)] flex-col bg-[#103d2e] text-white shadow-2xl transition-transform duration-200 ease-out ${
+        className={`agricore-sidebar absolute inset-y-0 left-0 flex w-[min(88vw,22rem)] flex-col text-white shadow-2xl transition-transform duration-200 ease-out ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -91,7 +87,7 @@ export default function MobileDrawer({
               ref={closeButtonRef}
               type="button"
               onClick={onClose}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white transition active:bg-white/10"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white transition active:bg-white/15"
               aria-label="Close navigation menu"
             >
               <SidebarIcon name="close" className="h-6 w-6" />
@@ -115,7 +111,7 @@ export default function MobileDrawer({
         />
 
         <div className="border-t border-white/10 p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
-          <div className="rounded-2xl bg-white/10 p-4">
+          <div className="rounded-2xl border border-white/10 bg-white/8 p-4 backdrop-blur-xl">
             <UserCard
               userState={userState}
               loading={loading}

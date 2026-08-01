@@ -12,7 +12,7 @@ export default function Card({
   return (
     <div
       className={[
-        "rounded-2xl border border-slate-200 bg-white shadow-sm",
+        "ui-card rounded-2xl",
         className,
       ]
         .filter(Boolean)

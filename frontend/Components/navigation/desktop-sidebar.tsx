@@ -25,7 +25,7 @@ export default function DesktopSidebar({
   onSwitchCompany,
 }: DesktopSidebarProps) {
   return (
-    <aside className="hidden h-dvh w-64 shrink-0 flex-col bg-[#103d2e] text-white lg:sticky lg:top-0 lg:flex">
+    <aside className="agricore-sidebar hidden h-dvh w-64 shrink-0 flex-col text-white lg:sticky lg:top-0 lg:flex">
       <div className="border-b border-white/10 px-4 py-4">
         <CompanyBrand compact dark />
 
@@ -45,7 +45,7 @@ export default function DesktopSidebar({
       />
 
       <div className="border-t border-white/10 p-4">
-        <div className="rounded-2xl bg-white/10 p-4">
+        <div className="rounded-2xl border border-white/10 bg-white/8 p-4 shadow-lg backdrop-blur-xl">
           <UserCard
             userState={userState}
             loading={loading}

@@ -10,11 +10,11 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    "bg-[#176b4d] text-white hover:bg-[#12583f] focus:ring-[#176b4d]/30",
+    "border border-transparent bg-[var(--brand)] text-white shadow-lg shadow-emerald-950/10 hover:bg-[var(--brand-hover)] focus:ring-[var(--brand)]/30",
   secondary:
-    "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 focus:ring-slate-300/40",
+    "border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-secondary)] shadow-sm hover:bg-[var(--surface-strong)] hover:text-[var(--text-primary)] focus:ring-[var(--focus-ring)]/20",
   danger:
-    "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500/30",
+    "border border-transparent bg-red-600 text-white shadow-lg shadow-red-950/10 hover:bg-red-700 focus:ring-red-500/30",
 };
 
 export default function Button({
@@ -29,8 +29,8 @@ export default function Button({
     <button
       type={type}
       className={[
-        "inline-flex items-center justify-center rounded-lg px-5 py-2.5",
-        "text-sm font-semibold transition",
+        "inline-flex min-h-11 items-center justify-center rounded-xl px-5 py-2.5",
+        "text-sm font-semibold transition duration-200 active:scale-[0.98]",
         "focus:outline-none focus:ring-4",
         "disabled:cursor-not-allowed disabled:opacity-50",
         variantStyles[variant],

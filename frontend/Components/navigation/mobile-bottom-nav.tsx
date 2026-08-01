@@ -17,7 +17,7 @@ export default function MobileBottomNav({
 }: MobileBottomNavProps) {
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+      className="agricore-glass fixed inset-x-2 bottom-2 z-40 overflow-hidden rounded-2xl border pb-[env(safe-area-inset-bottom)] shadow-2xl lg:hidden"
       aria-label="Primary navigation"
     >
       <div className="grid h-16 grid-cols-5">
@@ -28,20 +28,18 @@ export default function MobileBottomNav({
             <Link
               key={item.name}
               href={item.href}
-              className={`flex min-w-0 flex-col items-center justify-center gap-1 px-1 text-[11px] font-semibold transition ${
+              className={`relative flex min-w-0 flex-col items-center justify-center gap-1 px-1 text-[11px] font-semibold transition ${
                 active
-                  ? "text-[#103d2e]"
-                  : "text-slate-500 active:bg-slate-100"
+                  ? "text-[var(--brand)]"
+                  : "text-[var(--text-muted)] active:bg-[var(--surface-strong)]"
               }`}
               aria-current={active ? "page" : undefined}
             >
-              <SidebarIcon
-                name={item.icon}
-                className="h-5 w-5"
-              />
-              <span className="max-w-full truncate">
-                {item.name}
-              </span>
+              {active && (
+                <span className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-[var(--brand)]" />
+              )}
+              <SidebarIcon name={item.icon} className="h-5 w-5" />
+              <span className="max-w-full truncate">{item.name}</span>
             </Link>
           );
         })}
@@ -49,7 +47,7 @@ export default function MobileBottomNav({
         <button
           type="button"
           onClick={onOpenMore}
-          className="flex min-w-0 flex-col items-center justify-center gap-1 px-1 text-[11px] font-semibold text-slate-500 transition active:bg-slate-100"
+          className="flex min-w-0 flex-col items-center justify-center gap-1 px-1 text-[11px] font-semibold text-[var(--text-muted)] transition active:bg-[var(--surface-strong)]"
         >
           <SidebarIcon name="more" className="h-5 w-5" />
           <span>More</span>

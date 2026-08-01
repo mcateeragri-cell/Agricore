@@ -69,8 +69,8 @@ export default function NavigationMenu({
             onClick={() => setAdministrationOpen((current) => !current)}
             className={`flex min-h-12 w-full items-center justify-between rounded-xl px-4 py-3 text-left text-sm font-semibold transition ${
               pathname.startsWith("/administration")
-                ? "bg-white/15 text-white"
-                : "text-emerald-50 hover:bg-white/10 hover:text-white"
+                ? "agricore-nav-item-active"
+                : "agricore-nav-item"
             }`}
             aria-expanded={administrationOpen}
           >
@@ -128,8 +128,8 @@ function NavigationLink({
         isChild ? "px-3" : "px-4"
       } ${
         isActive
-          ? "bg-white text-[#103d2e] shadow-sm"
-          : "text-emerald-50 hover:bg-white/10 hover:text-white"
+          ? "agricore-nav-item-active"
+          : "agricore-nav-item"
       }`}
     >
       <SidebarIcon
