@@ -11,6 +11,7 @@ import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Button from "../../../Components/ui/Button";
 import Card from "../../../Components/ui/Card";
+import { useNavigationUser } from "../../../Components/navigation/use-navigation-user";
 
 type Customer = {
   id: string;
@@ -38,6 +39,18 @@ type Machine = {
   notes: string;
 };
 
+const emptyCustomerForm = {
+  contactName: "",
+  businessName: "",
+  customerType: "Farm",
+  phone: "",
+  email: "",
+  address: "",
+  postcode: "",
+  vatNumber: "",
+  notes: "",
+};
+
 const emptyMachineForm = {
   make: "",
   model: "",
@@ -53,10 +66,24 @@ export default function CustomerProfilePage() {
   const params = useParams<{ id: string }>();
   const customerId = params.id;
 
+  const { userState, loading: isLoadingUser } =
+    useNavigationUser();
+
+  const canEditCustomer =
+    userState.permissions.includes("customers.edit");
+
   const [customer, setCustomer] =
     useState<Customer | null>(null);
 
   const [machines, setMachines] = useState<Machine[]>([]);
+
+  const [showCustomerForm, setShowCustomerForm] =
+    useState(false);
+  const [customerForm, setCustomerForm] =
+    useState(emptyCustomerForm);
+  const [isSavingCustomer, setIsSavingCustomer] =
+    useState(false);
+  const [customerError, setCustomerError] = useState("");
 
   const [showMachineForm, setShowMachineForm] =
     useState(false);
@@ -164,6 +191,108 @@ export default function CustomerProfilePage() {
   useEffect(() => {
     void loadPageData();
   }, [loadPageData]);
+
+  function openCustomerForm() {
+    if (!customer || !canEditCustomer) {
+      return;
+    }
+
+    setCustomerError("");
+    setCustomerForm({
+      contactName: customer.name,
+      businessName: customer.businessName,
+      customerType: customer.customerType,
+      phone: customer.phone,
+      email: customer.email,
+      address: customer.address,
+      postcode: customer.postcode,
+      vatNumber: customer.vatNumber,
+      notes: customer.notes,
+    });
+    setShowCustomerForm(true);
+  }
+
+  function closeCustomerForm() {
+    if (isSavingCustomer) {
+      return;
+    }
+
+    setShowCustomerForm(false);
+    setCustomerError("");
+  }
+
+  function updateCustomerForm(
+    field: keyof typeof emptyCustomerForm,
+    value: string,
+  ) {
+    setCustomerForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  }
+
+  async function handleCustomerSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+
+    if (!canEditCustomer) {
+      setCustomerError(
+        "Your account is not authorised to edit this customer.",
+      );
+      return;
+    }
+
+    if (
+      !customerForm.contactName.trim() &&
+      !customerForm.businessName.trim()
+    ) {
+      setCustomerError(
+        "Enter either a contact name or a business name.",
+      );
+      return;
+    }
+
+    setIsSavingCustomer(true);
+    setCustomerError("");
+
+    try {
+      const response = await fetch(
+        `/api/customers/${customerId}`,
+        {
+          method: "PATCH",
+          credentials: "same-origin",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(customerForm),
+        },
+      );
+
+      const result = (await response.json()) as {
+        customer?: Customer;
+        error?: string;
+      };
+
+      if (!response.ok || !result.customer) {
+        throw new Error(
+          result.error || "Unable to update customer.",
+        );
+      }
+
+      setCustomer(result.customer);
+      setShowCustomerForm(false);
+    } catch (error) {
+      console.error("Unable to update customer:", error);
+      setCustomerError(
+        error instanceof Error
+          ? error.message
+          : "Unable to update customer.",
+      );
+    } finally {
+      setIsSavingCustomer(false);
+    }
+  }
 
   function updateMachineForm(
     field: keyof typeof emptyMachineForm,
@@ -319,9 +448,20 @@ export default function CustomerProfilePage() {
           </p>
         </div>
 
-        <span className="w-fit rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-700">
-          {customer.customerType}
-        </span>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="w-fit rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-700">
+            {customer.customerType}
+          </span>
+
+          {!isLoadingUser && canEditCustomer && (
+            <Button
+              variant="secondary"
+              onClick={openCustomerForm}
+            >
+              Edit customer
+            </Button>
+          )}
+        </div>
       </div>
 
       <section className="grid gap-6 xl:grid-cols-3">
@@ -607,6 +747,211 @@ export default function CustomerProfilePage() {
           </p>
         </Card>
       </section>
+
+
+      {showCustomerForm && customer && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/60 p-4 md:items-center"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeCustomerForm();
+            }
+          }}
+        >
+          <Card className="my-4 w-full max-w-3xl overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+              <div>
+                <h2 className="text-xl font-bold">
+                  Edit customer
+                </h2>
+
+                <p className="text-sm text-slate-500">
+                  Update the customer&apos;s contact and account details.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeCustomerForm}
+                disabled={isSavingCustomer}
+                className="rounded-lg px-3 py-2 text-xl text-slate-500 hover:bg-slate-100 disabled:opacity-50"
+                aria-label="Close customer form"
+              >
+                ×
+              </button>
+            </div>
+
+            <form
+              onSubmit={handleCustomerSubmit}
+              className="p-6"
+            >
+              {customerError && (
+                <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {customerError}
+                </div>
+              )}
+
+              <div className="grid gap-5 md:grid-cols-2">
+                <label className="text-sm font-semibold">
+                  Contact name
+                  <input
+                    value={customerForm.contactName}
+                    onChange={(event) =>
+                      updateCustomerForm(
+                        "contactName",
+                        event.target.value,
+                      )
+                    }
+                    className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2.5 font-normal outline-none focus:border-[#176b4d] focus:ring-2 focus:ring-[#176b4d]/10"
+                    placeholder="e.g. Robert Davidson"
+                  />
+                </label>
+
+                <label className="text-sm font-semibold">
+                  Farm or business name
+                  <input
+                    value={customerForm.businessName}
+                    onChange={(event) =>
+                      updateCustomerForm(
+                        "businessName",
+                        event.target.value,
+                      )
+                    }
+                    className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2.5 font-normal outline-none focus:border-[#176b4d] focus:ring-2 focus:ring-[#176b4d]/10"
+                    placeholder="e.g. R. Davidson & Sons"
+                  />
+                </label>
+
+                <label className="text-sm font-semibold">
+                  Customer type
+                  <select
+                    value={customerForm.customerType}
+                    onChange={(event) =>
+                      updateCustomerForm(
+                        "customerType",
+                        event.target.value,
+                      )
+                    }
+                    className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2.5 font-normal outline-none focus:border-[#176b4d] focus:ring-2 focus:ring-[#176b4d]/10"
+                  >
+                    <option>Farm</option>
+                    <option>Contractor</option>
+                    <option>Commercial</option>
+                    <option>Dealership</option>
+                    <option>Private customer</option>
+                  </select>
+                </label>
+
+                <label className="text-sm font-semibold">
+                  Phone number
+                  <input
+                    type="tel"
+                    value={customerForm.phone}
+                    onChange={(event) =>
+                      updateCustomerForm(
+                        "phone",
+                        event.target.value,
+                      )
+                    }
+                    className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2.5 font-normal outline-none focus:border-[#176b4d] focus:ring-2 focus:ring-[#176b4d]/10"
+                  />
+                </label>
+
+                <label className="text-sm font-semibold">
+                  Email address
+                  <input
+                    type="email"
+                    value={customerForm.email}
+                    onChange={(event) =>
+                      updateCustomerForm(
+                        "email",
+                        event.target.value,
+                      )
+                    }
+                    className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2.5 font-normal outline-none focus:border-[#176b4d] focus:ring-2 focus:ring-[#176b4d]/10"
+                  />
+                </label>
+
+                <label className="text-sm font-semibold">
+                  Postcode
+                  <input
+                    value={customerForm.postcode}
+                    onChange={(event) =>
+                      updateCustomerForm(
+                        "postcode",
+                        event.target.value.toUpperCase(),
+                      )
+                    }
+                    className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2.5 font-normal uppercase outline-none focus:border-[#176b4d] focus:ring-2 focus:ring-[#176b4d]/10"
+                  />
+                </label>
+
+                <label className="text-sm font-semibold md:col-span-2">
+                  Address
+                  <input
+                    value={customerForm.address}
+                    onChange={(event) =>
+                      updateCustomerForm(
+                        "address",
+                        event.target.value,
+                      )
+                    }
+                    className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2.5 font-normal outline-none focus:border-[#176b4d] focus:ring-2 focus:ring-[#176b4d]/10"
+                  />
+                </label>
+
+                <label className="text-sm font-semibold">
+                  VAT number
+                  <input
+                    value={customerForm.vatNumber}
+                    onChange={(event) =>
+                      updateCustomerForm(
+                        "vatNumber",
+                        event.target.value,
+                      )
+                    }
+                    className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2.5 font-normal uppercase outline-none focus:border-[#176b4d] focus:ring-2 focus:ring-[#176b4d]/10"
+                  />
+                </label>
+
+                <label className="text-sm font-semibold md:col-span-2">
+                  Customer notes
+                  <textarea
+                    rows={4}
+                    value={customerForm.notes}
+                    onChange={(event) =>
+                      updateCustomerForm(
+                        "notes",
+                        event.target.value,
+                      )
+                    }
+                    className="mt-2 w-full resize-none rounded-lg border border-slate-300 px-4 py-2.5 font-normal outline-none focus:border-[#176b4d] focus:ring-2 focus:ring-[#176b4d]/10"
+                  />
+                </label>
+              </div>
+
+              <div className="mt-6 flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end">
+                <Button
+                  variant="secondary"
+                  onClick={closeCustomerForm}
+                  disabled={isSavingCustomer}
+                >
+                  Cancel
+                </Button>
+
+                <Button
+                  type="submit"
+                  disabled={isSavingCustomer}
+                >
+                  {isSavingCustomer
+                    ? "Saving changes..."
+                    : "Save changes"}
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
 
       {showMachineForm && (
         <div

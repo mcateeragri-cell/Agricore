@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 
 import CompanyBrand from "@/Components/branding/company-brand";
 
+import CompanySwitcher from "./company-switcher";
 import NavigationMenu from "./navigation-menu";
 import SidebarIcon from "./sidebar-icon";
 import UserCard from "./user-card";
@@ -14,6 +15,9 @@ type MobileDrawerProps = {
   pathname: string;
   userState: UserNavigationState;
   loading: boolean;
+  switchingCompany: boolean;
+  companyError: string;
+  onSwitchCompany: (companyId: string) => Promise<void>;
   onClose: () => void;
 };
 
@@ -22,6 +26,9 @@ export default function MobileDrawer({
   pathname,
   userState,
   loading,
+  switchingCompany,
+  companyError,
+  onSwitchCompany,
   onClose,
 }: MobileDrawerProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -74,20 +81,30 @@ export default function MobileDrawer({
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex items-center gap-3 border-b border-white/10 px-4 pb-4 pt-[calc(env(safe-area-inset-top)+1rem)]">
-          <div className="min-w-0 flex-1">
-            <CompanyBrand compact dark />
+        <div className="border-b border-white/10 px-4 pb-4 pt-[calc(env(safe-area-inset-top)+1rem)]">
+          <div className="flex items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <CompanyBrand compact dark />
+            </div>
+
+            <button
+              ref={closeButtonRef}
+              type="button"
+              onClick={onClose}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white transition active:bg-white/10"
+              aria-label="Close navigation menu"
+            >
+              <SidebarIcon name="close" className="h-6 w-6" />
+            </button>
           </div>
 
-          <button
-            ref={closeButtonRef}
-            type="button"
-            onClick={onClose}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white transition active:bg-white/10"
-            aria-label="Close navigation menu"
-          >
-            <SidebarIcon name="close" className="h-6 w-6" />
-          </button>
+          <CompanySwitcher
+            userState={userState}
+            loading={loading}
+            switchingCompany={switchingCompany}
+            error={companyError}
+            onSwitchCompany={onSwitchCompany}
+          />
         </div>
 
         <NavigationMenu

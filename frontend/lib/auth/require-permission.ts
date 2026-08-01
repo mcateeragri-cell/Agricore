@@ -1,14 +1,36 @@
 import "server-only";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+
+const ACTIVE_COMPANY_COOKIE = "agricore_company_id";
+
+export type PlatformRole =
+  | "super_admin"
+  | "platform_admin"
+  | "support";
+
+export type CompanyRole =
+  | "company_admin"
+  | "administrator"
+  | "service_manager"
+  | "office"
+  | "parts_manager"
+  | "technician"
+  | "apprentice"
+  | "read_only";
 
 export type AuthenticatedUserContext = {
   userId: string;
   email: string;
   fullName: string;
-  role: string;
+  platformRole: PlatformRole | null;
+  companyId: string;
+  companyName: string;
+  companySlug: string;
+  role: CompanyRole | "";
   permissions: string[];
 };
 
@@ -16,6 +38,17 @@ type RequirePermissionOptions = {
   mode?: "any" | "all";
   loginPath?: string;
   unauthorisedPath?: string;
+};
+
+type CompanyMembershipRow = {
+  company_id: string;
+  joined_at: string | null;
+};
+
+type CompanyRow = {
+  id: string;
+  company_name: string;
+  slug: string;
 };
 
 function uniquePermissions(
@@ -28,6 +61,31 @@ function uniquePermissions(
         .filter(Boolean),
     ),
   );
+}
+
+function cleanText(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function asPlatformRole(value: unknown): PlatformRole | null {
+  return value === "super_admin" ||
+    value === "platform_admin" ||
+    value === "support"
+    ? value
+    : null;
+}
+
+function asCompanyRole(value: unknown): CompanyRole | "" {
+  return value === "company_admin" ||
+    value === "administrator" ||
+    value === "service_manager" ||
+    value === "office" ||
+    value === "parts_manager" ||
+    value === "technician" ||
+    value === "apprentice" ||
+    value === "read_only"
+    ? value
+    : "";
 }
 
 export async function getAuthenticatedUserContext(): Promise<
@@ -55,40 +113,158 @@ export async function getAuthenticatedUserContext(): Promise<
   }
 
   const [
+    { data: platformRoleRecord, error: platformRoleError },
+    { data: membershipRows, error: membershipsError },
+  ] = await Promise.all([
+    supabase
+      .from("platform_user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("company_members")
+      .select("company_id, joined_at")
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .order("joined_at", { ascending: true }),
+  ]);
+
+  if (platformRoleError) {
+    console.error(
+      "Unable to load authenticated platform role:",
+      platformRoleError,
+    );
+  }
+
+  if (membershipsError) {
+    console.error(
+      "Unable to load authenticated user company memberships:",
+      membershipsError,
+    );
+
+    return null;
+  }
+
+  const platformRole = asPlatformRole(
+    platformRoleRecord?.role,
+  );
+
+  const memberships =
+    (membershipRows as CompanyMembershipRow[] | null) ?? [];
+
+  if (memberships.length === 0) {
+    console.error(
+      `Authenticated user ${user.id} has no active AgriCore company membership.`,
+    );
+
+    return null;
+  }
+
+  const companyIds = memberships.map(
+    (membership) => membership.company_id,
+  );
+
+  const {
+    data: companyRows,
+    error: companiesError,
+  } = await supabase
+    .from("companies")
+    .select("id, company_name, slug")
+    .in("id", companyIds)
+    .eq("is_active", true);
+
+  if (companiesError) {
+    console.error(
+      "Unable to load authenticated user companies:",
+      companiesError,
+    );
+
+    return null;
+  }
+
+  const companies =
+    (companyRows as CompanyRow[] | null) ?? [];
+
+  if (companies.length === 0) {
+    console.error(
+      `Authenticated user ${user.id} has no active AgriCore company.`,
+    );
+
+    return null;
+  }
+
+  const companyById = new Map(
+    companies.map((company) => [company.id, company]),
+  );
+
+  const availableCompanyIds = new Set(
+    companies.map((company) => company.id),
+  );
+
+  const cookieStore = await cookies();
+  const requestedCompanyId = cleanText(
+    cookieStore.get(ACTIVE_COMPANY_COOKIE)?.value,
+  );
+
+  const companyId =
+    requestedCompanyId &&
+    availableCompanyIds.has(requestedCompanyId)
+      ? requestedCompanyId
+      : memberships.find((membership) =>
+          availableCompanyIds.has(membership.company_id),
+        )?.company_id;
+
+  if (!companyId) {
+    return null;
+  }
+
+  const company = companyById.get(companyId);
+
+  if (!company) {
+    return null;
+  }
+
+  const [
     { data: profile, error: profileError },
     { data: roleRecord, error: roleError },
   ] = await Promise.all([
     supabase
-      .from("app_user_profiles")
-      .select("full_name")
+      .from("company_member_profiles")
+      .select("full_name, is_active")
+      .eq("company_id", companyId)
       .eq("user_id", user.id)
       .maybeSingle(),
     supabase
-      .from("app_user_roles")
+      .from("company_member_roles")
       .select("role")
+      .eq("company_id", companyId)
       .eq("user_id", user.id)
       .maybeSingle(),
   ]);
 
   if (profileError) {
     console.error(
-      "Unable to load authenticated user profile:",
+      "Unable to load authenticated company member profile:",
       profileError,
     );
   }
 
   if (roleError) {
     console.error(
-      "Unable to load authenticated user role:",
+      "Unable to load authenticated company member role:",
       roleError,
     );
   }
 
-  const role =
-    typeof roleRecord?.role === "string"
-      ? roleRecord.role.trim()
-      : "";
+  if (profile?.is_active === false) {
+    console.error(
+      `Authenticated user ${user.id} is inactive for company ${companyId}.`,
+    );
 
+    return null;
+  }
+
+  const role = asCompanyRole(roleRecord?.role);
   let permissions: string[] = [];
 
   if (role) {
@@ -96,14 +272,15 @@ export async function getAuthenticatedUserContext(): Promise<
       data: permissionRows,
       error: permissionsError,
     } = await supabase
-      .from("app_role_permissions")
+      .from("company_role_permissions")
       .select("permission_key")
+      .eq("company_id", companyId)
       .eq("role", role)
       .eq("allowed", true);
 
     if (permissionsError) {
       console.error(
-        "Unable to load authenticated user permissions:",
+        "Unable to load authenticated company permissions:",
         permissionsError,
       );
     } else {
@@ -115,19 +292,22 @@ export async function getAuthenticatedUserContext(): Promise<
     }
   }
 
-  const metadataName =
-    typeof user.user_metadata?.full_name === "string"
-      ? user.user_metadata.full_name.trim()
-      : "";
+  const metadataName = cleanText(
+    user.user_metadata?.full_name,
+  );
 
   return {
     userId: user.id,
     email: user.email ?? "",
     fullName:
-      profile?.full_name?.trim() ||
+      cleanText(profile?.full_name) ||
       metadataName ||
       user.email?.split("@")[0] ||
       "AgriCore User",
+    platformRole,
+    companyId,
+    companyName: cleanText(company.company_name),
+    companySlug: cleanText(company.slug),
     role,
     permissions,
   };
@@ -180,6 +360,31 @@ export async function requirePermission(
         );
 
   if (!hasPermission) {
+    redirect(
+      options.unauthorisedPath ??
+        "/unauthorised",
+    );
+  }
+
+  return userContext;
+}
+
+export async function requirePlatformRole(
+  allowedRoles: PlatformRole[] = ["super_admin"],
+  options: Pick<
+    RequirePermissionOptions,
+    "loginPath" | "unauthorisedPath"
+  > = {},
+): Promise<AuthenticatedUserContext> {
+  const userContext =
+    await requireAuthenticatedUser({
+      loginPath: options.loginPath,
+    });
+
+  if (
+    !userContext.platformRole ||
+    !allowedRoles.includes(userContext.platformRole)
+  ) {
     redirect(
       options.unauthorisedPath ??
         "/unauthorised",

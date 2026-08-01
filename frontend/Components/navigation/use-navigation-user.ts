@@ -1,112 +1,91 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-
-import { supabase } from "@/lib/supabase";
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+import { useRouter } from "next/navigation";
 
 import {
   initialUserState,
+  isPlatformRole,
   isUserRole,
+  type CompanyContextResponse,
   type UserNavigationState,
 } from "./navigation-types";
 
 export function useNavigationUser() {
+  const router = useRouter();
+
   const [userState, setUserState] =
     useState<UserNavigationState>(initialUserState);
   const [loading, setLoading] = useState(true);
+  const [switchingCompany, setSwitchingCompany] =
+    useState(false);
+  const [error, setError] = useState("");
 
   const loadCurrentUser = useCallback(async () => {
     setLoading(true);
+    setError("");
 
     try {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+      const response = await fetch(
+        "/api/auth/company-context",
+        {
+          method: "GET",
+          cache: "no-store",
+          credentials: "same-origin",
+        },
+      );
 
-      if (userError) {
-        if (userError.name !== "AuthSessionMissingError") {
-          console.error("Unable to load current user:", userError);
+      const result =
+        (await response.json()) as CompanyContextResponse;
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          setUserState(initialUserState);
+          return;
         }
 
-        setUserState(initialUserState);
-        return;
+        throw new Error(
+          result.error ||
+            "Unable to load your AgriCore account.",
+        );
       }
-
-      if (!user) {
-        setUserState(initialUserState);
-        return;
-      }
-
-      const [
-        { data: profile, error: profileError },
-        { data: roleRecord, error: roleError },
-      ] = await Promise.all([
-        supabase
-          .from("app_user_profiles")
-          .select("full_name")
-          .eq("user_id", user.id)
-          .maybeSingle(),
-        supabase
-          .from("app_user_roles")
-          .select("role")
-          .eq("user_id", user.id)
-          .maybeSingle(),
-      ]);
-
-      if (profileError) {
-        console.error("Unable to load navigation profile:", profileError);
-      }
-
-      if (roleError) {
-        console.error("Unable to load navigation role:", roleError);
-      }
-
-      const role = isUserRole(roleRecord?.role)
-        ? roleRecord.role
-        : null;
-
-      let permissions: string[] = [];
-
-      if (role) {
-        const {
-          data: permissionRows,
-          error: permissionsError,
-        } = await supabase
-          .from("app_role_permissions")
-          .select("permission_key")
-          .eq("role", role)
-          .eq("allowed", true);
-
-        if (permissionsError) {
-          console.error(
-            "Unable to load navigation permissions:",
-            permissionsError,
-          );
-        } else {
-          permissions =
-            permissionRows?.map((row) => String(row.permission_key)) ?? [];
-        }
-      }
-
-      const metadataName =
-        typeof user.user_metadata?.full_name === "string"
-          ? user.user_metadata.full_name
-          : "";
 
       setUserState({
         fullName:
-          profile?.full_name ||
-          metadataName ||
-          user.email?.split("@")[0] ||
+          result.user?.fullName ||
+          result.user?.email?.split("@")[0] ||
           "AgriCore User",
-        email: user.email ?? "",
-        role,
-        permissions,
+        email: result.user?.email ?? "",
+        platformRole: isPlatformRole(
+          result.user?.platformRole,
+        )
+          ? result.user.platformRole
+          : null,
+        role: isUserRole(result.user?.role)
+          ? result.user.role
+          : null,
+        permissions: Array.from(
+          new Set(result.user?.permissions ?? []),
+        ),
+        activeCompany: result.activeCompany ?? null,
+        companies: result.companies ?? [],
       });
-    } catch (error) {
-      console.error("Unable to load navigation user:", error);
+    } catch (loadError) {
+      console.error(
+        "Unable to load navigation user context:",
+        loadError,
+      );
+
       setUserState(initialUserState);
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : "Unable to load your AgriCore account.",
+      );
     } finally {
       setLoading(false);
     }
@@ -116,8 +95,77 @@ export function useNavigationUser() {
     void loadCurrentUser();
   }, [loadCurrentUser]);
 
+  const switchCompany = useCallback(
+    async (companyId: string) => {
+      const requestedCompanyId = companyId.trim();
+
+      if (
+        !requestedCompanyId ||
+        requestedCompanyId ===
+          userState.activeCompany?.id ||
+        switchingCompany
+      ) {
+        return;
+      }
+
+      setSwitchingCompany(true);
+      setError("");
+
+      try {
+        const response = await fetch(
+          "/api/auth/company-context",
+          {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              companyId: requestedCompanyId,
+            }),
+          },
+        );
+
+        const result =
+          (await response.json()) as CompanyContextResponse;
+
+        if (!response.ok) {
+          throw new Error(
+            result.error || "Unable to switch company.",
+          );
+        }
+
+        await loadCurrentUser();
+        router.refresh();
+      } catch (switchError) {
+        console.error(
+          "Unable to switch active company:",
+          switchError,
+        );
+
+        setError(
+          switchError instanceof Error
+            ? switchError.message
+            : "Unable to switch company.",
+        );
+      } finally {
+        setSwitchingCompany(false);
+      }
+    },
+    [
+      loadCurrentUser,
+      router,
+      switchingCompany,
+      userState.activeCompany?.id,
+    ],
+  );
+
   return {
     userState,
     loading,
+    switchingCompany,
+    error,
+    reload: loadCurrentUser,
+    switchCompany,
   };
 }

@@ -28,6 +28,7 @@ import {
   type Machine,
   type MachineForm,
 } from "./types";
+import MachineInsightsLinks from "./MachineInsightsLinks";
 
 export default function MachineProfilePage() {
   const params = useParams<{ id: string; machineId: string }>();
@@ -406,12 +407,20 @@ export default function MachineProfilePage() {
         <MachineSummary />
       </section>
 
-      <HourHistory readings={hourReadings} onRecordHours={openHourForm} />
+      <HourHistory
+  readings={hourReadings}
+  onRecordHours={openHourForm}
+/>
 
-      <section className="grid gap-6 lg:grid-cols-2">
-        <JobsPreview />
-        <MachineNotes notes={machine.notes} />
-      </section>
+<MachineInsightsLinks
+  customerId={customer.id}
+  machineId={machine.id}
+/>
+
+<section className="grid gap-6 lg:grid-cols-2">
+  <JobsPreview />
+  <MachineNotes notes={machine.notes} />
+</section>
 
       {showEditForm && (
         <EditMachineModal

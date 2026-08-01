@@ -24,7 +24,14 @@ export default function AppShell({
 }: AppShellProps) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { userState, loading } = useNavigationUser();
+
+  const {
+    userState,
+    loading,
+    switchingCompany,
+    error: companyError,
+    switchCompany,
+  } = useNavigationUser();
 
   const isPublicRoute = publicRoutes.some(
     (route) =>
@@ -56,6 +63,9 @@ export default function AppShell({
         pathname={pathname}
         userState={userState}
         loading={loading}
+        switchingCompany={switchingCompany}
+        companyError={companyError}
+        onSwitchCompany={switchCompany}
       />
 
       <div className="w-full min-w-0 flex-1">
@@ -79,6 +89,9 @@ export default function AppShell({
         pathname={pathname}
         userState={userState}
         loading={loading}
+        switchingCompany={switchingCompany}
+        companyError={companyError}
+        onSwitchCompany={switchCompany}
         onClose={closeMobileMenu}
       />
 

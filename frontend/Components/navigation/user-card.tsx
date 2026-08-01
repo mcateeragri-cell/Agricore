@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase";
 
 import SidebarIcon from "./sidebar-icon";
 import {
+  platformRoleLabels,
   roleLabels,
   type UserNavigationState,
 } from "./navigation-types";
@@ -32,6 +33,14 @@ export default function UserCard({
     return <UserCardSkeleton />;
   }
 
+  const companyRoleLabel = userState.role
+    ? roleLabels[userState.role]
+    : "No company role assigned";
+
+  const platformRoleLabel = userState.platformRole
+    ? platformRoleLabels[userState.platformRole]
+    : null;
+
   return (
     <>
       <div className="flex items-start gap-3">
@@ -45,10 +54,14 @@ export default function UserCard({
           </p>
 
           <p className="mt-0.5 truncate text-xs text-emerald-100">
-            {userState.role
-              ? roleLabels[userState.role]
-              : "No role assigned"}
+            {companyRoleLabel}
           </p>
+
+          {platformRoleLabel && (
+            <p className="mt-1 truncate text-[11px] font-semibold text-amber-200">
+              {platformRoleLabel}
+            </p>
+          )}
 
           {userState.email && (
             <p className="mt-1 truncate text-[11px] text-emerald-100/70">

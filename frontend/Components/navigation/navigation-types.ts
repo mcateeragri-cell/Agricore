@@ -1,4 +1,10 @@
+export type PlatformRole =
+  | "super_admin"
+  | "platform_admin"
+  | "support";
+
 export type UserRole =
+  | "company_admin"
   | "administrator"
   | "service_manager"
   | "office"
@@ -39,14 +45,38 @@ export type AdministrationItem = NavigationItem & {
   permissions: string[];
 };
 
+export type CompanyOption = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
 export type UserNavigationState = {
   fullName: string;
   email: string;
+  platformRole: PlatformRole | null;
   role: UserRole | null;
   permissions: string[];
+  activeCompany: CompanyOption | null;
+  companies: CompanyOption[];
+};
+
+export type CompanyContextResponse = {
+  user?: {
+    id: string;
+    email: string;
+    fullName: string;
+    platformRole: PlatformRole | null;
+    role: UserRole | null;
+    permissions: string[];
+  };
+  activeCompany?: CompanyOption;
+  companies?: CompanyOption[];
+  error?: string;
 };
 
 export const roleLabels: Record<UserRole, string> = {
+  company_admin: "Company Administrator",
   administrator: "Administrator",
   service_manager: "Service Manager",
   office: "Office",
@@ -56,15 +86,38 @@ export const roleLabels: Record<UserRole, string> = {
   read_only: "Read Only",
 };
 
+export const platformRoleLabels: Record<
+  PlatformRole,
+  string
+> = {
+  super_admin: "AgriCore Super Administrator",
+  platform_admin: "AgriCore Administrator",
+  support: "AgriCore Support",
+};
+
 export const initialUserState: UserNavigationState = {
   fullName: "",
   email: "",
+  platformRole: null,
   role: null,
   permissions: [],
+  activeCompany: null,
+  companies: [],
 };
+
+export function isPlatformRole(
+  value: unknown,
+): value is PlatformRole {
+  return (
+    value === "super_admin" ||
+    value === "platform_admin" ||
+    value === "support"
+  );
+}
 
 export function isUserRole(value: unknown): value is UserRole {
   return (
+    value === "company_admin" ||
     value === "administrator" ||
     value === "service_manager" ||
     value === "office" ||

@@ -7,45 +7,51 @@ import {
   useMemo,
   useState,
 } from "react";
+
 import { supabase } from "@/lib/supabase";
 
 type RelatedCustomer = {
+  id?: string | null;
   contact_name?: string | null;
   business_name?: string | null;
   address?: string | null;
-  town?: string | null;
   postcode?: string | null;
 };
 
 type RelatedMachine = {
+  id?: string | null;
   make?: string | null;
   model?: string | null;
   registration?: string | null;
   serial_number?: string | null;
 };
 
-type ScheduleJobRow = {
+type RelatedJob = {
   id: string;
   job_number?: string | null;
-  title?: string | null;
-  description?: string | null;
-  fault_description?: string | null;
   status?: string | null;
+  priority?: string | null;
   engineer_name?: string | null;
-  assigned_engineer?: string | null;
-  location?: string | null;
-  site_address?: string | null;
-  scheduled_at?: string | null;
-  scheduled_date?: string | null;
-  appointment_date?: string | null;
-  start_date?: string | null;
-  start_time?: string | null;
+  fault_reported?: string | null;
+  opened_date?: string | null;
   customers?: RelatedCustomer | RelatedCustomer[] | null;
   machines?: RelatedMachine | RelatedMachine[] | null;
 };
 
+type JobAssignmentRow = {
+  id: string;
+  job_id: string;
+  user_id?: string | null;
+  scheduled_start: string;
+  scheduled_end?: string | null;
+  assignment_status?: string | null;
+  notes?: string | null;
+  jobs?: RelatedJob | RelatedJob[] | null;
+};
+
 type ScheduleItem = {
   id: string;
+  jobId: string;
   jobNumber: string;
   time: string;
   title: string;
@@ -59,7 +65,9 @@ type ScheduleItem = {
 function firstRelated<T>(
   value: T | T[] | null | undefined,
 ): T | null {
-  if (!value) return null;
+  if (!value) {
+    return null;
+  }
 
   return Array.isArray(value)
     ? value[0] ?? null
@@ -128,37 +136,12 @@ function getStatusBadge(status: string) {
   }
 }
 
-function getJobDate(job: ScheduleJobRow) {
-  const value =
-    job.scheduled_at ||
-    job.scheduled_date ||
-    job.appointment_date ||
-    job.start_date;
-
-  if (!value) return null;
-
+function formatTime(value: string) {
   const date = new Date(value);
 
-  return Number.isNaN(date.getTime())
-    ? null
-    : date;
-}
-
-function getJobTime(
-  job: ScheduleJobRow,
-  date: Date | null,
-) {
-  if (job.start_time) {
-    return job.start_time.slice(0, 5);
+  if (Number.isNaN(date.getTime())) {
+    return "Time not set";
   }
-
-  if (!date) return "All day";
-
-  const hasTime =
-    date.getHours() !== 0 ||
-    date.getMinutes() !== 0;
-
-  if (!hasTime) return "All day";
 
   return new Intl.DateTimeFormat("en-GB", {
     hour: "2-digit",
@@ -167,22 +150,30 @@ function getJobTime(
   }).format(date);
 }
 
-function isToday(date: Date) {
-  const today = new Date();
-
-  return (
-    date.getFullYear() === today.getFullYear() &&
-    date.getMonth() === today.getMonth() &&
-    date.getDate() === today.getDate()
-  );
-}
-
 function formatToday() {
   return new Intl.DateTimeFormat("en-GB", {
     weekday: "long",
     day: "numeric",
     month: "long",
   }).format(new Date());
+}
+
+function getLocalDateInput(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(
+    2,
+    "0",
+  );
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function addDays(dateInput: string, days: number) {
+  const date = new Date(`${dateInput}T00:00:00`);
+  date.setDate(date.getDate() + days);
+
+  return getLocalDateInput(date);
 }
 
 function buildCustomerName(
@@ -206,26 +197,19 @@ function buildMachineName(
 }
 
 function buildLocation(
-  job: ScheduleJobRow,
   customer: RelatedCustomer | null,
 ) {
-  if (job.location) return job.location;
-  if (job.site_address) return job.site_address;
-
   return (
-    [
-      customer?.address,
-      customer?.town,
-      customer?.postcode,
-    ]
+    [customer?.address, customer?.postcode]
       .filter(Boolean)
       .join(", ") || "Location not added"
   );
 }
 
 export default function Schedule() {
-  const [jobs, setJobs] =
-    useState<ScheduleJobRow[]>([]);
+  const [assignments, setAssignments] = useState<
+    JobAssignmentRow[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] =
     useState("");
@@ -233,27 +217,55 @@ export default function Schedule() {
   const loadSchedule = useCallback(async () => {
     setErrorMessage("");
 
+    const selectedDate = getLocalDateInput();
+    const nextDate = addDays(selectedDate, 1);
+
+    const startOfDay = new Date(
+      `${selectedDate}T00:00:00`,
+    ).toISOString();
+
+    const startOfNextDay = new Date(
+      `${nextDate}T00:00:00`,
+    ).toISOString();
+
     const { data, error } = await supabase
-      .from("jobs")
+      .from("job_assignments")
       .select(`
-        *,
-        customers (
-          contact_name,
-          business_name,
-          address,
-          town,
-          postcode
-        ),
-        machines (
-          make,
-          model,
-          registration,
-          serial_number
+        id,
+        job_id,
+        user_id,
+        scheduled_start,
+        scheduled_end,
+        assignment_status,
+        notes,
+        jobs (
+          id,
+          job_number,
+          status,
+          priority,
+          engineer_name,
+          fault_reported,
+          opened_date,
+          customers (
+            id,
+            contact_name,
+            business_name,
+            address,
+            postcode
+          ),
+          machines (
+            id,
+            make,
+            model,
+            registration,
+            serial_number
+          )
         )
       `)
-      .order("scheduled_at", {
+      .gte("scheduled_start", startOfDay)
+      .lt("scheduled_start", startOfNextDay)
+      .order("scheduled_start", {
         ascending: true,
-        nullsFirst: false,
       });
 
     if (error) {
@@ -266,7 +278,9 @@ export default function Schedule() {
       return;
     }
 
-    setJobs((data ?? []) as ScheduleJobRow[]);
+    setAssignments(
+      (data ?? []) as JobAssignmentRow[],
+    );
     setLoading(false);
   }, []);
 
@@ -275,6 +289,17 @@ export default function Schedule() {
 
     const channel = supabase
       .channel("dashboard-today-schedule")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "job_assignments",
+        },
+        () => {
+          void loadSchedule();
+        },
+      )
       .on(
         "postgres_changes",
         {
@@ -302,50 +327,44 @@ export default function Schedule() {
   }, [loadSchedule]);
 
   const schedule = useMemo<ScheduleItem[]>(() => {
-    return jobs
-      .map((job) => {
-        const date = getJobDate(job);
+    return assignments.flatMap((assignment) => {
+      const job = firstRelated(assignment.jobs);
 
-        if (!date || !isToday(date)) {
-          return null;
-        }
+      if (!job) {
+        return [];
+      }
 
-        const customer = firstRelated(
-          job.customers,
-        );
-        const machine = firstRelated(job.machines);
+      const customer = firstRelated(job.customers);
+      const machine = firstRelated(job.machines);
 
-        return {
-          id: job.id,
+      const status =
+        job.status ||
+        assignment.assignment_status ||
+        "scheduled";
+
+      return [
+        {
+          id: assignment.id,
+          jobId: job.id || assignment.job_id,
           jobNumber:
             job.job_number || "Unnumbered job",
-          time: getJobTime(job, date),
+          time: formatTime(
+            assignment.scheduled_start,
+          ),
           title:
-            job.title ||
-            job.description ||
-            job.fault_description ||
+            job.fault_reported ||
+            assignment.notes ||
             "Service job",
           customer: buildCustomerName(customer),
           machine: buildMachineName(machine),
           engineer:
-            job.engineer_name ||
-            job.assigned_engineer ||
-            "Unassigned",
-          location: buildLocation(job, customer),
-          status: job.status || "scheduled",
-        };
-      })
-      .filter(
-        (item): item is ScheduleItem =>
-          item !== null,
-      )
-      .sort((a, b) => {
-        if (a.time === "All day") return -1;
-        if (b.time === "All day") return 1;
-
-        return a.time.localeCompare(b.time);
-      });
-  }, [jobs]);
+            job.engineer_name || "Unassigned",
+          location: buildLocation(customer),
+          status,
+        },
+      ];
+    });
+  }, [assignments]);
 
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
@@ -429,7 +448,7 @@ export default function Schedule() {
           {schedule.map((item) => (
             <Link
               key={item.id}
-              href={`/jobs/${item.id}`}
+              href={`/jobs/${item.jobId}`}
               className="block transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/60"
             >
               <article className="p-5">
