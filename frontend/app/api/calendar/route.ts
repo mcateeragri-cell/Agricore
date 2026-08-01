@@ -22,6 +22,8 @@ type DatabaseRow = Record<string, unknown>;
 // incompatible generic signatures when no generated Database type exists.
 type AdminSupabaseClient = SupabaseClient;
 
+const ACTIVE_COMPANY_COOKIE = "agricore_company_id";
+
 const TECHNICIAN_COLOURS = [
   "#166534",
   "#0369a1",
@@ -86,6 +88,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const companyId = await resolveCompanyId(
+      adminClient,
+      user.id,
+      request,
+    );
+
+    if (!companyId) {
+      return NextResponse.json(
+        {
+          error:
+            "No active company is available for this account.",
+        },
+        { status: 403 },
+      );
+    }
+
     const requestUrl = new URL(request.url);
 
     const startValue =
@@ -147,6 +165,7 @@ export async function GET(request: NextRequest) {
       adminClient
         .from("job_assignments")
         .select("*")
+        .eq("company_id", companyId)
         .lt(
           "scheduled_start",
           rangeEnd.toISOString(),
@@ -166,6 +185,7 @@ export async function GET(request: NextRequest) {
       adminClient
         .from("staff_calendar_events")
         .select("*")
+        .eq("company_id", companyId)
         .lt("starts_at", rangeEnd.toISOString())
         .gt("ends_at", rangeStart.toISOString())
         .order("starts_at", {
@@ -284,6 +304,7 @@ export async function GET(request: NextRequest) {
     const jobs = await loadCalendarJobs(
       adminClient,
       assignedJobIds,
+      companyId,
     );
 
     const customerIds = uniqueStrings(
@@ -309,10 +330,12 @@ export async function GET(request: NextRequest) {
         loadCustomers(
           adminClient,
           customerIds,
+          companyId,
         ),
         loadMachines(
           adminClient,
           machineIds,
+          companyId,
         ),
       ]);
 
@@ -394,6 +417,22 @@ export async function POST(request: NextRequest) {
             "Your session has expired. Please sign in again.",
         },
         { status: 401 },
+      );
+    }
+
+    const companyId = await resolveCompanyId(
+      adminClient,
+      user.id,
+      request,
+    );
+
+    if (!companyId) {
+      return NextResponse.json(
+        {
+          error:
+            "No active company is available for this account.",
+        },
+        { status: 403 },
       );
     }
 
@@ -506,8 +545,9 @@ export async function POST(request: NextRequest) {
       await Promise.all([
         adminClient
           .from("jobs")
-          .select("id, status")
+          .select("id, status, company_id")
           .eq("id", jobId)
+          .eq("company_id", companyId)
           .maybeSingle(),
         adminClient
   .from("app_user_profiles")
@@ -545,6 +585,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const {
+      data: technicianMembership,
+      error: technicianMembershipError,
+    } = await adminClient
+      .from("company_members")
+      .select("user_id")
+      .eq("company_id", companyId)
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (technicianMembershipError) {
+      throw new Error(
+        `Unable to verify the technician company membership: ${technicianMembershipError.message}`,
+      );
+    }
+
+    if (!technicianMembership) {
+      return NextResponse.json(
+        {
+          error:
+            "The selected technician does not belong to the active company.",
+        },
+        { status: 409 },
+      );
+    }
+
     const profileRow =
       profileResult.data as DatabaseRow;
 
@@ -569,6 +636,7 @@ export async function POST(request: NextRequest) {
         adminClient
           .from("job_assignments")
           .select("id")
+          .eq("company_id", companyId)
           .eq("user_id", userId)
           .neq("assignment_status", "cancelled")
           .lt(
@@ -583,6 +651,7 @@ export async function POST(request: NextRequest) {
         adminClient
           .from("staff_calendar_events")
           .select("id, title")
+          .eq("company_id", companyId)
           .eq("user_id", userId)
           .lt(
             "starts_at",
@@ -642,6 +711,7 @@ export async function POST(request: NextRequest) {
       await adminClient
         .from("job_assignments")
         .insert({
+          company_id: companyId,
           job_id: jobId,
           user_id: userId,
           scheduled_start:
@@ -689,7 +759,8 @@ export async function POST(request: NextRequest) {
             status: "scheduled",
             updated_at: new Date().toISOString(),
           })
-          .eq("id", jobId);
+          .eq("id", jobId)
+          .eq("company_id", companyId);
 
       if (updateJobError) {
         console.error(
@@ -733,7 +804,7 @@ export async function PATCH(request: NextRequest) {
       return context;
     }
 
-    const { adminClient } = context;
+    const { adminClient, companyId } = context;
     const body = await readRequestBody(request);
 
     if (body instanceof NextResponse) {
@@ -798,6 +869,7 @@ export async function PATCH(request: NextRequest) {
         .from("job_assignments")
         .select("*")
         .eq("id", assignmentId)
+        .eq("company_id", companyId)
         .maybeSingle(),
       adminClient
         .from("app_user_profiles")
@@ -852,6 +924,7 @@ export async function PATCH(request: NextRequest) {
         userId,
         scheduledStart,
         scheduledEnd,
+        companyId,
         assignmentId,
       );
 
@@ -875,6 +948,7 @@ export async function PATCH(request: NextRequest) {
           updated_at: new Date().toISOString(),
         })
         .eq("id", assignmentId)
+        .eq("company_id", companyId)
         .select("*")
         .single();
 
@@ -919,7 +993,7 @@ export async function DELETE(request: NextRequest) {
       return context;
     }
 
-    const { adminClient } = context;
+    const { adminClient, companyId } = context;
     const body = await readRequestBody(request);
 
     if (body instanceof NextResponse) {
@@ -940,6 +1014,7 @@ export async function DELETE(request: NextRequest) {
         .from("job_assignments")
         .select("id, job_id")
         .eq("id", assignmentId)
+        .eq("company_id", companyId)
         .maybeSingle();
 
     if (loadError) {
@@ -964,7 +1039,8 @@ export async function DELETE(request: NextRequest) {
       await adminClient
         .from("job_assignments")
         .delete()
-        .eq("id", assignmentId);
+        .eq("id", assignmentId)
+        .eq("company_id", companyId);
 
     if (deleteError) {
       throw new Error(
@@ -977,6 +1053,7 @@ export async function DELETE(request: NextRequest) {
         await adminClient
           .from("job_assignments")
           .select("id")
+          .eq("company_id", companyId)
           .eq("job_id", jobId)
           .neq("assignment_status", "cancelled")
           .limit(1);
@@ -995,6 +1072,7 @@ export async function DELETE(request: NextRequest) {
             .from("jobs")
             .select("status")
             .eq("id", jobId)
+            .eq("company_id", companyId)
             .maybeSingle();
 
         if (!jobLoadError && jobRow) {
@@ -1013,7 +1091,8 @@ export async function DELETE(request: NextRequest) {
                   status: "open",
                   updated_at: new Date().toISOString(),
                 })
-                .eq("id", jobId);
+                .eq("id", jobId)
+                .eq("company_id", companyId);
 
             if (jobUpdateError) {
               console.error(
@@ -1052,6 +1131,7 @@ async function createAuthenticatedAdminClient(
   | {
       adminClient: AdminSupabaseClient;
       userId: string;
+      companyId: string;
     }
   | NextResponse
 > {
@@ -1100,10 +1180,97 @@ async function createAuthenticatedAdminClient(
     );
   }
 
+  const companyId = await resolveCompanyId(
+    adminClient,
+    user.id,
+    request,
+  );
+
+  if (!companyId) {
+    return NextResponse.json(
+      {
+        error:
+          "No active company is available for this account.",
+      },
+      { status: 403 },
+    );
+  }
+
   return {
     adminClient,
     userId: user.id,
+    companyId,
   };
+}
+
+async function resolveCompanyId(
+  adminClient: AdminSupabaseClient,
+  userId: string,
+  request: NextRequest,
+): Promise<string | null> {
+  const requestedCompanyId =
+    request.cookies
+      .get(ACTIVE_COMPANY_COOKIE)
+      ?.value?.trim() ?? "";
+
+  let membershipQuery = adminClient
+    .from("company_members")
+    .select("company_id, joined_at")
+    .eq("user_id", userId)
+    .eq("is_active", true);
+
+  if (requestedCompanyId) {
+    const {
+      data: requestedMembership,
+      error: requestedMembershipError,
+    } = await membershipQuery
+      .eq("company_id", requestedCompanyId)
+      .maybeSingle();
+
+    if (requestedMembershipError) {
+      throw new Error(
+        `Unable to resolve the active company: ${requestedMembershipError.message}`,
+      );
+    }
+
+    if (
+      requestedMembership &&
+      typeof requestedMembership.company_id ===
+        "string"
+    ) {
+      return requestedMembership.company_id;
+    }
+  }
+
+  const {
+    data: memberships,
+    error: membershipsError,
+  } = await adminClient
+    .from("company_members")
+    .select("company_id, joined_at")
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .order("joined_at", {
+      ascending: true,
+    })
+    .limit(1);
+
+  if (membershipsError) {
+    throw new Error(
+      `Unable to resolve the active company: ${membershipsError.message}`,
+    );
+  }
+
+  const firstMembership =
+    Array.isArray(memberships)
+      ? memberships[0]
+      : null;
+
+  return firstMembership &&
+    typeof firstMembership.company_id ===
+      "string"
+    ? firstMembership.company_id
+    : null;
 }
 
 async function readRequestBody(
@@ -1160,11 +1327,13 @@ async function findSchedulingClash(
   userId: string,
   scheduledStart: Date,
   scheduledEnd: Date,
+  companyId: string,
   excludedAssignmentId?: string,
 ): Promise<string | null> {
   let assignmentQuery = adminClient
     .from("job_assignments")
     .select("id")
+    .eq("company_id", companyId)
     .eq("user_id", userId)
     .neq("assignment_status", "cancelled")
     .lt("scheduled_start", scheduledEnd.toISOString())
@@ -1179,6 +1348,7 @@ async function findSchedulingClash(
     adminClient
       .from("staff_calendar_events")
       .select("id, title")
+      .eq("company_id", companyId)
       .eq("user_id", userId)
       .lt("starts_at", scheduledEnd.toISOString())
       .gt("ends_at", scheduledStart.toISOString())
@@ -1519,11 +1689,13 @@ async function loadAuthenticationUsers(
 async function loadCalendarJobs(
   adminClient: AdminSupabaseClient,
   assignedJobIds: string[],
+  companyId: string,
 ): Promise<CalendarJob[]> {
   const { data, error } =
     await adminClient
       .from("jobs")
       .select("*")
+      .eq("company_id", companyId)
       .order("job_sequence", {
         ascending: false,
       })
@@ -1568,6 +1740,7 @@ async function loadCalendarJobs(
 async function loadCustomers(
   adminClient: AdminSupabaseClient,
   customerIds: string[],
+  companyId: string,
 ): Promise<CalendarCustomer[]> {
   if (customerIds.length === 0) {
     return [];
@@ -1577,6 +1750,7 @@ async function loadCustomers(
     await adminClient
       .from("customers")
       .select("*")
+      .eq("company_id", companyId)
       .in("id", customerIds);
 
   if (error) {
@@ -1650,6 +1824,7 @@ async function loadCustomers(
 async function loadMachines(
   adminClient: AdminSupabaseClient,
   machineIds: string[],
+  companyId: string,
 ): Promise<CalendarMachine[]> {
   if (machineIds.length === 0) {
     return [];
@@ -1659,6 +1834,7 @@ async function loadMachines(
     await adminClient
       .from("machines")
       .select("*")
+      .eq("company_id", companyId)
       .in("id", machineIds);
 
   if (error) {

@@ -6,6 +6,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -23,6 +24,7 @@ import PhotoViewer, {
   type TechnicianJobPhoto,
 } from "@/Components/technician/PhotoViewer";
 import QuickActions from "@/Components/technician/QuickActions";
+import TravelCard from "@/Components/technician/TravelCard";
 import { supabase } from "@/lib/supabase";
 
 import type {
@@ -136,6 +138,12 @@ export default function TechnicianJobPage() {
 
   const [uploadingPhotos, setUploadingPhotos] =
     useState(false);
+
+  const cameraInputRef =
+    useRef<HTMLInputElement | null>(null);
+
+  const libraryInputRef =
+    useRef<HTMLInputElement | null>(null);
 
   const [completionSaving, setCompletionSaving] =
     useState(false);
@@ -889,7 +897,7 @@ export default function TechnicianJobPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-slate-100 px-4 py-20 text-center">
+      <main className="min-h-screen bg-transparent px-4 py-20 text-center">
         <p className="font-semibold text-slate-600">
           Loading technician job…
         </p>
@@ -899,7 +907,7 @@ export default function TechnicianJobPage() {
 
   if (!jobData) {
     return (
-      <main className="min-h-screen bg-slate-100 px-4 py-6">
+      <main className="min-h-screen bg-transparent px-4 py-6">
         <div className="mx-auto max-w-2xl">
           <Link
             href="/technician"
@@ -926,7 +934,7 @@ export default function TechnicianJobPage() {
     })) ?? [];
 
   return (
-    <main className="min-h-screen bg-slate-100">
+    <main className="min-h-screen bg-transparent">
       <div className="mx-auto max-w-2xl px-4 py-5 sm:px-6">
         <Link
           href="/technician"
@@ -983,6 +991,12 @@ export default function TechnicianJobPage() {
               "No fault description has been recorded."}
           </p>
         </section>
+
+        <TravelCard
+          jobId={jobId}
+          disabled={readOnly}
+          onChanged={() => void loadJob()}
+        />
 
         <QuickActions
           travelling={travelling}
@@ -1071,6 +1085,97 @@ export default function TechnicianJobPage() {
             }}
           />
         </div>
+
+
+        <section className="mt-4 rounded-2xl border border-white/50 bg-white/80 p-5 shadow-sm backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/75">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300">
+                Job photos
+              </p>
+              <h2 className="mt-1 text-lg font-bold text-slate-950 dark:text-white">
+                Add photos from camera or library
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                Photos are attached to this job and remain available in the machine history.
+              </p>
+            </div>
+
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+              {photosData?.photos.length ?? 0}
+            </span>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              disabled={
+                readOnly ||
+                uploadingPhotos ||
+                (photosData?.remainingPhotos ?? 1) <= 0
+              }
+              onClick={() =>
+                cameraInputRef.current?.click()
+              }
+              className="min-h-16 rounded-2xl bg-[#0c4a3a] px-5 text-base font-bold text-white shadow-sm transition hover:bg-[#0a3f31] disabled:cursor-not-allowed disabled:opacity-45"
+            >
+              {uploadingPhotos
+                ? "Uploading…"
+                : "Take photo"}
+            </button>
+
+            <button
+              type="button"
+              disabled={
+                readOnly ||
+                uploadingPhotos ||
+                (photosData?.remainingPhotos ?? 1) <= 0
+              }
+              onClick={() =>
+                libraryInputRef.current?.click()
+              }
+              className="min-h-16 rounded-2xl border border-slate-300 bg-white/90 px-5 text-base font-bold text-slate-900 shadow-sm transition hover:border-emerald-400 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-45 dark:border-slate-700 dark:bg-slate-950/80 dark:text-white dark:hover:bg-slate-900"
+            >
+              Upload photos
+            </button>
+          </div>
+
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(event) => {
+              if (event.target.files) {
+                void uploadPhotos(event.target.files);
+              }
+
+              event.target.value = "";
+            }}
+          />
+
+          <input
+            ref={libraryInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(event) => {
+              if (event.target.files) {
+                void uploadPhotos(event.target.files);
+              }
+
+              event.target.value = "";
+            }}
+          />
+
+          <p className="mt-3 text-xs font-semibold text-slate-500 dark:text-slate-400">
+            {photosData
+              ? `${photosData.remainingPhotos} of ${photosData.maximumPhotos} photo spaces remaining`
+              : "Photos will appear below after upload."}
+          </p>
+        </section>
 
         <PhotosCard
           photos={photosData?.photos ?? []}

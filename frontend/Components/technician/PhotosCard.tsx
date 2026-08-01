@@ -35,70 +35,26 @@ export default function PhotosCard({
   }
 
   return (
-    <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex items-start justify-between gap-4">
+    <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700">
-            Evidence
-          </p>
-
-          <h2 className="mt-1 text-lg font-bold text-slate-950">
-            Job photos
+          <h2 className="text-lg font-bold text-slate-950 dark:text-white">
+            Uploaded photos
           </h2>
 
-          <p className="mt-1 text-sm text-slate-500">
-            Add clear photos of the fault, repair and completed work.
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
+            View and manage photos already attached to this job.
           </p>
         </div>
 
-        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
-          {photos.length}{" "}
-          {photos.length === 1 ? "photo" : "photos"}
+        <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-200">
+          {photos.length} photo
+          {photos.length === 1 ? "" : "s"}
         </span>
       </div>
 
-      {!readOnly ? (
-        <label
-          className={`mt-5 flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-5 text-center transition ${
-            uploading
-              ? "cursor-wait border-slate-200 bg-slate-50 opacity-60"
-              : "border-slate-300 bg-slate-50 hover:border-emerald-400 hover:bg-emerald-50"
-          }`}
-        >
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            multiple
-            disabled={uploading}
-            onChange={handleFiles}
-            className="sr-only"
-          />
-
-          <span className="font-bold text-slate-900">
-            {uploading
-              ? "Uploading photos…"
-              : "Take or upload photos"}
-          </span>
-
-          <span className="mt-1 text-sm text-slate-500">
-            JPEG, PNG, HEIC or other supported image formats
-          </span>
-        </label>
-      ) : null}
-
-      {photos.length === 0 ? (
-        <div className="mt-5 rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center">
-          <p className="font-semibold text-slate-700">
-            No photos uploaded
-          </p>
-
-          <p className="mt-1 text-sm text-slate-500">
-            Upload supporting evidence before completing the job.
-          </p>
-        </div>
-      ) : (
-        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+      {photos.length > 0 ? (
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
           {photos.map((photo) => (
             <PhotoTile
               key={photo.id}
@@ -109,7 +65,34 @@ export default function PhotosCard({
             />
           ))}
         </div>
+      ) : (
+        <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center dark:border-slate-700 dark:bg-slate-950/50">
+          <p className="font-bold text-slate-900 dark:text-white">
+            No photos added yet
+          </p>
+
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-300">
+            Use the camera or upload buttons above to add photos.
+          </p>
+        </div>
       )}
+
+      {!readOnly ? (
+        <label className="mt-4 flex min-h-12 cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:border-emerald-400 hover:bg-emerald-50 dark:border-slate-700 dark:bg-slate-950/70 dark:text-white dark:hover:bg-slate-900">
+          {uploading
+            ? "Uploading photos…"
+            : "Upload more photos"}
+
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            disabled={uploading}
+            onChange={handleFiles}
+            className="hidden"
+          />
+        </label>
+      ) : null}
     </section>
   );
 }
@@ -126,13 +109,13 @@ function PhotoTile({
   onDelete: () => void;
 }) {
   return (
-    <article className="group overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+    <article className="group overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-950/60">
       <button
         type="button"
         onClick={onOpen}
         className="block w-full text-left"
       >
-        <div className="aspect-square overflow-hidden bg-slate-200">
+        <div className="aspect-square overflow-hidden bg-slate-200 dark:bg-slate-800">
           <img
             src={photo.url}
             alt={photo.caption || "Job photo"}
@@ -141,22 +124,22 @@ function PhotoTile({
         </div>
 
         <div className="p-3">
-          <p className="truncate text-sm font-bold text-slate-900">
+          <p className="truncate text-sm font-bold text-slate-900 dark:text-white">
             {photo.caption || "Job photo"}
           </p>
 
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             {formatPhotoDate(photo.createdAt)}
           </p>
         </div>
       </button>
 
       {!readOnly ? (
-        <div className="border-t border-slate-200 p-2">
+        <div className="border-t border-slate-200 p-2 dark:border-slate-700">
           <button
             type="button"
             onClick={onDelete}
-            className="min-h-10 w-full rounded-lg text-sm font-bold text-red-700 hover:bg-red-50"
+            className="min-h-10 w-full rounded-lg text-sm font-bold text-red-700 transition hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950/40"
           >
             Delete photo
           </button>
