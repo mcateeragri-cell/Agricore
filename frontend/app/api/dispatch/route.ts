@@ -1,6 +1,14 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+import {
+  getAuthenticatedUserContext,
+} from "@/lib/auth/require-permission";
+import {
+  createSupabaseServerClient,
+} from "@/lib/supabase-server";
 
 type AssignmentPayload = {
   jobId?: string;
@@ -10,62 +18,24 @@ type AssignmentPayload = {
   notes?: string;
 };
 
-async function createSupabase() {
-  const cookieStore = await cookies();
-
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(
-            ({ name, value, options }) => {
-              try {
-                cookieStore.set(name, value, options);
-              } catch {
-                // Cookie writing may not be available
-                // in every server context.
-              }
-            },
-          );
-        },
-      },
-    },
+function canManageDispatch(
+  permissions: string[],
+) {
+  return (
+    permissions.includes("jobs.assign") ||
+    permissions.includes("jobs.edit") ||
+    permissions.includes("calendar.manage")
   );
 }
 
-async function getAuthenticatedUser() {
-  const supabase = await createSupabase();
-
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error || !user) {
-    return {
-      supabase,
-      user: null,
-    };
-  }
-
-  return {
-    supabase,
-    user,
-  };
-}
-
-export async function GET(request: NextRequest) {
+export async function GET(
+  request: NextRequest,
+) {
   try {
-    const { supabase, user } =
-      await getAuthenticatedUser();
+    const auth =
+      await getAuthenticatedUserContext();
 
-    if (!user) {
+    if (!auth) {
       return NextResponse.json(
         {
           error: "Unauthorised",
@@ -76,14 +46,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const supabase =
+      await createSupabaseServerClient();
+
     const selectedDate =
-      request.nextUrl.searchParams.get("date") ??
-      getLocalDate();
+      request.nextUrl.searchParams.get(
+        "date",
+      ) ?? getLocalDate();
 
     if (!isValidDateInput(selectedDate)) {
       return NextResponse.json(
         {
-          error: "The selected date is invalid.",
+          error:
+            "The selected date is invalid.",
         },
         {
           status: 400,
@@ -91,7 +66,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const nextDate = addDays(selectedDate, 1);
+    const nextDate = addDays(
+      selectedDate,
+      1,
+    );
 
     const startOfDay = new Date(
       `${selectedDate}T00:00:00`,
@@ -107,7 +85,7 @@ export async function GET(request: NextRequest) {
       assignmentsResult,
     ] = await Promise.all([
       supabase
-        .from("app_user_profiles")
+        .from("company_member_profiles")
         .select(`
           user_id,
           full_name,
@@ -115,6 +93,10 @@ export async function GET(request: NextRequest) {
           calendar_colour,
           is_active
         `)
+        .eq(
+          "company_id",
+          auth.companyId,
+        )
         .eq("is_active", true)
         .order("full_name", {
           ascending: true,
@@ -143,6 +125,10 @@ export async function GET(request: NextRequest) {
             registration
           )
         `)
+        .eq(
+          "company_id",
+          auth.companyId,
+        )
         .not(
           "status",
           "in",
@@ -186,50 +172,56 @@ export async function GET(request: NextRequest) {
             )
           )
         `)
-        .gte("scheduled_start", startOfDay)
-        .lt("scheduled_start", startOfNextDay)
+        .eq(
+          "company_id",
+          auth.companyId,
+        )
+        .gte(
+          "scheduled_start",
+          startOfDay,
+        )
+        .lt(
+          "scheduled_start",
+          startOfNextDay,
+        )
         .order("scheduled_start", {
           ascending: true,
         }),
     ]);
 
     if (techniciansResult.error) {
-      console.error(
-        "Unable to load technicians:",
-        techniciansResult.error,
-      );
-
       throw new Error(
-        techniciansResult.error.message,
+        `Unable to load technicians: ${techniciansResult.error.message}`,
       );
     }
 
     if (jobsResult.error) {
-      console.error(
-        "Unable to load dispatch jobs:",
-        jobsResult.error,
+      throw new Error(
+        `Unable to load dispatch jobs: ${jobsResult.error.message}`,
       );
-
-      throw new Error(jobsResult.error.message);
     }
 
     if (assignmentsResult.error) {
-      console.error(
-        "Unable to load assignments:",
-        assignmentsResult.error,
-      );
-
       throw new Error(
-        assignmentsResult.error.message,
+        `Unable to load assignments: ${assignmentsResult.error.message}`,
       );
     }
 
-    return NextResponse.json({
-      date: selectedDate,
-      technicians: techniciansResult.data ?? [],
-      jobs: jobsResult.data ?? [],
-      assignments: assignmentsResult.data ?? [],
-    });
+    return NextResponse.json(
+      {
+        date: selectedDate,
+        technicians:
+          techniciansResult.data ?? [],
+        jobs: jobsResult.data ?? [],
+        assignments:
+          assignmentsResult.data ?? [],
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
+    );
   } catch (error: unknown) {
     console.error(
       "Unable to load dispatch data:",
@@ -250,12 +242,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(
+  request: NextRequest,
+) {
   try {
-    const { supabase, user } =
-      await getAuthenticatedUser();
+    const auth =
+      await getAuthenticatedUserContext();
 
-    if (!user) {
+    if (!auth) {
       return NextResponse.json(
         {
           error: "Unauthorised",
@@ -266,11 +260,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body =
-      (await request.json()) as AssignmentPayload;
+    if (
+      !canManageDispatch(
+        auth.permissions,
+      )
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "You do not have permission to schedule jobs.",
+        },
+        {
+          status: 403,
+        },
+      );
+    }
 
-    const jobId = body.jobId?.trim() ?? "";
-    const userId = body.userId?.trim() ?? "";
+    const supabase =
+      await createSupabaseServerClient();
+
+    const body =
+      (await request.json()) as
+        AssignmentPayload;
+
+    const jobId =
+      body.jobId?.trim() ?? "";
+
+    const userId =
+      body.userId?.trim() ?? "";
 
     const scheduledStart =
       body.scheduledStart?.trim() ?? "";
@@ -278,7 +295,8 @@ export async function POST(request: NextRequest) {
     const scheduledEnd =
       body.scheduledEnd?.trim() ?? "";
 
-    const notes = body.notes?.trim() || null;
+    const notes =
+      body.notes?.trim() || null;
 
     if (!jobId) {
       return NextResponse.json(
@@ -302,7 +320,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!scheduledStart || !scheduledEnd) {
+    if (
+      !scheduledStart ||
+      !scheduledEnd
+    ) {
       return NextResponse.json(
         {
           error:
@@ -314,16 +335,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const startDate = new Date(scheduledStart);
-    const endDate = new Date(scheduledEnd);
+    const startDate = new Date(
+      scheduledStart,
+    );
+
+    const endDate = new Date(
+      scheduledEnd,
+    );
 
     if (
-      Number.isNaN(startDate.getTime()) ||
-      Number.isNaN(endDate.getTime())
+      Number.isNaN(
+        startDate.getTime(),
+      ) ||
+      Number.isNaN(
+        endDate.getTime(),
+      )
     ) {
       return NextResponse.json(
         {
-          error: "Enter a valid schedule.",
+          error:
+            "Enter a valid schedule.",
         },
         {
           status: 400,
@@ -349,12 +380,18 @@ export async function POST(request: NextRequest) {
       existingAssignmentResult,
     ] = await Promise.all([
       supabase
-        .from("app_user_profiles")
+        .from(
+          "company_member_profiles",
+        )
         .select(`
           user_id,
           full_name,
           is_active
         `)
+        .eq(
+          "company_id",
+          auth.companyId,
+        )
         .eq("user_id", userId)
         .maybeSingle(),
 
@@ -365,20 +402,36 @@ export async function POST(request: NextRequest) {
           job_number
         `)
         .eq("id", jobId)
+        .eq(
+          "company_id",
+          auth.companyId,
+        )
         .maybeSingle(),
 
       supabase
-        .from("job_assignments")
+        .from(
+          "job_assignments",
+        )
         .select(`
           id,
           job_id
         `)
         .eq("job_id", jobId)
+        .eq(
+          "company_id",
+          auth.companyId,
+        )
+        .neq(
+          "assignment_status",
+          "cancelled",
+        )
         .limit(1)
         .maybeSingle(),
     ]);
 
-    if (technicianResult.error) {
+    if (
+      technicianResult.error
+    ) {
       throw new Error(
         technicianResult.error.message,
       );
@@ -386,12 +439,13 @@ export async function POST(request: NextRequest) {
 
     if (
       !technicianResult.data ||
-      technicianResult.data.is_active !== true
+      technicianResult.data
+        .is_active !== true
     ) {
       return NextResponse.json(
         {
           error:
-            "The selected technician is unavailable.",
+            "The selected technician is unavailable in the active company.",
         },
         {
           status: 400,
@@ -400,13 +454,16 @@ export async function POST(request: NextRequest) {
     }
 
     if (jobResult.error) {
-      throw new Error(jobResult.error.message);
+      throw new Error(
+        jobResult.error.message,
+      );
     }
 
     if (!jobResult.data) {
       return NextResponse.json(
         {
-          error: "The selected job could not be found.",
+          error:
+            "The selected job could not be found in the active company.",
         },
         {
           status: 404,
@@ -414,52 +471,85 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (existingAssignmentResult.error) {
+    if (
+      existingAssignmentResult.error
+    ) {
       throw new Error(
-        existingAssignmentResult.error.message,
+        existingAssignmentResult
+          .error.message,
       );
     }
 
-    const now = new Date().toISOString();
+    const now =
+      new Date().toISOString();
 
     let assignmentId: string;
     let message: string;
 
-    if (existingAssignmentResult.data) {
-      const { data, error } = await supabase
-        .from("job_assignments")
+    if (
+      existingAssignmentResult.data
+    ) {
+      const {
+        data,
+        error,
+      } = await supabase
+        .from(
+          "job_assignments",
+        )
         .update({
           user_id: userId,
-          scheduled_start: startDate.toISOString(),
-          scheduled_end: endDate.toISOString(),
-          assignment_status: "scheduled",
+          scheduled_start:
+            startDate.toISOString(),
+          scheduled_end:
+            endDate.toISOString(),
+          assignment_status:
+            "scheduled",
           notes,
           updated_at: now,
         })
         .eq(
           "id",
-          existingAssignmentResult.data.id,
+          existingAssignmentResult
+            .data.id,
+        )
+        .eq(
+          "company_id",
+          auth.companyId,
         )
         .select("id")
         .single();
 
       if (error) {
-        throw new Error(error.message);
+        throw new Error(
+          error.message,
+        );
       }
 
       assignmentId = data.id;
-      message = "Job assignment updated.";
+      message =
+        "Job assignment updated.";
     } else {
-      const { data, error } = await supabase
-        .from("job_assignments")
+      const {
+        data,
+        error,
+      } = await supabase
+        .from(
+          "job_assignments",
+        )
         .insert({
+          company_id:
+            auth.companyId,
           job_id: jobId,
           user_id: userId,
-          scheduled_start: startDate.toISOString(),
-          scheduled_end: endDate.toISOString(),
-          assignment_status: "scheduled",
+          scheduled_start:
+            startDate.toISOString(),
+          scheduled_end:
+            endDate.toISOString(),
+          assignment_status:
+            "scheduled",
           notes,
-          created_by: user.id,
+          created_by:
+            auth.userId,
           created_at: now,
           updated_at: now,
         })
@@ -467,22 +557,31 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (error) {
-        throw new Error(error.message);
+        throw new Error(
+          error.message,
+        );
       }
 
       assignmentId = data.id;
-      message = "Job scheduled successfully.";
+      message =
+        "Job scheduled successfully.";
     }
 
-    const { error: jobUpdateError } =
-      await supabase
-        .from("jobs")
-        .update({
-          engineer_name:
-            technicianResult.data.full_name,
-          updated_at: now,
-        })
-        .eq("id", jobId);
+    const {
+      error: jobUpdateError,
+    } = await supabase
+      .from("jobs")
+      .update({
+        engineer_name:
+          technicianResult.data
+            .full_name,
+        updated_at: now,
+      })
+      .eq("id", jobId)
+      .eq(
+        "company_id",
+        auth.companyId,
+      );
 
     if (jobUpdateError) {
       console.error(
@@ -503,11 +602,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      assignmentId,
-      message,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        assignmentId,
+        message,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
+    );
   } catch (error: unknown) {
     console.error(
       "Unable to schedule job:",
@@ -532,10 +638,10 @@ export async function DELETE(
   request: NextRequest,
 ) {
   try {
-    const { supabase, user } =
-      await getAuthenticatedUser();
+    const auth =
+      await getAuthenticatedUserContext();
 
-    if (!user) {
+    if (!auth) {
       return NextResponse.json(
         {
           error: "Unauthorised",
@@ -546,6 +652,25 @@ export async function DELETE(
       );
     }
 
+    if (
+      !canManageDispatch(
+        auth.permissions,
+      )
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "You do not have permission to remove scheduled jobs.",
+        },
+        {
+          status: 403,
+        },
+      );
+    }
+
+    const supabase =
+      await createSupabaseServerClient();
+
     const assignmentId =
       request.nextUrl.searchParams
         .get("assignmentId")
@@ -554,7 +679,8 @@ export async function DELETE(
     if (!assignmentId) {
       return NextResponse.json(
         {
-          error: "Assignment ID is required.",
+          error:
+            "Assignment ID is required.",
         },
         {
           status: 400,
@@ -562,24 +688,33 @@ export async function DELETE(
       );
     }
 
-    const { data: assignment, error: loadError } =
-      await supabase
-        .from("job_assignments")
-        .select(`
-          id,
-          job_id
-        `)
-        .eq("id", assignmentId)
-        .maybeSingle();
+    const {
+      data: assignment,
+      error: loadError,
+    } = await supabase
+      .from("job_assignments")
+      .select(`
+        id,
+        job_id
+      `)
+      .eq("id", assignmentId)
+      .eq(
+        "company_id",
+        auth.companyId,
+      )
+      .maybeSingle();
 
     if (loadError) {
-      throw new Error(loadError.message);
+      throw new Error(
+        loadError.message,
+      );
     }
 
     if (!assignment) {
       return NextResponse.json(
         {
-          error: "The assignment could not be found.",
+          error:
+            "The assignment could not be found in the active company.",
         },
         {
           status: 404,
@@ -587,23 +722,37 @@ export async function DELETE(
       );
     }
 
-    const { error: deleteError } = await supabase
+    const {
+      error: deleteError,
+    } = await supabase
       .from("job_assignments")
       .delete()
-      .eq("id", assignmentId);
+      .eq("id", assignmentId)
+      .eq(
+        "company_id",
+        auth.companyId,
+      );
 
     if (deleteError) {
-      throw new Error(deleteError.message);
+      throw new Error(
+        deleteError.message,
+      );
     }
 
-    const { error: jobUpdateError } =
-      await supabase
-        .from("jobs")
-        .update({
-          engineer_name: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", assignment.job_id);
+    const {
+      error: jobUpdateError,
+    } = await supabase
+      .from("jobs")
+      .update({
+        engineer_name: null,
+        updated_at:
+          new Date().toISOString(),
+      })
+      .eq("id", assignment.job_id)
+      .eq(
+        "company_id",
+        auth.companyId,
+      );
 
     if (jobUpdateError) {
       console.error(
@@ -612,10 +761,18 @@ export async function DELETE(
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      message: "Job removed from the schedule.",
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        message:
+          "Job removed from the schedule.",
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
+    );
   } catch (error: unknown) {
     console.error(
       "Unable to remove assignment:",
@@ -638,10 +795,13 @@ export async function DELETE(
 
 function getLocalDate() {
   const date = new Date();
-  const offset = date.getTimezoneOffset();
+
+  const offset =
+    date.getTimezoneOffset();
 
   return new Date(
-    date.getTime() - offset * 60_000,
+    date.getTime() -
+      offset * 60_000,
   )
     .toISOString()
     .slice(0, 10);
@@ -655,13 +815,20 @@ function addDays(
     `${dateValue}T12:00:00`,
   );
 
-  date.setDate(date.getDate() + days);
+  date.setDate(
+    date.getDate() + days,
+  );
 
-  return getDateInputValue(date);
+  return getDateInputValue(
+    date,
+  );
 }
 
-function getDateInputValue(date: Date) {
-  const year = date.getFullYear();
+function getDateInputValue(
+  date: Date,
+) {
+  const year =
+    date.getFullYear();
 
   const month = String(
     date.getMonth() + 1,
@@ -674,6 +841,10 @@ function getDateInputValue(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-function isValidDateInput(value: string) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+function isValidDateInput(
+  value: string,
+) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(
+    value,
+  );
 }

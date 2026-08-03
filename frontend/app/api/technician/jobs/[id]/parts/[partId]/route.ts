@@ -55,17 +55,11 @@ export async function PATCH(
       );
     }
 
-    if (auth.error) {
-      return NextResponse.json(
-        { error: auth.error },
-        { status: 500 },
-      );
-    }
-
     const assignment = await getAccessibleAssignment(
       auth.supabase,
       jobId,
       auth.user.id,
+      auth.companyId,
       auth.isManager,
     );
 
@@ -80,6 +74,7 @@ export async function PATCH(
       auth.supabase,
       jobId,
       partId,
+      auth.companyId,
     );
 
     if (!part) {
@@ -121,6 +116,7 @@ export async function PATCH(
           .from("stock_items")
           .select("id, quantity_in_stock")
           .eq("id", part.stock_item_id)
+          .eq("company_id", auth.companyId)
           .maybeSingle();
 
       if (stockError) {
@@ -166,7 +162,8 @@ export async function PATCH(
             quantity_in_stock: updatedStockQuantity,
             updated_at: now,
           })
-          .eq("id", stock.id);
+          .eq("id", stock.id)
+          .eq("company_id", auth.companyId);
 
       if (stockUpdateError) {
         throw new Error(stockUpdateError.message);
@@ -183,6 +180,7 @@ export async function PATCH(
         })
         .eq("id", partId)
         .eq("job_id", jobId)
+        .eq("company_id", auth.companyId)
         .select(`
           id,
           job_id,
@@ -207,7 +205,8 @@ export async function PATCH(
             quantity_in_stock: originalStockQuantity,
             updated_at: new Date().toISOString(),
           })
-          .eq("id", stock.id);
+          .eq("id", stock.id)
+          .eq("company_id", auth.companyId);
       }
 
       if (partUpdateError) {
@@ -220,13 +219,22 @@ export async function PATCH(
       );
     }
 
-    return NextResponse.json({
-      message: "Part updated.",
-      part: mapJobPart(updatedPart as JobPartRow),
-      quantityInStock: stock
-        ? updatedStockQuantity
-        : null,
-    });
+    return NextResponse.json(
+      {
+        message: "Part updated.",
+        part: mapJobPart(
+          updatedPart as JobPartRow,
+        ),
+        quantityInStock: stock
+          ? updatedStockQuantity
+          : null,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
+    );
   } catch (error) {
     console.error(
       "PATCH technician job part error:",
@@ -260,17 +268,11 @@ export async function DELETE(
       );
     }
 
-    if (auth.error) {
-      return NextResponse.json(
-        { error: auth.error },
-        { status: 500 },
-      );
-    }
-
     const assignment = await getAccessibleAssignment(
       auth.supabase,
       jobId,
       auth.user.id,
+      auth.companyId,
       auth.isManager,
     );
 
@@ -285,6 +287,7 @@ export async function DELETE(
       auth.supabase,
       jobId,
       partId,
+      auth.companyId,
     );
 
     if (!part) {
@@ -306,6 +309,7 @@ export async function DELETE(
           .from("stock_items")
           .select("id, quantity_in_stock")
           .eq("id", part.stock_item_id)
+          .eq("company_id", auth.companyId)
           .maybeSingle();
 
       if (stockError) {
@@ -335,7 +339,8 @@ export async function DELETE(
               originalStockQuantity + quantityToReturn,
             updated_at: now,
           })
-          .eq("id", stock.id);
+          .eq("id", stock.id)
+          .eq("company_id", auth.companyId);
 
       if (stockUpdateError) {
         throw new Error(stockUpdateError.message);
@@ -347,7 +352,8 @@ export async function DELETE(
       await auth.supabase
         .from("stock_movements")
         .update({ job_part_id: null })
-        .eq("job_part_id", partId);
+        .eq("job_part_id", partId)
+        .eq("company_id", auth.companyId);
 
     if (detachMovementError) {
       if (stock) {
@@ -357,7 +363,8 @@ export async function DELETE(
             quantity_in_stock: originalStockQuantity,
             updated_at: new Date().toISOString(),
           })
-          .eq("id", stock.id);
+          .eq("id", stock.id)
+          .eq("company_id", auth.companyId);
       }
 
       throw new Error(detachMovementError.message);
@@ -367,7 +374,8 @@ export async function DELETE(
       .from("job_parts_used")
       .delete()
       .eq("id", partId)
-      .eq("job_id", jobId);
+      .eq("job_id", jobId)
+      .eq("company_id", auth.companyId);
 
     if (deleteError) {
       if (stock) {
@@ -377,15 +385,24 @@ export async function DELETE(
             quantity_in_stock: originalStockQuantity,
             updated_at: new Date().toISOString(),
           })
-          .eq("id", stock.id);
+          .eq("id", stock.id)
+          .eq("company_id", auth.companyId);
       }
 
       throw new Error(deleteError.message);
     }
 
-    return NextResponse.json({
-      message: "Part removed and stock returned.",
-    });
+    return NextResponse.json(
+      {
+        message:
+          "Part removed and stock returned.",
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
+    );
   } catch (error) {
     console.error(
       "DELETE technician job part error:",
@@ -410,12 +427,14 @@ async function getAccessibleAssignment(
   >["supabase"],
   jobId: string,
   userId: string,
+  companyId: string,
   isManager: boolean,
 ): Promise<AssignmentRow | null> {
   let query = supabase
     .from("job_assignments")
     .select("id")
     .eq("job_id", jobId)
+    .eq("company_id", companyId)
     .neq("assignment_status", "cancelled");
 
   if (!isManager) {
@@ -442,6 +461,7 @@ async function getJobPart(
   >["supabase"],
   jobId: string,
   partId: string,
+  companyId: string,
 ): Promise<JobPartRow | null> {
   const { data, error } = await supabase
     .from("job_parts_used")
@@ -461,6 +481,7 @@ async function getJobPart(
     `)
     .eq("id", partId)
     .eq("job_id", jobId)
+    .eq("company_id", companyId)
     .maybeSingle();
 
   if (error) {

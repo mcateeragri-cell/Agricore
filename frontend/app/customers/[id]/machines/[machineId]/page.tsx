@@ -8,6 +8,8 @@ import {
   useState,
 } from "react";
 import { useParams } from "next/navigation";
+
+import { useNavigationUser } from "@/Components/navigation/use-navigation-user";
 import { supabase } from "@/lib/supabase";
 import Card from "../../../../../Components/ui/Card";
 import EditMachineModal from "./EditMachineModal";
@@ -15,6 +17,7 @@ import HourHistory from "./HourHistory";
 import JobsPreview from "./JobsPreview";
 import MachineDetails from "./MachineDetails";
 import MachineHeader from "./MachineHeader";
+import MachineInsightsLinks from "./MachineInsightsLinks";
 import MachineNotes from "./MachineNotes";
 import MachineSummary from "./MachineSummary";
 import RecordHoursModal from "./RecordHoursModal";
@@ -28,126 +31,258 @@ import {
   type Machine,
   type MachineForm,
 } from "./types";
-import MachineInsightsLinks from "./MachineInsightsLinks";
 
 export default function MachineProfilePage() {
-  const params = useParams<{ id: string; machineId: string }>();
+  const params = useParams<{
+    id: string;
+    machineId: string;
+  }>();
+
   const customerId = params.id;
   const machineId = params.machineId;
 
-  const [customer, setCustomer] = useState<Customer | null>(null);
-  const [machine, setMachine] = useState<Machine | null>(null);
-  const [hourReadings, setHourReadings] = useState<HourReading[]>([]);
+  const {
+    userState,
+    loading: companyLoading,
+  } = useNavigationUser();
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState("");
+  const companyId =
+    userState.activeCompany?.id ?? "";
 
-  const [showEditForm, setShowEditForm] = useState(false);
+  const [customer, setCustomer] =
+    useState<Customer | null>(null);
+
+  const [machine, setMachine] =
+    useState<Machine | null>(null);
+
+  const [hourReadings, setHourReadings] =
+    useState<HourReading[]>([]);
+
+  const [isLoading, setIsLoading] =
+    useState(true);
+
+  const [errorMessage, setErrorMessage] =
+    useState("");
+
+  const [showEditForm, setShowEditForm] =
+    useState(false);
+
   const [machineForm, setMachineForm] =
-    useState<MachineForm>(emptyMachineForm);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveError, setSaveError] = useState("");
+    useState<MachineForm>(
+      emptyMachineForm,
+    );
 
-  const [showHourForm, setShowHourForm] = useState(false);
+  const [isSaving, setIsSaving] =
+    useState(false);
+
+  const [saveError, setSaveError] =
+    useState("");
+
+  const [showHourForm, setShowHourForm] =
+    useState(false);
+
   const [hourForm, setHourForm] =
-    useState<HourReadingForm>(emptyHourReadingForm);
-  const [isSavingHours, setIsSavingHours] = useState(false);
-  const [hourError, setHourError] = useState("");
+    useState<HourReadingForm>(
+      emptyHourReadingForm,
+    );
 
-  const loadMachineProfile = useCallback(async () => {
-    setIsLoading(true);
-    setErrorMessage("");
+  const [isSavingHours, setIsSavingHours] =
+    useState(false);
 
-    const [customerResult, machineResult, hourReadingsResult] =
-      await Promise.all([
+  const [hourError, setHourError] =
+    useState("");
+
+  const loadMachineProfile =
+    useCallback(async () => {
+      if (companyLoading) {
+        return;
+      }
+
+      setIsLoading(true);
+      setErrorMessage("");
+
+      if (!companyId) {
+        setCustomer(null);
+        setMachine(null);
+        setHourReadings([]);
+        setErrorMessage(
+          "No active company is selected.",
+        );
+        setIsLoading(false);
+        return;
+      }
+
+      const [
+        customerResult,
+        machineResult,
+        hourReadingsResult,
+      ] = await Promise.all([
         supabase
           .from("customers")
-          .select("id, contact_name, business_name")
+          .select(
+            "id, contact_name, business_name",
+          )
           .eq("id", customerId)
+          .eq("company_id", companyId)
           .maybeSingle(),
 
         supabase
           .from("machines")
           .select("*")
           .eq("id", machineId)
-          .eq("customer_id", customerId)
+          .eq(
+            "customer_id",
+            customerId,
+          )
+          .eq(
+            "company_id",
+            companyId,
+          )
           .maybeSingle(),
 
         supabase
-          .from("machine_hour_readings")
-          .select("id, hours, reading_date, source, notes, created_at")
-          .eq("machine_id", machineId)
-          .order("reading_date", { ascending: false })
-          .order("created_at", { ascending: false }),
+          .from(
+            "machine_hour_readings",
+          )
+          .select(
+            "id, hours, reading_date, source, notes, created_at",
+          )
+          .eq(
+            "machine_id",
+            machineId,
+          )
+          .eq(
+            "company_id",
+            companyId,
+          )
+          .order("reading_date", {
+            ascending: false,
+          })
+          .order("created_at", {
+            ascending: false,
+          }),
       ]);
 
-    const errors = [
-      customerResult.error
-        ? `Unable to load customer: ${customerResult.error.message}`
-        : "",
-      machineResult.error
-        ? `Unable to load machine: ${machineResult.error.message}`
-        : "",
-      hourReadingsResult.error
-        ? `Unable to load hour history: ${hourReadingsResult.error.message}`
-        : "",
-    ].filter(Boolean);
+      const errors = [
+        customerResult.error
+          ? `Unable to load customer: ${customerResult.error.message}`
+          : "",
+        machineResult.error
+          ? `Unable to load machine: ${machineResult.error.message}`
+          : "",
+        hourReadingsResult.error
+          ? `Unable to load hour history: ${hourReadingsResult.error.message}`
+          : "",
+      ].filter(Boolean);
 
-    setErrorMessage(errors.join(" "));
+      setErrorMessage(
+        errors.join(" "),
+      );
 
-    if (customerResult.data) {
-      setCustomer({
-        id: customerResult.data.id,
-        contactName: customerResult.data.contact_name ?? "",
-        businessName: customerResult.data.business_name ?? "",
-      });
-    } else {
-      setCustomer(null);
-    }
+      if (customerResult.data) {
+        setCustomer({
+          id: customerResult.data.id,
+          contactName:
+            customerResult.data
+              .contact_name ?? "",
+          businessName:
+            customerResult.data
+              .business_name ?? "",
+        });
+      } else {
+        setCustomer(null);
+      }
 
-    if (machineResult.data) {
-      setMachine({
-        id: machineResult.data.id,
-        customerId: machineResult.data.customer_id,
-        make: machineResult.data.make ?? "",
-        model: machineResult.data.model ?? "",
-        machineType: machineResult.data.machine_type ?? "Other",
-        year:
-          machineResult.data.year === null ||
-          machineResult.data.year === undefined
-            ? ""
-            : String(machineResult.data.year),
-        registration: machineResult.data.registration ?? "",
-        serialNumber: machineResult.data.serial_number ?? "",
-        hours:
-          machineResult.data.hours === null ||
-          machineResult.data.hours === undefined
-            ? ""
-            : String(machineResult.data.hours),
-        notes: machineResult.data.notes ?? "",
-      });
-    } else {
-      setMachine(null);
-    }
+      if (machineResult.data) {
+        setMachine({
+          id: machineResult.data.id,
+          customerId:
+            machineResult.data
+              .customer_id,
+          make:
+            machineResult.data.make ??
+            "",
+          model:
+            machineResult.data.model ??
+            "",
+          machineType:
+            machineResult.data
+              .machine_type ??
+            "Other",
+          year:
+            machineResult.data.year ===
+              null ||
+            machineResult.data.year ===
+              undefined
+              ? ""
+              : String(
+                  machineResult.data
+                    .year,
+                ),
+          registration:
+            machineResult.data
+              .registration ?? "",
+          serialNumber:
+            machineResult.data
+              .serial_number ?? "",
+          hours:
+            machineResult.data.hours ===
+              null ||
+            machineResult.data.hours ===
+              undefined
+              ? ""
+              : String(
+                  machineResult.data
+                    .hours,
+                ),
+          notes:
+            machineResult.data.notes ??
+            "",
+        });
+      } else {
+        setMachine(null);
+      }
 
-    const loadedHourReadings: HourReading[] = (
-      hourReadingsResult.data ?? []
-    ).map((reading) => ({
-      id: reading.id,
-      hours: Number(reading.hours),
-      readingDate: reading.reading_date,
-      source: reading.source ?? "manual",
-      notes: reading.notes ?? "",
-      createdAt: reading.created_at ?? "",
-    }));
+      const loadedHourReadings: HourReading[] =
+        (
+          hourReadingsResult.data ??
+          []
+        ).map((reading) => ({
+          id: reading.id,
+          hours: Number(
+            reading.hours,
+          ),
+          readingDate:
+            reading.reading_date,
+          source:
+            reading.source ??
+            "manual",
+          notes:
+            reading.notes ?? "",
+          createdAt:
+            reading.created_at ?? "",
+        }));
 
-    setHourReadings(loadedHourReadings);
-    setIsLoading(false);
-  }, [customerId, machineId]);
+      setHourReadings(
+        loadedHourReadings,
+      );
+
+      setIsLoading(false);
+    }, [
+      companyId,
+      companyLoading,
+      customerId,
+      machineId,
+    ]);
 
   useEffect(() => {
-    void loadMachineProfile();
-  }, [loadMachineProfile]);
+    if (!companyLoading) {
+      void loadMachineProfile();
+    }
+  }, [
+    companyLoading,
+    loadMachineProfile,
+  ]);
 
   function openEditForm() {
     if (!machine) {
@@ -157,10 +292,13 @@ export default function MachineProfilePage() {
     setMachineForm({
       make: machine.make,
       model: machine.model,
-      machineType: machine.machineType,
+      machineType:
+        machine.machineType,
       year: machine.year,
-      registration: machine.registration,
-      serialNumber: machine.serialNumber,
+      registration:
+        machine.registration,
+      serialNumber:
+        machine.serialNumber,
       hours: machine.hours,
       notes: machine.notes,
     });
@@ -178,32 +316,66 @@ export default function MachineProfilePage() {
     setSaveError("");
   }
 
-  function updateMachineForm(field: keyof MachineForm, value: string) {
-    setMachineForm((current) => ({ ...current, [field]: value }));
+  function updateMachineForm(
+    field: keyof MachineForm,
+    value: string,
+  ) {
+    setMachineForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
   }
 
-  async function handleEditSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleEditSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
 
-    if (!machineForm.make.trim() || !machineForm.model.trim()) {
-      setSaveError("Machine make and model are required.");
+    if (
+      !machineForm.make.trim() ||
+      !machineForm.model.trim()
+    ) {
+      setSaveError(
+        "Machine make and model are required.",
+      );
       return;
     }
 
-    const yearValue = machineForm.year.trim()
-      ? Number(machineForm.year)
-      : null;
-    const hoursValue = machineForm.hours.trim()
-      ? Number(machineForm.hours)
-      : null;
-
-    if (yearValue !== null && Number.isNaN(yearValue)) {
-      setSaveError("Enter a valid machine year.");
+    if (!companyId) {
+      setSaveError(
+        "No active company is selected.",
+      );
       return;
     }
 
-    if (hoursValue !== null && (Number.isNaN(hoursValue) || hoursValue < 0)) {
-      setSaveError("Enter a valid non-negative hour reading.");
+    const yearValue =
+      machineForm.year.trim()
+        ? Number(machineForm.year)
+        : null;
+
+    const hoursValue =
+      machineForm.hours.trim()
+        ? Number(machineForm.hours)
+        : null;
+
+    if (
+      yearValue !== null &&
+      Number.isNaN(yearValue)
+    ) {
+      setSaveError(
+        "Enter a valid machine year.",
+      );
+      return;
+    }
+
+    if (
+      hoursValue !== null &&
+      (Number.isNaN(hoursValue) ||
+        hoursValue < 0)
+    ) {
+      setSaveError(
+        "Enter a valid non-negative hour reading.",
+      );
       return;
     }
 
@@ -213,25 +385,44 @@ export default function MachineProfilePage() {
     const { error } = await supabase
       .from("machines")
       .update({
-        make: machineForm.make.trim(),
-        model: machineForm.model.trim(),
-        machine_type: machineForm.machineType,
+        make:
+          machineForm.make.trim(),
+        model:
+          machineForm.model.trim(),
+        machine_type:
+          machineForm.machineType,
         year: yearValue,
-        registration: machineForm.registration.trim().toUpperCase(),
-        serial_number: machineForm.serialNumber.trim(),
+        registration:
+          machineForm.registration
+            .trim()
+            .toUpperCase(),
+        serial_number:
+          machineForm.serialNumber
+            .trim(),
         hours: hoursValue,
-        notes: machineForm.notes.trim(),
+        notes:
+          machineForm.notes.trim(),
       })
       .eq("id", machineId)
-      .eq("customer_id", customerId);
+      .eq(
+        "customer_id",
+        customerId,
+      )
+      .eq(
+        "company_id",
+        companyId,
+      );
 
     if (error) {
-      setSaveError(`Unable to update machine: ${error.message}`);
+      setSaveError(
+        `Unable to update machine: ${error.message}`,
+      );
       setIsSaving(false);
       return;
     }
 
     await loadMachineProfile();
+
     setShowEditForm(false);
     setIsSaving(false);
   }
@@ -239,10 +430,12 @@ export default function MachineProfilePage() {
   function openHourForm() {
     setHourForm({
       hours: machine?.hours ?? "",
-      readingDate: getTodayDate(),
+      readingDate:
+        getTodayDate(),
       source: "manual",
       notes: "",
     });
+
     setHourError("");
     setShowHourForm(true);
   }
@@ -256,32 +449,59 @@ export default function MachineProfilePage() {
     setHourError("");
   }
 
-  function updateHourForm(field: keyof HourReadingForm, value: string) {
-    setHourForm((current) => ({ ...current, [field]: value }));
+  function updateHourForm(
+    field: keyof HourReadingForm,
+    value: string,
+  ) {
+    setHourForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
   }
 
-  async function handleHourSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleHourSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
 
-    const newHours = Number(hourForm.hours);
+    if (!companyId) {
+      setHourError(
+        "No active company is selected.",
+      );
+      return;
+    }
+
+    const newHours = Number(
+      hourForm.hours,
+    );
 
     if (
-      hourForm.hours.trim() === "" ||
+      hourForm.hours.trim() ===
+        "" ||
       Number.isNaN(newHours) ||
       newHours < 0
     ) {
-      setHourError("Enter a valid non-negative hour reading.");
+      setHourError(
+        "Enter a valid non-negative hour reading.",
+      );
       return;
     }
 
     if (!hourForm.readingDate) {
-      setHourError("Choose the date the reading was taken.");
+      setHourError(
+        "Choose the date the reading was taken.",
+      );
       return;
     }
 
-    const latestReading = hourReadings[0];
+    const latestReading =
+      hourReadings[0];
 
-    if (latestReading && newHours < latestReading.hours) {
+    if (
+      latestReading &&
+      newHours <
+        latestReading.hours
+    ) {
       setHourError(
         `The new reading cannot be lower than the latest reading of ${latestReading.hours.toLocaleString()} hours.`,
       );
@@ -291,27 +511,48 @@ export default function MachineProfilePage() {
     setIsSavingHours(true);
     setHourError("");
 
-    const { error: insertError } = await supabase
-      .from("machine_hour_readings")
+    const {
+      error: insertError,
+    } = await supabase
+      .from(
+        "machine_hour_readings",
+      )
       .insert({
+        company_id: companyId,
         machine_id: machineId,
         hours: newHours,
-        reading_date: hourForm.readingDate,
+        reading_date:
+          hourForm.readingDate,
         source: hourForm.source,
-        notes: hourForm.notes.trim() || null,
+        notes:
+          hourForm.notes.trim() ||
+          null,
       });
 
     if (insertError) {
-      setHourError(`Unable to save hour reading: ${insertError.message}`);
+      setHourError(
+        `Unable to save hour reading: ${insertError.message}`,
+      );
       setIsSavingHours(false);
       return;
     }
 
-    const { error: machineUpdateError } = await supabase
+    const {
+      error: machineUpdateError,
+    } = await supabase
       .from("machines")
-      .update({ hours: newHours })
+      .update({
+        hours: newHours,
+      })
       .eq("id", machineId)
-      .eq("customer_id", customerId);
+      .eq(
+        "customer_id",
+        customerId,
+      )
+      .eq(
+        "company_id",
+        companyId,
+      );
 
     if (machineUpdateError) {
       setHourError(
@@ -322,16 +563,24 @@ export default function MachineProfilePage() {
     }
 
     await loadMachineProfile();
+
     setShowHourForm(false);
-    setHourForm(emptyHourReadingForm);
+    setHourForm(
+      emptyHourReadingForm,
+    );
     setIsSavingHours(false);
   }
 
-  if (isLoading) {
+  if (
+    isLoading ||
+    companyLoading
+  ) {
     return (
       <main className="p-6 lg:p-8">
         <Card className="p-10 text-center">
-          <p className="font-semibold text-slate-700">Loading machine...</p>
+          <p className="font-semibold text-slate-700">
+            Loading machine...
+          </p>
         </Card>
       </main>
     );
@@ -341,13 +590,18 @@ export default function MachineProfilePage() {
     return (
       <main className="p-6 lg:p-8">
         <Card className="p-8 text-center">
-          <h1 className="text-2xl font-bold">Machine not found</h1>
+          <h1 className="text-2xl font-bold">
+            Machine not found
+          </h1>
+
           <p className="mt-2 text-slate-500">
             This machine could not be found for the selected customer.
           </p>
 
           {errorMessage && (
-            <p className="mt-3 text-sm text-red-700">{errorMessage}</p>
+            <p className="mt-3 text-sm text-red-700">
+              {errorMessage}
+            </p>
           )}
 
           <Link
@@ -384,52 +638,84 @@ export default function MachineProfilePage() {
           >
             Overview
           </button>
-          <button type="button" className="px-1 pb-3 text-slate-500">
+
+          <button
+            type="button"
+            className="px-1 pb-3 text-slate-500"
+          >
             Jobs
           </button>
-          <button type="button" className="px-1 pb-3 text-slate-500">
+
+          <button
+            type="button"
+            className="px-1 pb-3 text-slate-500"
+          >
             Service
           </button>
-          <button type="button" className="px-1 pb-3 text-slate-500">
+
+          <button
+            type="button"
+            className="px-1 pb-3 text-slate-500"
+          >
             Parts
           </button>
-          <button type="button" className="px-1 pb-3 text-slate-500">
+
+          <button
+            type="button"
+            className="px-1 pb-3 text-slate-500"
+          >
             Photos
           </button>
-          <button type="button" className="px-1 pb-3 text-slate-500">
+
+          <button
+            type="button"
+            className="px-1 pb-3 text-slate-500"
+          >
             Documents
           </button>
         </div>
       </nav>
 
       <section className="grid gap-6 xl:grid-cols-3">
-        <MachineDetails machine={machine} />
+        <MachineDetails
+          machine={machine}
+        />
+
         <MachineSummary />
       </section>
 
       <HourHistory
-  readings={hourReadings}
-  onRecordHours={openHourForm}
-/>
+        readings={hourReadings}
+        onRecordHours={
+          openHourForm
+        }
+      />
 
-<MachineInsightsLinks
-  customerId={customer.id}
-  machineId={machine.id}
-/>
+      <MachineInsightsLinks
+        customerId={customer.id}
+        machineId={machine.id}
+      />
 
-<section className="grid gap-6 lg:grid-cols-2">
-  <JobsPreview />
-  <MachineNotes notes={machine.notes} />
-</section>
+      <section className="grid gap-6 lg:grid-cols-2">
+        <JobsPreview />
+
+        <MachineNotes
+          notes={machine.notes}
+        />
+      </section>
 
       {showEditForm && (
         <EditMachineModal
           form={machineForm}
           isSaving={isSaving}
           errorMessage={saveError}
-          onChange={updateMachineForm}
+          onChange={
+            updateMachineForm
+          }
           onClose={closeEditForm}
-          onSubmit={handleEditSubmit}
+          onSubmit={
+            handleEditSubmit
+          }
         />
       )}
 
@@ -439,9 +725,13 @@ export default function MachineProfilePage() {
           form={hourForm}
           isSaving={isSavingHours}
           errorMessage={hourError}
-          onChange={updateHourForm}
+          onChange={
+            updateHourForm
+          }
           onClose={closeHourForm}
-          onSubmit={handleHourSubmit}
+          onSubmit={
+            handleHourSubmit
+          }
         />
       )}
     </main>

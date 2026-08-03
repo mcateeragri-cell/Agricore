@@ -581,15 +581,6 @@ function getAuthResponse(
     );
   }
 
-  if (auth.error) {
-    return NextResponse.json(
-      {
-        error: auth.error,
-      },
-      { status: 500 },
-    );
-  }
-
   if (!auth.canReview) {
     return NextResponse.json(
       {

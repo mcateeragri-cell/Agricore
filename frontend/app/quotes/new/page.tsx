@@ -16,6 +16,7 @@ import QuoteTotals, {
 } from "@/Components/quotes/QuoteTotals";
 
 import { supabase } from "@/lib/supabase";
+import { getActiveCompany } from "@/lib/client/active-company";
 
 type Customer = {
   id: string;
@@ -55,6 +56,7 @@ export default function NewQuotePage() {
 
   const initialDate = getToday();
 
+  const [activeCompanyId, setActiveCompanyId] = useState("");
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
   const [stockItems, setStockItems] = useState<StockItemOption[]>([]);
@@ -91,11 +93,16 @@ export default function NewQuotePage() {
       setLoading(true);
       setErrorMessage("");
 
-      const [customersResult, machinesResult, stockResult] =
-        await Promise.all([
+      try {
+        const activeCompany = await getActiveCompany();
+        setActiveCompanyId(activeCompany.id);
+
+        const [customersResult, machinesResult, stockResult] =
+          await Promise.all([
           supabase
             .from("customers")
             .select("*")
+            .eq("company_id", activeCompany.id)
             .order("created_at", {
               ascending: true,
             }),
@@ -103,6 +110,7 @@ export default function NewQuotePage() {
           supabase
             .from("machines")
             .select("*")
+            .eq("company_id", activeCompany.id)
             .order("created_at", {
               ascending: true,
             }),
@@ -112,6 +120,7 @@ export default function NewQuotePage() {
             .select(
               "id, part_number, description, unit_cost, unit_price, quantity_in_stock",
             )
+            .eq("company_id", activeCompany.id)
             .eq("active", true)
             .order("description", {
               ascending: true,
@@ -138,11 +147,18 @@ export default function NewQuotePage() {
 
       setMachines((machinesResult.data ?? []) as Machine[]);
 
-      setStockItems(
-        (stockResult.data ?? []) as StockItemOption[],
-      );
-
-      setLoading(false);
+        setStockItems(
+          (stockResult.data ?? []) as StockItemOption[],
+        );
+      } catch (error) {
+        console.error("Unable to load quote form data:", error);
+        setCustomers([]);
+        setMachines([]);
+        setStockItems([]);
+        setErrorMessage(error instanceof Error ? error.message : "Unable to load quote form data.");
+      } finally {
+        setLoading(false);
+      }
     }
 
     void loadPageData();
@@ -175,6 +191,11 @@ export default function NewQuotePage() {
 
   async function saveQuote(status: "draft" | "sent") {
     setErrorMessage("");
+
+    if (!activeCompanyId) {
+      setErrorMessage("No active company is selected. Refresh and try again.");
+      return;
+    }
 
     if (!customerId) {
       setErrorMessage("Please select a customer.");
@@ -232,6 +253,7 @@ export default function NewQuotePage() {
       }
 
       const quotePayload = {
+        company_id: activeCompanyId,
         customer_id: customerId,
         machine_id: machineId || null,
         status,
@@ -262,6 +284,7 @@ export default function NewQuotePage() {
       }
 
       const itemPayload = items.map((item, index) => ({
+        company_id: activeCompanyId,
         quote_id: quote.id,
         item_type: item.item_type,
         stock_item_id: item.stock_item_id || null,
@@ -280,7 +303,8 @@ export default function NewQuotePage() {
         const { error: cleanupError } = await supabase
           .from("quotes")
           .delete()
-          .eq("id", quote.id);
+          .eq("id", quote.id)
+          .eq("company_id", activeCompanyId);
 
         if (cleanupError) {
           console.error(

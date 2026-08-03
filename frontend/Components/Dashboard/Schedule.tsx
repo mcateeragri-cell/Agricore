@@ -9,7 +9,7 @@ import {
 } from "react";
 
 import { supabase } from "@/lib/supabase";
-
+import { useNavigationUser } from "@/Components/navigation/use-navigation-user";
 type RelatedCustomer = {
   id?: string | null;
   contact_name?: string | null;
@@ -207,6 +207,8 @@ function buildLocation(
 }
 
 export default function Schedule() {
+  const { userState, loading: companyLoading } = useNavigationUser();
+  const companyId = userState.activeCompany?.id ?? "";
   const [assignments, setAssignments] = useState<
     JobAssignmentRow[]
   >([]);
@@ -216,6 +218,12 @@ export default function Schedule() {
 
   const loadSchedule = useCallback(async () => {
     setErrorMessage("");
+
+    if (!companyId) {
+      setAssignments([]);
+      setLoading(companyLoading);
+      return;
+    }
 
     const selectedDate = getLocalDateInput();
     const nextDate = addDays(selectedDate, 1);
@@ -262,6 +270,7 @@ export default function Schedule() {
           )
         )
       `)
+      .eq("company_id", companyId)
       .gte("scheduled_start", startOfDay)
       .lt("scheduled_start", startOfNextDay)
       .order("scheduled_start", {
@@ -282,7 +291,7 @@ export default function Schedule() {
       (data ?? []) as JobAssignmentRow[],
     );
     setLoading(false);
-  }, []);
+  }, [companyId, companyLoading]);
 
   useEffect(() => {
     void loadSchedule();
@@ -295,6 +304,7 @@ export default function Schedule() {
           event: "*",
           schema: "public",
           table: "job_assignments",
+          filter: `company_id=eq.${companyId}`,
         },
         () => {
           void loadSchedule();

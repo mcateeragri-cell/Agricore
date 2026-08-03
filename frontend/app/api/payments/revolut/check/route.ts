@@ -74,6 +74,7 @@ export async function POST(request: NextRequest) {
         `,
       )
       .eq("id", invoiceId)
+      .eq("company_id", auth.companyId)
       .single();
 
     if (invoiceError || !invoice) {
@@ -133,6 +134,7 @@ export async function POST(request: NextRequest) {
       .from("invoices")
       .update(updateValues)
       .eq("id", invoiceId)
+      .eq("company_id", auth.companyId)
       .select("status, amount_paid, paid_at")
       .single();
 
@@ -150,14 +152,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json<CheckPaymentResponse>({
+    return NextResponse.json<CheckPaymentResponse>(
+      {
       success: true,
       state,
       isPaid,
       invoiceStatus: updatedInvoice.status,
       amountPaid: asNumber(updatedInvoice.amount_paid),
       paidAt: updatedInvoice.paid_at,
-    });
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
+    );
   } catch (error) {
     console.error("Revolut payment status check failed:", error);
 

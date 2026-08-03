@@ -30,6 +30,7 @@ export async function loadInvoicePdfData({
     .from("invoices")
     .select("*")
     .eq("id", invoiceId)
+    .eq("company_id", auth.companyId)
     .maybeSingle();
 
   if (invoiceResult.error) throw new Error(invoiceResult.error.message);
@@ -41,6 +42,7 @@ export async function loadInvoicePdfData({
     .from("invoice_items")
     .select("id, item_type, description, quantity, unit_price, line_total, sort_order")
     .eq("invoice_id", invoiceId)
+    .eq("company_id", auth.companyId)
     .order("sort_order", { ascending: true });
 
   if (itemResult.error) throw new Error(itemResult.error.message);
@@ -54,6 +56,7 @@ export async function loadInvoicePdfData({
       .from("jobs")
       .select("id, job_number, fault_reported, diagnosis, work_carried_out, machine_hours, engineer_name, machine_id")
       .eq("id", invoice.job_id)
+      .eq("company_id", auth.companyId)
       .maybeSingle();
 
     if (jobResult.error) throw new Error(jobResult.error.message);
@@ -64,6 +67,7 @@ export async function loadInvoicePdfData({
         .from("job_photos")
         .select("id, file_path, caption, created_at")
         .eq("job_id", invoice.job_id)
+        .eq("company_id", auth.companyId)
         .order("created_at", { ascending: true })
         .limit(6);
 
@@ -76,6 +80,7 @@ export async function loadInvoicePdfData({
         .from("machines")
         .select("id, make, model, registration, serial_number")
         .eq("id", job.machine_id)
+        .eq("company_id", auth.companyId)
         .maybeSingle();
 
       if (machineResult.error) throw new Error(machineResult.error.message);

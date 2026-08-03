@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { getTechnicianAuth } from "../../../_shared";
+import { getTechnicianAuth } from "@/app/api/technician/_shared";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -44,6 +44,7 @@ type AssignmentRow = {
 
 type CompletionRow = {
   id: string;
+  company_id: string;
   job_id: string;
   assignment_id: string | null;
   submitted_by: string;
@@ -100,17 +101,11 @@ export async function GET(
       );
     }
 
-    if (auth.error) {
-      return NextResponse.json(
-        { error: auth.error },
-        { status: 500 },
-      );
-    }
-
     const assignment = await getAccessibleAssignment(
       auth.supabase,
       jobId,
       auth.user.id,
+      auth.companyId,
       auth.isManager,
     );
 
@@ -125,6 +120,7 @@ export async function GET(
       .from("job_completions")
       .select(`
         id,
+        company_id,
         job_id,
         assignment_id,
         submitted_by,
@@ -155,17 +151,27 @@ export async function GET(
         updated_at
       `)
       .eq("job_id", jobId)
+      .eq("company_id", auth.companyId)
       .maybeSingle();
 
     if (error) {
       throw new Error(error.message);
     }
 
-    return NextResponse.json({
-      completion: data
-        ? mapCompletion(data as CompletionRow)
-        : null,
-    });
+    return NextResponse.json(
+      {
+        completion: data
+          ? mapCompletion(
+              data as CompletionRow,
+            )
+          : null,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
+    );
   } catch (error) {
     console.error(
       "GET technician job completion error:",
@@ -210,17 +216,11 @@ export async function POST(
       );
     }
 
-    if (auth.error) {
-      return NextResponse.json(
-        { error: auth.error },
-        { status: 500 },
-      );
-    }
-
     const assignment = await getAccessibleAssignment(
       auth.supabase,
       jobId,
       auth.user.id,
+      auth.companyId,
       auth.isManager,
     );
 
@@ -249,6 +249,7 @@ export async function POST(
       await loadExistingCompletion(
         auth.supabase,
         jobId,
+        auth.companyId,
       );
 
     if (
@@ -378,6 +379,7 @@ export async function POST(
           : "draft";
 
     const completionPayload = {
+      company_id: auth.companyId,
       job_id: jobId,
       assignment_id: assignment.id,
       submitted_by: auth.user.id,
@@ -433,6 +435,7 @@ export async function POST(
         })
         .select(`
           id,
+          company_id,
           job_id,
           assignment_id,
           submitted_by,
@@ -473,12 +476,14 @@ export async function POST(
         auth.supabase,
         jobId,
         auth.fullName,
+        auth.companyId,
         now,
       );
 
       await updateAssignment(
         auth.supabase,
         assignment.id,
+        auth.companyId,
         {
           assignment_status: "completed",
           updated_at: now.toISOString(),
@@ -490,28 +495,40 @@ export async function POST(
        * is deliberately not changed here. Office approval will
        * later mark the job ready for invoicing.
        */
-      await updateJob(auth.supabase, jobId, {
-        status: "completed",
-        engineer_name: auth.fullName,
-        diagnosis,
-        work_carried_out: workCarriedOut,
-        completed_date: now
-          .toISOString()
-          .slice(0, 10),
-        updated_at: now.toISOString(),
-      });
+      await updateJob(
+        auth.supabase,
+        jobId,
+        auth.companyId,
+        {
+          status: "completed",
+          engineer_name: auth.fullName,
+          diagnosis,
+          work_carried_out: workCarriedOut,
+          completed_date: now
+            .toISOString()
+            .slice(0, 10),
+          updated_at: now.toISOString(),
+        },
+      );
     }
 
-    return NextResponse.json({
-      success: true,
-      message:
-        action === "submit"
-          ? "Job submitted for office review."
-          : "Completion draft saved.",
-      completion: mapCompletion(
-        savedCompletion as CompletionRow,
-      ),
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        message:
+          action === "submit"
+            ? "Job submitted for office review."
+            : "Completion draft saved.",
+        completion: mapCompletion(
+          savedCompletion as CompletionRow,
+        ),
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
+    );
   } catch (error) {
     console.error(
       "POST technician job completion error:",
@@ -536,17 +553,20 @@ async function getAccessibleAssignment(
   >["supabase"],
   jobId: string,
   userId: string,
+  companyId: string,
   isManager: boolean,
 ): Promise<AssignmentRow | null> {
   let query = supabase
     .from("job_assignments")
     .select(`
       id,
+      company_id,
       job_id,
       user_id,
       assignment_status
     `)
     .eq("job_id", jobId)
+    .eq("company_id", companyId)
     .neq("assignment_status", "cancelled");
 
   if (!isManager) {
@@ -572,6 +592,7 @@ async function loadExistingCompletion(
     ReturnType<typeof getTechnicianAuth>
   >["supabase"],
   jobId: string,
+  companyId: string,
 ): Promise<CompletionRow | null> {
   const { data, error } = await supabase
     .from("job_completions")
@@ -607,6 +628,7 @@ async function loadExistingCompletion(
       updated_at
     `)
     .eq("job_id", jobId)
+    .eq("company_id", companyId)
     .maybeSingle();
 
   if (error) {
@@ -621,12 +643,14 @@ async function updateAssignment(
     ReturnType<typeof getTechnicianAuth>
   >["supabase"],
   assignmentId: string,
+  companyId: string,
   updates: Record<string, unknown>,
 ) {
   const { error } = await supabase
     .from("job_assignments")
     .update(updates)
-    .eq("id", assignmentId);
+    .eq("id", assignmentId)
+    .eq("company_id", companyId);
 
   if (error) {
     throw new Error(error.message);
@@ -638,12 +662,14 @@ async function updateJob(
     ReturnType<typeof getTechnicianAuth>
   >["supabase"],
   jobId: string,
+  companyId: string,
   updates: Record<string, unknown>,
 ) {
   const { error } = await supabase
     .from("jobs")
     .update(updates)
-    .eq("id", jobId);
+    .eq("id", jobId)
+    .eq("company_id", companyId);
 
   if (error) {
     throw new Error(error.message);
@@ -656,6 +682,7 @@ async function stopRunningLabour(
   >["supabase"],
   jobId: string,
   engineerName: string,
+  companyId: string,
   finishedAt: Date,
 ) {
   const { data: running, error } =
@@ -665,6 +692,7 @@ async function stopRunningLabour(
         "id,start_time,break_minutes",
       )
       .eq("job_id", jobId)
+      .eq("company_id", companyId)
       .eq("engineer_name", engineerName)
       .eq("entry_status", "running")
       .order("start_time", {
@@ -702,7 +730,8 @@ async function stopRunningLabour(
         entry_status: "completed",
         updated_at: finishedAt.toISOString(),
       })
-      .eq("id", running.id);
+      .eq("id", running.id)
+      .eq("company_id", companyId);
 
   if (updateError) {
     throw new Error(updateError.message);
@@ -793,6 +822,7 @@ function cleanNullableText(
 function mapCompletion(row: CompletionRow) {
   return {
     id: row.id,
+    companyId: row.company_id,
     jobId: row.job_id,
     assignmentId: row.assignment_id,
     submittedBy: row.submitted_by,

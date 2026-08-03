@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { getActiveCompany } from "@/lib/client/active-company";
 import Card from "../../Components/ui/Card";
 
 type QuoteStatus =
@@ -153,11 +154,15 @@ export default function QuotesPage() {
     setLoading(true);
     setErrorMessage("");
 
+    try {
+      const activeCompany = await getActiveCompany();
+
     const { data: quoteData, error: quoteError } = await supabase
       .from("quotes")
       .select(
         "id, quote_number, customer_id, machine_id, converted_job_id, status, title, quote_date, expiry_date, subtotal, vat_total, total, revision_number, created_at",
       )
+      .eq("company_id", activeCompany.id)
       .order("created_at", { ascending: false });
 
     if (quoteError) {
@@ -185,10 +190,10 @@ export default function QuotesPage() {
 
     const [customerResult, machineResult] = await Promise.all([
       customerIds.length > 0
-        ? supabase.from("customers").select("*").in("id", customerIds)
+        ? supabase.from("customers").select("*").eq("company_id", activeCompany.id).in("id", customerIds)
         : Promise.resolve({ data: [], error: null }),
       machineIds.length > 0
-        ? supabase.from("machines").select("*").in("id", machineIds)
+        ? supabase.from("machines").select("*").eq("company_id", activeCompany.id).in("id", machineIds)
         : Promise.resolve({ data: [], error: null }),
     ]);
 
@@ -220,9 +225,17 @@ export default function QuotesPage() {
       ]),
     );
 
-    setCustomers(customerMap);
-    setMachines(machineMap);
-    setLoading(false);
+      setCustomers(customerMap);
+      setMachines(machineMap);
+    } catch (error) {
+      console.error("Unable to load quotes:", error);
+      setQuotes([]);
+      setCustomers({});
+      setMachines({});
+      setErrorMessage(error instanceof Error ? error.message : "Unable to load quotes.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {

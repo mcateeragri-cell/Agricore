@@ -18,6 +18,7 @@ type RouteContext = {
 
 type JobPhotoRow = {
   id: string;
+  company_id: string;
   job_id: string;
   uploaded_by: string | null;
   file_path: string;
@@ -25,6 +26,7 @@ type JobPhotoRow = {
   created_at: string;
 };
 
+const ACTIVE_COMPANY_COOKIE = "agricore_company_id";
 const PHOTO_BUCKET = "job-photos";
 const MAX_PHOTOS_PER_JOB = 10;
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
@@ -59,12 +61,14 @@ export async function GET(
       return authentication;
     }
 
-    const { adminClient, userId } = authentication;
+    const { adminClient, userId, companyId, role } = authentication;
 
     const accessResponse = await checkJobAccess(
       adminClient,
       jobId,
       userId,
+      companyId,
+      role,
     );
 
     if (accessResponse instanceof NextResponse) {
@@ -74,17 +78,25 @@ export async function GET(
     const photos = await loadJobPhotos(
       adminClient,
       jobId,
+      companyId,
     );
 
-    return NextResponse.json({
-      photos,
-      photoCount: photos.length,
-      maximumPhotos: MAX_PHOTOS_PER_JOB,
-      remainingPhotos: Math.max(
-        0,
-        MAX_PHOTOS_PER_JOB - photos.length,
-      ),
-    });
+    return NextResponse.json(
+      {
+        photos,
+        photoCount: photos.length,
+        maximumPhotos: MAX_PHOTOS_PER_JOB,
+        remainingPhotos: Math.max(
+          0,
+          MAX_PHOTOS_PER_JOB - photos.length,
+        ),
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
+    );
   } catch (error: unknown) {
     console.error(
       "Unable to load technician job photos:",
@@ -126,12 +138,14 @@ export async function POST(
       return authentication;
     }
 
-    const { adminClient, userId } = authentication;
+    const { adminClient, userId, companyId, role } = authentication;
 
     const accessResponse = await checkJobAccess(
       adminClient,
       jobId,
       userId,
+      companyId,
+      role,
     );
 
     if (accessResponse instanceof NextResponse) {
@@ -145,7 +159,8 @@ export async function POST(
           count: "exact",
           head: true,
         })
-        .eq("job_id", jobId);
+        .eq("job_id", jobId)
+        .eq("company_id", companyId);
 
     if (countError) {
       throw new Error(
@@ -221,7 +236,7 @@ export async function POST(
 
     const extension = getFileExtension(fileValue);
     uploadedFilePath =
-      `${jobId}/${Date.now()}-${randomUUID()}.${extension}`;
+      `${companyId}/${jobId}/${Date.now()}-${randomUUID()}.${extension}`;
 
     const fileBuffer = Buffer.from(
       await fileValue.arrayBuffer(),
@@ -248,13 +263,14 @@ export async function POST(
     } = await adminClient
       .from("job_photos")
       .insert({
+        company_id: companyId,
         job_id: jobId,
         uploaded_by: userId,
         file_path: uploadedFilePath,
         caption: caption || null,
       })
       .select(
-        "id, job_id, uploaded_by, file_path, caption, created_at",
+        "id, company_id, job_id, uploaded_by, file_path, caption, created_at",
       )
       .single();
 
@@ -316,6 +332,8 @@ async function createAuthenticatedAdminClient(
   | {
       adminClient: AdminSupabaseClient;
       userId: string;
+      companyId: string;
+      role: string;
     }
   | NextResponse
 > {
@@ -370,9 +388,111 @@ async function createAuthenticatedAdminClient(
     );
   }
 
+  const requestedCompanyId =
+    request.cookies
+      .get(ACTIVE_COMPANY_COOKIE)
+      ?.value?.trim() ?? "";
+
+  let companyId = "";
+
+  if (requestedCompanyId) {
+    const {
+      data: requestedMembership,
+      error: requestedMembershipError,
+    } = await adminClient
+      .from("company_members")
+      .select("company_id")
+      .eq("company_id", requestedCompanyId)
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (requestedMembershipError) {
+      return NextResponse.json(
+        {
+          error:
+            `Unable to resolve the active company: ${requestedMembershipError.message}`,
+        },
+        { status: 500 },
+      );
+    }
+
+    if (requestedMembership) {
+      companyId =
+        requestedMembership.company_id;
+    }
+  }
+
+  if (!companyId) {
+    const {
+      data: memberships,
+      error: membershipsError,
+    } = await adminClient
+      .from("company_members")
+      .select("company_id, joined_at")
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .order("joined_at", {
+        ascending: true,
+      })
+      .limit(1);
+
+    if (membershipsError) {
+      return NextResponse.json(
+        {
+          error:
+            `Unable to resolve the active company: ${membershipsError.message}`,
+        },
+        { status: 500 },
+      );
+    }
+
+    companyId =
+      Array.isArray(memberships) &&
+      typeof memberships[0]?.company_id ===
+        "string"
+        ? memberships[0].company_id
+        : "";
+  }
+
+  if (!companyId) {
+    return NextResponse.json(
+      {
+        error:
+          "No active company is available for this account.",
+      },
+      { status: 403 },
+    );
+  }
+
+  const {
+    data: roleRow,
+    error: roleError,
+  } = await adminClient
+    .from("company_member_roles")
+    .select("role")
+    .eq("company_id", companyId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (roleError) {
+    return NextResponse.json(
+      {
+        error:
+          `Unable to load the company role: ${roleError.message}`,
+      },
+      { status: 500 },
+    );
+  }
+
   return {
     adminClient,
     userId: user.id,
+    companyId,
+    role:
+      typeof roleRow?.role === "string"
+        ? roleRow.role
+        : "",
   };
 }
 
@@ -380,31 +500,28 @@ async function checkJobAccess(
   adminClient: AdminSupabaseClient,
   jobId: string,
   userId: string,
+  companyId: string,
+  role: string,
 ): Promise<true | NextResponse> {
   const [
     jobResult,
     assignmentResult,
-    roleResult,
   ] = await Promise.all([
     adminClient
       .from("jobs")
       .select("id")
       .eq("id", jobId)
+      .eq("company_id", companyId)
       .maybeSingle(),
 
     adminClient
       .from("job_assignments")
       .select("id")
       .eq("job_id", jobId)
+      .eq("company_id", companyId)
       .eq("user_id", userId)
       .neq("assignment_status", "cancelled")
       .limit(1),
-
-    adminClient
-      .from("app_user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .maybeSingle(),
   ]);
 
   if (jobResult.error) {
@@ -426,23 +543,10 @@ async function checkJobAccess(
     );
   }
 
-  if (roleResult.error) {
-    throw new Error(
-      `Unable to check the user role: ${roleResult.error.message}`,
-    );
-  }
-
-  const role =
-    typeof roleResult.data?.role === "string"
-      ? roleResult.data.role
-      : "";
-
   const officeRoles = new Set([
+    "company_admin",
     "administrator",
     "service_manager",
-    "admin",
-    "manager",
-    "owner",
     "office",
   ]);
 
@@ -466,13 +570,15 @@ async function checkJobAccess(
 async function loadJobPhotos(
   adminClient: AdminSupabaseClient,
   jobId: string,
+  companyId: string,
 ) {
   const { data, error } = await adminClient
     .from("job_photos")
     .select(
-      "id, job_id, uploaded_by, file_path, caption, created_at",
+      "id, company_id, job_id, uploaded_by, file_path, caption, created_at",
     )
     .eq("job_id", jobId)
+    .eq("company_id", companyId)
     .order("created_at", {
       ascending: false,
     });
@@ -515,6 +621,7 @@ async function addSignedUrl(
 
   return {
     id: row.id,
+    companyId: row.company_id,
     jobId: row.job_id,
     uploadedBy: row.uploaded_by,
     filePath: row.file_path,

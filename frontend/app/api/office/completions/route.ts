@@ -59,13 +59,6 @@ export async function GET() {
       );
     }
 
-    if (auth.error) {
-      return NextResponse.json(
-        { error: auth.error },
-        { status: 500 },
-      );
-    }
-
     if (!auth.canReview) {
       return NextResponse.json(
         {
@@ -86,6 +79,7 @@ export async function GET() {
           status,
           submitted_at
         `)
+        .eq("company_id", auth.companyId)
         .in("status", [
           "submitted",
           "approved",
@@ -105,20 +99,27 @@ export async function GET() {
         []) as CompletionQueueRow[];
 
     if (completions.length === 0) {
-      return NextResponse.json({
-        reviewer: {
-          id: auth.user.id,
-          fullName: auth.fullName,
-          email: auth.user.email ?? "",
-          role: auth.role,
+      return NextResponse.json(
+        {
+          reviewer: {
+            id: auth.user.id,
+            fullName: auth.fullName,
+            email: auth.user.email ?? "",
+            role: auth.role,
+          },
+          counts: {
+            submitted: 0,
+            approved: 0,
+            rejected: 0,
+          },
+          completions: [],
         },
-        counts: {
-          submitted: 0,
-          approved: 0,
-          rejected: 0,
+        {
+          headers: {
+            "Cache-Control": "no-store",
+          },
         },
-        completions: [],
-      });
+      );
     }
 
     const jobIds = Array.from(
@@ -142,6 +143,7 @@ export async function GET() {
           customer_id,
           machine_id
         `)
+        .eq("company_id", auth.companyId)
         .in("id", jobIds);
 
     if (jobsError) {
@@ -188,6 +190,7 @@ export async function GET() {
               phone,
               email
             `)
+            .eq("company_id", auth.companyId)
             .in("id", customerIds)
         : Promise.resolve({
             data: [],
@@ -205,6 +208,7 @@ export async function GET() {
               serial_number,
               machine_hours
             `)
+            .eq("company_id", auth.companyId)
             .in("id", machineIds)
         : Promise.resolve({
             data: [],
@@ -348,16 +352,23 @@ export async function GET() {
       },
     );
 
-    return NextResponse.json({
-      reviewer: {
-        id: auth.user.id,
-        fullName: auth.fullName,
-        email: auth.user.email ?? "",
-        role: auth.role,
+    return NextResponse.json(
+      {
+        reviewer: {
+          id: auth.user.id,
+          fullName: auth.fullName,
+          email: auth.user.email ?? "",
+          role: auth.role,
+        },
+        counts,
+        completions: queueItems,
       },
-      counts,
-      completions: queueItems,
-    });
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
+    );
   } catch (error) {
     console.error(
       "GET office completions queue error:",

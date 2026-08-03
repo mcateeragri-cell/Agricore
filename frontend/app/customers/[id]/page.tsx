@@ -69,6 +69,8 @@ export default function CustomerProfilePage() {
   const { userState, loading: isLoadingUser } =
     useNavigationUser();
 
+  const companyId = userState.activeCompany?.id ?? "";
+
   const canEditCustomer =
     userState.permissions.includes("customers.edit");
 
@@ -99,10 +101,15 @@ export default function CustomerProfilePage() {
   const [machineError, setMachineError] = useState("");
 
   const loadCustomer = useCallback(async () => {
+    if (!companyId) {
+      setCustomer(null);
+      return null;
+    }
     const { data, error } = await supabase
       .from("customers")
       .select("*")
       .eq("id", customerId)
+      .eq("company_id", companyId)
       .maybeSingle();
 
     if (error) {
@@ -133,13 +140,18 @@ export default function CustomerProfilePage() {
 
     setCustomer(loadedCustomer);
     return loadedCustomer;
-  }, [customerId]);
+  }, [companyId, customerId]);
 
   const loadMachines = useCallback(async () => {
+    if (!companyId) {
+      setMachines([]);
+      return;
+    }
     const { data, error } = await supabase
       .from("machines")
       .select("*")
       .eq("customer_id", customerId)
+      .eq("company_id", companyId)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -174,7 +186,7 @@ export default function CustomerProfilePage() {
     );
 
     setMachines(loadedMachines);
-  }, [customerId]);
+  }, [companyId, customerId]);
 
   const loadPageData = useCallback(async () => {
     setIsLoading(true);
@@ -348,6 +360,7 @@ export default function CustomerProfilePage() {
     const { error } = await supabase
       .from("machines")
       .insert({
+        company_id: companyId,
         customer_id: customerId,
         make: machineForm.make.trim(),
         model: machineForm.model.trim(),

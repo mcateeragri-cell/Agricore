@@ -56,14 +56,12 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     if (!auth.user) {
       return NextResponse.json({ error: auth.error }, { status: 401 });
     }
-    if (auth.error) {
-      return NextResponse.json({ error: auth.error }, { status: 500 });
-    }
 
     const assignment = await getAccessibleAssignment(
       auth.supabase,
       id,
       auth.user.id,
+      auth.companyId,
       auth.isManager,
     );
 
@@ -90,6 +88,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         machine_hours
       `)
       .eq("id", id)
+      .eq("company_id", auth.companyId)
       .maybeSingle();
 
     if (jobError) {
@@ -106,6 +105,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
             .from("customers")
             .select("id,business_name,contact_name,phone,email")
             .eq("id", job.customer_id)
+            .eq("company_id", auth.companyId)
             .maybeSingle()
         : Promise.resolve({ data: null, error: null }),
       job.machine_id
@@ -113,6 +113,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
             .from("machines")
             .select("id,make,model,registration,serial_number")
             .eq("id", job.machine_id)
+            .eq("company_id", auth.companyId)
             .maybeSingle()
         : Promise.resolve({ data: null, error: null }),
       auth.supabase
@@ -129,6 +130,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
           entry_status
         `)
         .eq("job_id", id)
+        .eq("company_id", auth.companyId)
         .order("start_time", { ascending: false }),
     ]);
 
@@ -215,7 +217,14 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       labourEntries,
     };
 
-    return NextResponse.json(response);
+    return NextResponse.json(
+      response,
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
+    );
   } catch (error) {
     console.error("GET technician job error:", error);
     return NextResponse.json(
@@ -233,14 +242,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     if (!auth.user) {
       return NextResponse.json({ error: auth.error }, { status: 401 });
     }
-    if (auth.error) {
-      return NextResponse.json({ error: auth.error }, { status: 500 });
-    }
 
     const assignment = await getAccessibleAssignment(
       auth.supabase,
       id,
       auth.user.id,
+      auth.companyId,
       auth.isManager,
     );
 
@@ -256,17 +263,27 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
     switch (body.action) {
       case "start_travel":
-        await updateAssignment(auth.supabase, assignment.id, {
+        await updateAssignment(
+          auth.supabase,
+          assignment.id,
+          auth.companyId,
+          {
           assignment_status: "travelling",
           updated_at: now.toISOString(),
-        });
+          },
+        );
         return NextResponse.json({ message: "Travel started." });
 
       case "arrive_on_site":
-        await updateAssignment(auth.supabase, assignment.id, {
+        await updateAssignment(
+          auth.supabase,
+          assignment.id,
+          auth.companyId,
+          {
           assignment_status: "confirmed",
           updated_at: now.toISOString(),
-        });
+          },
+        );
         return NextResponse.json({ message: "Arrival recorded." });
 
       case "start_labour": {
@@ -274,6 +291,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           .from("job_labour_entries")
           .select("id")
           .eq("job_id", id)
+          .eq("company_id", auth.companyId)
           .eq("engineer_name", auth.fullName)
           .eq("entry_status", "running")
           .limit(1)
@@ -290,6 +308,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         const { error } = await auth.supabase
           .from("job_labour_entries")
           .insert({
+            company_id: auth.companyId,
             job_id: id,
             engineer_name: auth.fullName,
             labour_date: now.toISOString().slice(0, 10),
@@ -302,15 +321,26 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
         if (error) throw new Error(error.message);
 
-        await updateAssignment(auth.supabase, assignment.id, {
-          assignment_status: "in_progress",
-          updated_at: now.toISOString(),
-        });
-        await updateJob(auth.supabase, id, {
-          status: "in_progress",
-          engineer_name: auth.fullName,
-          updated_at: now.toISOString(),
-        });
+        await updateAssignment(
+          auth.supabase,
+          assignment.id,
+          auth.companyId,
+          {
+            assignment_status: "in_progress",
+            updated_at: now.toISOString(),
+          },
+        );
+
+        await updateJob(
+          auth.supabase,
+          id,
+          auth.companyId,
+          {
+            status: "in_progress",
+            engineer_name: auth.fullName,
+            updated_at: now.toISOString(),
+          },
+        );
 
         return NextResponse.json({ message: "Labour timer started." });
       }
@@ -320,6 +350,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           auth.supabase,
           id,
           auth.fullName,
+          auth.companyId,
           now,
         );
 
@@ -344,20 +375,37 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           );
         }
 
-        await stopRunningLabour(auth.supabase, id, auth.fullName, now);
-        await updateAssignment(auth.supabase, assignment.id, {
-          assignment_status: "completed",
-          updated_at: now.toISOString(),
-        });
-        await updateJob(auth.supabase, id, {
-          status: "completed",
-          engineer_name: auth.fullName,
-          diagnosis,
-          work_carried_out: workCarriedOut,
-          completed_date: now.toISOString().slice(0, 10),
-          invoice_status: "ready",
-          updated_at: now.toISOString(),
-        });
+        await stopRunningLabour(
+          auth.supabase,
+          id,
+          auth.fullName,
+          auth.companyId,
+          now,
+        );
+        await updateAssignment(
+          auth.supabase,
+          assignment.id,
+          auth.companyId,
+          {
+            assignment_status: "completed",
+            updated_at: now.toISOString(),
+          },
+        );
+
+        await updateJob(
+          auth.supabase,
+          id,
+          auth.companyId,
+          {
+            status: "completed",
+            engineer_name: auth.fullName,
+            diagnosis,
+            work_carried_out: workCarriedOut,
+            completed_date: now.toISOString().slice(0, 10),
+            invoice_status: "ready",
+            updated_at: now.toISOString(),
+          },
+        );
 
         return NextResponse.json({
           message: "Job completed and marked ready for invoicing.",
@@ -383,6 +431,7 @@ async function getAccessibleAssignment(
   supabase: Awaited<ReturnType<typeof getTechnicianAuth>>["supabase"],
   jobId: string,
   userId: string,
+  companyId: string,
   isManager: boolean,
 ): Promise<AssignmentRow | null> {
   let query = supabase
@@ -397,6 +446,7 @@ async function getAccessibleAssignment(
       scheduled_end
     `)
     .eq("job_id", jobId)
+    .eq("company_id", companyId)
     .neq("assignment_status", "cancelled");
 
   if (!isManager) query = query.eq("user_id", userId);
@@ -413,21 +463,28 @@ async function getAccessibleAssignment(
 async function updateAssignment(
   supabase: Awaited<ReturnType<typeof getTechnicianAuth>>["supabase"],
   assignmentId: string,
+  companyId: string,
   updates: Record<string, unknown>,
 ) {
   const { error } = await supabase
     .from("job_assignments")
     .update(updates)
-    .eq("id", assignmentId);
+    .eq("id", assignmentId)
+    .eq("company_id", companyId);
   if (error) throw new Error(error.message);
 }
 
 async function updateJob(
   supabase: Awaited<ReturnType<typeof getTechnicianAuth>>["supabase"],
   jobId: string,
+  companyId: string,
   updates: Record<string, unknown>,
 ) {
-  const { error } = await supabase.from("jobs").update(updates).eq("id", jobId);
+  const { error } = await supabase
+    .from("jobs")
+    .update(updates)
+    .eq("id", jobId)
+    .eq("company_id", companyId);
   if (error) throw new Error(error.message);
 }
 
@@ -435,12 +492,14 @@ async function stopRunningLabour(
   supabase: Awaited<ReturnType<typeof getTechnicianAuth>>["supabase"],
   jobId: string,
   engineerName: string,
+  companyId: string,
   finishedAt: Date,
 ) {
   const { data: running, error } = await supabase
     .from("job_labour_entries")
     .select("id,start_time,break_minutes")
     .eq("job_id", jobId)
+    .eq("company_id", companyId)
     .eq("engineer_name", engineerName)
     .eq("entry_status", "running")
     .order("start_time", { ascending: false })
@@ -464,7 +523,8 @@ async function stopRunningLabour(
       entry_status: "completed",
       updated_at: finishedAt.toISOString(),
     })
-    .eq("id", running.id);
+    .eq("id", running.id)
+    .eq("company_id", companyId);
 
   if (updateError) throw new Error(updateError.message);
   return true;

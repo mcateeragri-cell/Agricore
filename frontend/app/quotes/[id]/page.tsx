@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { getActiveCompany } from "@/lib/client/active-company";
 import Card from "../../../Components/ui/Card";
 
 type QuoteStatus =
@@ -176,6 +177,7 @@ export default function QuoteDetailPage() {
   const router = useRouter();
   const quoteId = params.id;
 
+  const [activeCompanyId, setActiveCompanyId] = useState("");
   const [quote, setQuote] = useState<Quote | null>(null);
   const [items, setItems] = useState<QuoteItem[]>([]);
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -191,10 +193,18 @@ export default function QuoteDetailPage() {
     setLoading(true);
     setErrorMessage("");
 
+    let companyId = "";
+
+    try {
+      const activeCompany = await getActiveCompany();
+      companyId = activeCompany.id;
+      setActiveCompanyId(companyId);
+
     const { data: quoteData, error: quoteError } = await supabase
       .from("quotes")
       .select("*")
       .eq("id", quoteId)
+      .eq("company_id", companyId)
       .single();
 
     if (quoteError || !quoteData) {
@@ -212,17 +222,20 @@ export default function QuoteDetailPage() {
         .from("quote_items")
         .select("*")
         .eq("quote_id", quoteId)
+        .eq("company_id", companyId)
         .order("sort_order", { ascending: true }),
       supabase
         .from("customers")
         .select("*")
         .eq("id", loadedQuote.customer_id)
+        .eq("company_id", companyId)
         .single(),
       loadedQuote.machine_id
         ? supabase
             .from("machines")
             .select("*")
             .eq("id", loadedQuote.machine_id)
+            .eq("company_id", companyId)
             .single()
         : Promise.resolve({ data: null, error: null }),
     ]);
@@ -250,10 +263,19 @@ export default function QuoteDetailPage() {
       );
     }
 
-    setItems((itemsResult.data ?? []) as QuoteItem[]);
-    setCustomer((customerResult.data ?? null) as Customer | null);
-    setMachine((machineResult.data ?? null) as Machine | null);
-    setLoading(false);
+      setItems((itemsResult.data ?? []) as QuoteItem[]);
+      setCustomer((customerResult.data ?? null) as Customer | null);
+      setMachine((machineResult.data ?? null) as Machine | null);
+    } catch (error) {
+      console.error("Unable to load quote:", error);
+      setQuote(null);
+      setItems([]);
+      setCustomer(null);
+      setMachine(null);
+      setErrorMessage(error instanceof Error ? error.message : "Unable to load quote.");
+    } finally {
+      setLoading(false);
+    }
   }, [quoteId]);
 
   useEffect(() => {
@@ -293,7 +315,8 @@ export default function QuoteDetailPage() {
     const { error } = await supabase
       .from("quotes")
       .update(payload)
-      .eq("id", quote.id);
+      .eq("id", quote.id)
+      .eq("company_id", activeCompanyId);
 
     if (error) {
       console.error("Unable to update quote status:", error);
@@ -321,7 +344,8 @@ export default function QuoteDetailPage() {
     const { error } = await supabase
       .from("quotes")
       .delete()
-      .eq("id", quote.id);
+      .eq("id", quote.id)
+      .eq("company_id", activeCompanyId);
 
     if (error) {
       console.error("Unable to delete quote:", error);

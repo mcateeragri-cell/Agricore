@@ -1,13 +1,15 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
+import {
+  getAuthenticatedUserContext,
+} from "@/lib/auth/require-permission";
+
 const OFFICE_ROLES = [
+  "company_admin",
   "administrator",
   "service_manager",
   "office",
-  "admin",
-  "manager",
-  "owner",
 ] as const;
 
 export async function createOfficeSupabase() {
@@ -35,7 +37,10 @@ export async function createOfficeSupabase() {
                 options,
               );
             } catch {
-              // Some server contexts do not permit cookie writes.
+              /*
+               * Some server contexts do not permit
+               * cookie writes.
+               */
             }
           }
         },
@@ -48,75 +53,67 @@ export async function getOfficeAuth() {
   const supabase =
     await createOfficeSupabase();
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
+  const context =
+    await getAuthenticatedUserContext();
 
-  if (authError || !user) {
+  if (!context) {
     return {
       supabase,
       user: null,
+      userId: "",
+      email: "",
       fullName: "",
+      platformRole: null,
+      companyId: "",
+      companyName: "",
+      companySlug: "",
       role: "",
+      permissions: [] as string[],
       canReview: false,
       error: "You must be signed in.",
     };
   }
 
-  const [
-    { data: profile, error: profileError },
-    { data: roleRow, error: roleError },
-  ] = await Promise.all([
-    supabase
-      .from("app_user_profiles")
-      .select("full_name")
-      .eq("user_id", user.id)
-      .maybeSingle(),
+  const role = normaliseRole(
+    context.role,
+  );
 
-    supabase
-      .from("app_user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .maybeSingle(),
-  ]);
-
-  if (profileError || roleError) {
-    return {
-      supabase,
-      user,
-      fullName: "",
-      role: "",
-      canReview: false,
-      error:
-        profileError?.message ??
-        roleError?.message ??
-        "Unable to load user profile.",
-    };
-  }
-
-  const role =
-    typeof roleRow?.role === "string"
-      ? normaliseRole(roleRow.role)
-      : "";
-
-  const fullName =
-    profile?.full_name ||
-    (typeof user.user_metadata
-      ?.full_name === "string"
-      ? user.user_metadata.full_name
-      : "") ||
-    user.email?.split("@")[0] ||
-    "AgriCore User";
+  const canReview =
+    OFFICE_ROLES.includes(
+      role as
+        (typeof OFFICE_ROLES)[number],
+    ) ||
+    context.permissions.includes(
+      "jobs.review",
+    ) ||
+    context.permissions.includes(
+      "jobs.edit",
+    ) ||
+    context.permissions.includes(
+      "invoices.view",
+    ) ||
+    context.permissions.includes(
+      "invoices.manage",
+    );
 
   return {
     supabase,
-    user,
-    fullName,
+    user: {
+      id: context.userId,
+      email: context.email,
+    },
+    userId: context.userId,
+    email: context.email,
+    fullName: context.fullName,
+    platformRole:
+      context.platformRole,
+    companyId: context.companyId,
+    companyName: context.companyName,
+    companySlug: context.companySlug,
     role,
-    canReview: OFFICE_ROLES.includes(
-      role as (typeof OFFICE_ROLES)[number],
-    ),
+    permissions:
+      context.permissions,
+    canReview,
     error: null,
   };
 }
@@ -130,8 +127,10 @@ export function normaliseStatus(
     .replace(/[\s-]+/g, "_");
 }
 
-function normaliseRole(value: string) {
-  return value
+function normaliseRole(
+  value: string | null | undefined,
+) {
+  return (value ?? "")
     .trim()
     .toLowerCase()
     .replace(/[\s-]+/g, "_");

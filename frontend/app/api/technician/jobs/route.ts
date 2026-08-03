@@ -57,10 +57,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: auth.error }, { status: 401 });
     }
 
-    if (auth.error) {
-      return NextResponse.json({ error: auth.error }, { status: 500 });
-    }
-
     const selectedDate =
       request.nextUrl.searchParams.get("date") ?? formatDateInput(new Date());
 
@@ -87,6 +83,7 @@ export async function GET(request: NextRequest) {
           fault_reported
         )
       `)
+      .eq("company_id", auth.companyId)
       .gte("scheduled_start", start)
       .lt("scheduled_start", end)
       .neq("assignment_status", "cancelled")
@@ -104,7 +101,13 @@ export async function GET(request: NextRequest) {
 
     const assignments = (data ?? []) as unknown as RawAssignment[];
     const jobs = await Promise.all(
-      assignments.map((assignment) => mapAssignment(auth.supabase, assignment)),
+      assignments.map((assignment) =>
+        mapAssignment(
+          auth.supabase,
+          assignment,
+          auth.companyId,
+        ),
+      ),
     );
 
     const response: TechnicianDashboardResponse = {
@@ -117,7 +120,14 @@ export async function GET(request: NextRequest) {
       jobs: jobs.filter((job): job is TechnicianDashboardJob => job !== null),
     };
 
-    return NextResponse.json(response);
+    return NextResponse.json(
+      response,
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
+    );
   } catch (error) {
     console.error("Technician dashboard error:", error);
     return NextResponse.json(
@@ -130,6 +140,7 @@ export async function GET(request: NextRequest) {
 async function mapAssignment(
   supabase: Awaited<ReturnType<typeof getTechnicianAuth>>["supabase"],
   assignment: RawAssignment,
+  companyId: string,
 ): Promise<TechnicianDashboardJob | null> {
   const job = Array.isArray(assignment.jobs)
     ? assignment.jobs[0] ?? null
@@ -143,6 +154,7 @@ async function mapAssignment(
           .from("customers")
           .select("id,business_name,contact_name,phone,email")
           .eq("id", job.customer_id)
+          .eq("company_id", companyId)
           .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
     job.machine_id
@@ -150,6 +162,7 @@ async function mapAssignment(
           .from("machines")
           .select("id,make,model,registration,serial_number")
           .eq("id", job.machine_id)
+          .eq("company_id", companyId)
           .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
   ]);

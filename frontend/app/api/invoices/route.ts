@@ -169,6 +169,7 @@ export async function GET(
         updated_at
       `,
     )
+    .eq("company_id", auth.companyId)
     .order("created_at", {
       ascending: false,
     });
@@ -199,9 +200,16 @@ export async function GET(
     );
   }
 
-  return NextResponse.json({
-    invoices: data ?? [],
-  });
+  return NextResponse.json(
+    {
+      invoices: data ?? [],
+    },
+    {
+      headers: {
+        "Cache-Control": "no-store",
+      },
+    },
+  );
 }
 
 export async function POST(
@@ -330,14 +338,87 @@ export async function POST(
   const invoiceNumber =
     generateInvoiceNumber();
 
+  const jobId = asText(body.jobId) || null;
+  const customerId =
+    asText(body.customerId) || null;
+
+  if (jobId) {
+    const { data: job, error: jobError } =
+      await auth.supabase
+        .from("jobs")
+        .select("id, customer_id")
+        .eq("id", jobId)
+        .eq("company_id", auth.companyId)
+        .maybeSingle();
+
+    if (jobError) {
+      return NextResponse.json(
+        { error: jobError.message },
+        { status: 500 },
+      );
+    }
+
+    if (!job) {
+      return NextResponse.json(
+        {
+          error:
+            "The selected job does not belong to the active company.",
+        },
+        { status: 404 },
+      );
+    }
+
+    if (
+      customerId &&
+      job.customer_id &&
+      job.customer_id !== customerId
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "The selected customer does not match the selected job.",
+        },
+        { status: 400 },
+      );
+    }
+  }
+
+  if (customerId) {
+    const {
+      data: customer,
+      error: customerError,
+    } = await auth.supabase
+      .from("customers")
+      .select("id")
+      .eq("id", customerId)
+      .eq("company_id", auth.companyId)
+      .maybeSingle();
+
+    if (customerError) {
+      return NextResponse.json(
+        { error: customerError.message },
+        { status: 500 },
+      );
+    }
+
+    if (!customer) {
+      return NextResponse.json(
+        {
+          error:
+            "The selected customer does not belong to the active company.",
+        },
+        { status: 404 },
+      );
+    }
+  }
+
   const invoiceInsert = {
+    company_id: auth.companyId,
     invoice_number: invoiceNumber,
 
-    job_id:
-      asText(body.jobId) || null,
+    job_id: jobId,
 
-    customer_id:
-      asText(body.customerId) || null,
+    customer_id: customerId,
 
     status: "draft",
 
@@ -398,6 +479,7 @@ export async function POST(
   if (items.length > 0) {
     const itemRows = items.map((item) => ({
       ...item,
+      company_id: auth.companyId,
       invoice_id: invoice.id,
     }));
 
@@ -415,7 +497,8 @@ export async function POST(
       await auth.supabase
         .from("invoices")
         .delete()
-        .eq("id", invoice.id);
+        .eq("id", invoice.id)
+        .eq("company_id", auth.companyId);
 
       return NextResponse.json(
         {

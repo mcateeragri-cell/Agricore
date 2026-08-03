@@ -13,14 +13,13 @@ export async function POST(request: NextRequest) {
   try {
     const auth = await getOfficeAuth();
     if (!auth.user) return NextResponse.json<CreatePaymentLinkResponse>({ success: false, error: auth.error ?? "You must be signed in." }, { status: 401 });
-    if (auth.error) return NextResponse.json<CreatePaymentLinkResponse>({ success: false, error: auth.error }, { status: 500 });
     if (!auth.canReview) return NextResponse.json<CreatePaymentLinkResponse>({ success: false, error: "You do not have permission to create payment links." }, { status: 403 });
 
     const body = await request.json() as CreatePaymentLinkRequest;
     if (!body.invoiceId?.trim()) return NextResponse.json<CreatePaymentLinkResponse>({ success: false, error: "Invoice ID is required." }, { status: 400 });
 
     const supabase = createSupabaseAdmin();
-    const { data, error } = await supabase.from("invoices").select("id,invoice_number,status,total,amount_paid,customer_name,customer_email,payment_url,payment_provider,revolut_order_id,revolut_order_state,paid_at").eq("id", body.invoiceId).single();
+    const { data, error } = await supabase.from("invoices").select("id,invoice_number,status,total,amount_paid,customer_name,customer_email,payment_url,payment_provider,revolut_order_id,revolut_order_state,paid_at").eq("id", body.invoiceId).eq("company_id", auth.companyId).single();
     if (error || !data) return NextResponse.json<CreatePaymentLinkResponse>({ success: false, error: error?.message ?? "Invoice not found." }, { status: 404 });
     const invoice = data as PaymentInvoiceRow;
 
@@ -31,12 +30,19 @@ export async function POST(request: NextRequest) {
   invoice.revolut_order_id &&
   !["CANCELLED", "FAILED"].includes(invoice.revolut_order_state ?? "")
 ) {
-  return NextResponse.json<CreatePaymentLinkResponse>({
-    success: true,
-    paymentUrl: invoice.payment_url,
-    revolutOrderId: invoice.revolut_order_id,
-    state: invoice.revolut_order_state ?? "PENDING",
-  });
+  return NextResponse.json<CreatePaymentLinkResponse>(
+    {
+      success: true,
+      paymentUrl: invoice.payment_url,
+      revolutOrderId: invoice.revolut_order_id,
+      state: invoice.revolut_order_state ?? "PENDING",
+    },
+    {
+      headers: {
+        "Cache-Control": "no-store",
+      },
+    },
+  );
 }
 
     const outstanding = Math.max(0, asNumber(invoice.total) - asNumber(invoice.amount_paid));
@@ -54,10 +60,22 @@ if (outstanding <= 0) {
     },
   );
 }
-    const { error: updateError } = await supabase.from("invoices").update({ payment_url: order.checkout_url, payment_provider: "revolut", revolut_order_id: order.id, revolut_order_state: order.state }).eq("id", invoice.id);
+    const { error: updateError } = await supabase.from("invoices").update({ payment_url: order.checkout_url, payment_provider: "revolut", revolut_order_id: order.id, revolut_order_state: order.state }).eq("id", invoice.id).eq("company_id", auth.companyId);
     if (updateError) throw new Error(`Payment order was created, but the invoice could not be updated: ${updateError.message}`);
 
-    return NextResponse.json<CreatePaymentLinkResponse>({ success: true, paymentUrl: order.checkout_url, revolutOrderId: order.id, state: order.state });
+    return NextResponse.json<CreatePaymentLinkResponse>(
+      {
+        success: true,
+        paymentUrl: order.checkout_url,
+        revolutOrderId: order.id,
+        state: order.state,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
+    );
   } catch (error) {
     console.error("POST Revolut create order error:", error);
     return NextResponse.json<CreatePaymentLinkResponse>({ success: false, error: safeErrorMessage(error, "Unable to create the Revolut payment link.") }, { status: 500 });

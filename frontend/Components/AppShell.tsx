@@ -1,27 +1,42 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import {
+  usePathname,
+} from "next/navigation";
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 
 import DesktopSidebar from "./navigation/desktop-sidebar";
 import MobileBottomNav from "./navigation/mobile-bottom-nav";
 import MobileDrawer from "./navigation/mobile-drawer";
 import MobileTopBar from "./navigation/mobile-top-bar";
-import { useNavigationUser } from "./navigation/use-navigation-user";
+import {
+  useNavigationUser,
+} from "./navigation/use-navigation-user";
 
 type AppShellProps = Readonly<{
   children: React.ReactNode;
 }>;
 
-const publicRoutes = [
+const shelllessRoutes = [
   "/login",
   "/forgot-password",
   "/reset-password",
+  "/select-company",
 ];
 
-export default function AppShell({ children }: AppShellProps) {
+export default function AppShell({
+  children,
+}: AppShellProps) {
   const pathname = usePathname();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const [
+    mobileMenuOpen,
+    setMobileMenuOpen,
+  ] = useState(false);
 
   const {
     userState,
@@ -31,20 +46,30 @@ export default function AppShell({ children }: AppShellProps) {
     switchCompany,
   } = useNavigationUser();
 
-  const isPublicRoute = publicRoutes.some(
-    (route) =>
-      pathname === route || pathname.startsWith(`${route}/`),
-  );
+  const isShelllessRoute =
+    shelllessRoutes.some(
+      (route) =>
+        pathname === route ||
+        pathname.startsWith(
+          `${route}/`,
+        ),
+    );
 
-  const closeMobileMenu = useCallback(() => {
-    setMobileMenuOpen(false);
-  }, []);
+  const closeMobileMenu =
+    useCallback(() => {
+      setMobileMenuOpen(false);
+    }, []);
 
   useEffect(() => {
     closeMobileMenu();
-  }, [pathname, closeMobileMenu]);
+  }, [
+    pathname,
+    closeMobileMenu,
+  ]);
 
-  if (isPublicRoute) return <>{children}</>;
+  if (isShelllessRoute) {
+    return <>{children}</>;
+  }
 
   return (
     <div className="min-h-dvh w-full min-w-0 overflow-x-clip lg:flex">
@@ -52,13 +77,21 @@ export default function AppShell({ children }: AppShellProps) {
         pathname={pathname}
         userState={userState}
         loading={loading}
-        switchingCompany={switchingCompany}
+        switchingCompany={
+          switchingCompany
+        }
         companyError={companyError}
-        onSwitchCompany={switchCompany}
+        onSwitchCompany={
+          switchCompany
+        }
       />
 
       <div className="w-full min-w-0 flex-1">
-        <MobileTopBar onOpenMenu={() => setMobileMenuOpen(true)} />
+        <MobileTopBar
+          onOpenMenu={() =>
+            setMobileMenuOpen(true)
+          }
+        />
 
         <main className="w-full min-w-0 overflow-x-clip pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0">
           {children}
@@ -70,15 +103,21 @@ export default function AppShell({ children }: AppShellProps) {
         pathname={pathname}
         userState={userState}
         loading={loading}
-        switchingCompany={switchingCompany}
+        switchingCompany={
+          switchingCompany
+        }
         companyError={companyError}
-        onSwitchCompany={switchCompany}
+        onSwitchCompany={
+          switchCompany
+        }
         onClose={closeMobileMenu}
       />
 
       <MobileBottomNav
         pathname={pathname}
-        onOpenMore={() => setMobileMenuOpen(true)}
+        onOpenMore={() =>
+          setMobileMenuOpen(true)
+        }
       />
     </div>
   );

@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { supabase } from "@/lib/supabase";
+import { loadActiveCompany } from "@/lib/company-context-client";
 import Card from "../../../Components/ui/Card";
 
 type StockFormState = {
@@ -84,15 +85,38 @@ export default function StockItemPage() {
     setLoading(true);
     setErrorMessage("");
 
+    let activeCompany;
+
+    try {
+      activeCompany = await loadActiveCompany();
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to load the active company.",
+      );
+      setLoading(false);
+      return;
+    }
+
     const { data, error } = await supabase
       .from("stock_items")
       .select("*")
       .eq("id", stockItemId)
-      .single();
+      .eq("company_id", activeCompany.id)
+      .maybeSingle();
 
     if (error) {
       console.error("Unable to load stock item:", error);
       setErrorMessage(error.message);
+      setLoading(false);
+      return;
+    }
+
+    if (!data) {
+      setErrorMessage(
+        "The stock item could not be found in the active company.",
+      );
       setLoading(false);
       return;
     }
@@ -167,6 +191,20 @@ export default function StockItemPage() {
     setErrorMessage("");
     setSuccessMessage("");
 
+    let activeCompany;
+
+    try {
+      activeCompany = await loadActiveCompany();
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to load the active company.",
+      );
+      setSaving(false);
+      return;
+    }
+
     const { error } = await supabase
       .from("stock_items")
       .update({
@@ -184,7 +222,8 @@ export default function StockItemPage() {
         notes: textOrNull(form.notes),
         active: form.active,
       })
-      .eq("id", stockItemId);
+      .eq("id", stockItemId)
+      .eq("company_id", activeCompany.id);
 
     if (error) {
       console.error("Unable to update stock item:", error);
@@ -211,12 +250,27 @@ export default function StockItemPage() {
     setArchiving(true);
     setErrorMessage("");
 
+    let activeCompany;
+
+    try {
+      activeCompany = await loadActiveCompany();
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to load the active company.",
+      );
+      setArchiving(false);
+      return;
+    }
+
     const { error } = await supabase
       .from("stock_items")
       .update({
         active: false,
       })
-      .eq("id", stockItemId);
+      .eq("id", stockItemId)
+      .eq("company_id", activeCompany.id);
 
     if (error) {
       console.error("Unable to archive stock item:", error);

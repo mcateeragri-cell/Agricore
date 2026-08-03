@@ -8,6 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
+
 import { supabase } from "@/lib/supabase";
 import Button from "../../Components/ui/Button";
 import Card from "../../Components/ui/Card";
@@ -27,6 +28,15 @@ type Customer = {
   openJobs: number;
 };
 
+type CompanyContextResponse = {
+  activeCompany?: {
+    id: string;
+    name: string;
+    slug: string;
+  } | null;
+  error?: string;
+};
+
 const emptyForm = {
   name: "",
   businessName: "",
@@ -41,6 +51,7 @@ const emptyForm = {
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [activeCompanyId, setActiveCompanyId] = useState("");
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -52,39 +63,79 @@ export default function CustomersPage() {
     setIsLoading(true);
     setErrorMessage("");
 
-    const { data, error } = await supabase
-      .from("customers")
-      .select("*")
-      .order("business_name", { ascending: true });
-
-    if (error) {
-      console.error("Error loading customers:", error);
-      setErrorMessage(
-        `Unable to load customers: ${error.message}`,
+    try {
+      const contextResponse = await fetch(
+        "/api/auth/company-context",
+        {
+          method: "GET",
+          cache: "no-store",
+          credentials: "same-origin",
+        },
       );
+
+      const context =
+        (await contextResponse.json()) as CompanyContextResponse;
+
+      if (!contextResponse.ok) {
+        throw new Error(
+          context.error ||
+            "Unable to load the active company.",
+        );
+      }
+
+      const companyId =
+        context.activeCompany?.id?.trim() ?? "";
+
+      if (!companyId) {
+        throw new Error(
+          "No active company is available for this account.",
+        );
+      }
+
+      setActiveCompanyId(companyId);
+
+      const { data, error } = await supabase
+        .from("customers")
+        .select("*")
+        .eq("company_id", companyId)
+        .order("business_name", {
+          ascending: true,
+        });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      const loadedCustomers: Customer[] = (data ?? []).map(
+        (customer) => ({
+          id: customer.id,
+          name: customer.contact_name ?? "",
+          businessName: customer.business_name ?? "",
+          customerType: customer.customer_type ?? "Farm",
+          phone: customer.phone ?? "",
+          email: customer.email ?? "",
+          address: customer.address ?? "",
+          postcode: customer.postcode ?? "",
+          vatNumber: customer.vat_number ?? "",
+          notes: customer.notes ?? "",
+          machines: 0,
+          openJobs: 0,
+        }),
+      );
+
+      setCustomers(loadedCustomers);
+    } catch (error) {
+      console.error("Error loading customers:", error);
+
+      setCustomers([]);
+      setErrorMessage(
+        error instanceof Error
+          ? `Unable to load customers: ${error.message}`
+          : "Unable to load customers.",
+      );
+    } finally {
       setIsLoading(false);
-      return;
     }
-
-    const loadedCustomers: Customer[] = (data ?? []).map(
-      (customer) => ({
-        id: customer.id,
-        name: customer.contact_name ?? "",
-        businessName: customer.business_name ?? "",
-        customerType: customer.customer_type ?? "Farm",
-        phone: customer.phone ?? "",
-        email: customer.email ?? "",
-        address: customer.address ?? "",
-        postcode: customer.postcode ?? "",
-        vatNumber: customer.vat_number ?? "",
-        notes: customer.notes ?? "",
-        machines: 0,
-        openJobs: 0,
-      }),
-    );
-
-    setCustomers(loadedCustomers);
-    setIsLoading(false);
   }, []);
 
   useEffect(() => {
@@ -157,12 +208,20 @@ export default function CustomersPage() {
       return;
     }
 
+    if (!activeCompanyId) {
+      setErrorMessage(
+        "No active company is selected. Refresh the page and try again.",
+      );
+      return;
+    }
+
     setIsSaving(true);
     setErrorMessage("");
 
     const { error } = await supabase
       .from("customers")
       .insert({
+        company_id: activeCompanyId,
         contact_name: form.name.trim(),
         business_name: form.businessName.trim(),
         customer_type: form.customerType,

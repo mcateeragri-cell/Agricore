@@ -8,6 +8,7 @@ import {
 } from "react";
 import { supabase } from "@/lib/supabase";
 import Card from "../ui/Card";
+import { useNavigationUser } from "../navigation/use-navigation-user";
 
 type DatabaseRow = Record<string, unknown>;
 
@@ -177,6 +178,8 @@ function isDateWithinNextDays(
 }
 
 export default function SummaryCards() {
+  const { userState, loading: companyLoading } = useNavigationUser();
+  const companyId = userState.activeCompany?.id ?? "";
   const [jobs, setJobs] = useState<DatabaseRow[]>([]);
   const [invoices, setInvoices] =
     useState<DatabaseRow[]>([]);
@@ -187,10 +190,17 @@ export default function SummaryCards() {
   const loadSummaryData = useCallback(async () => {
     setErrorMessage("");
 
+    if (!companyId) {
+      setJobs([]);
+      setInvoices([]);
+      setLoading(companyLoading);
+      return;
+    }
+
     const [jobsResult, invoicesResult] =
       await Promise.all([
-        supabase.from("jobs").select("*"),
-        supabase.from("invoices").select("*"),
+        supabase.from("jobs").select("*").eq("company_id", companyId),
+        supabase.from("invoices").select("*").eq("company_id", companyId),
       ]);
 
     if (jobsResult.error || invoicesResult.error) {
@@ -217,7 +227,7 @@ export default function SummaryCards() {
       (invoicesResult.data ?? []) as DatabaseRow[],
     );
     setLoading(false);
-  }, []);
+  }, [companyId, companyLoading]);
 
   useEffect(() => {
     void loadSummaryData();
@@ -230,6 +240,7 @@ export default function SummaryCards() {
           event: "*",
           schema: "public",
           table: "jobs",
+          filter: `company_id=eq.${companyId}`,
         },
         () => {
           void loadSummaryData();
@@ -245,6 +256,7 @@ export default function SummaryCards() {
           event: "*",
           schema: "public",
           table: "invoices",
+          filter: `company_id=eq.${companyId}`,
         },
         () => {
           void loadSummaryData();

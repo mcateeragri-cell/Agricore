@@ -24,6 +24,7 @@ type DecisionBody = {
 
 type CompletionRow = {
   id: string;
+  company_id: string;
   job_id: string;
   assignment_id: string | null;
 
@@ -159,6 +160,7 @@ export async function GET(
     const result = await loadCompletionDetail(
       auth.supabase,
       id,
+      auth.companyId,
     );
 
     if (!result) {
@@ -170,15 +172,22 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({
-      reviewer: {
-        id: auth.user!.id,
-        fullName: auth.fullName,
-        email: auth.user!.email ?? "",
-        role: auth.role,
+    return NextResponse.json(
+      {
+        reviewer: {
+          id: auth.user!.id,
+          fullName: auth.fullName,
+          email: auth.user!.email ?? "",
+          role: auth.role,
+        },
+        ...result,
       },
-      ...result,
-    });
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
+    );
   } catch (error) {
     console.error(
       "GET office completion detail error:",
@@ -270,6 +279,7 @@ export async function POST(
       .from("job_completions")
       .select("*")
       .eq("id", id)
+      .eq("company_id", auth.companyId)
       .maybeSingle();
 
     if (completionError) {
@@ -317,16 +327,24 @@ export async function POST(
           reviewerName: auth.fullName,
           officeNotes,
           reviewedAt: now,
+          companyId: auth.companyId,
         });
 
-      return NextResponse.json({
-        success: true,
-        message:
-          "Job completion approved and marked as ready for invoicing.",
-        completion: mapCompletion(
-          approvedCompletion,
-        ),
-      });
+      return NextResponse.json(
+        {
+          success: true,
+          message:
+            "Job completion approved and marked as ready for invoicing.",
+          completion: mapCompletion(
+            approvedCompletion,
+          ),
+        },
+        {
+          headers: {
+            "Cache-Control": "no-store",
+          },
+        },
+      );
     }
 
     const rejectedCompletion =
@@ -338,16 +356,24 @@ export async function POST(
         officeNotes,
         rejectionReason,
         reviewedAt: now,
+        companyId: auth.companyId,
       });
 
-    return NextResponse.json({
-      success: true,
-      message:
-        "Job completion returned to the technician.",
-      completion: mapCompletion(
-        rejectedCompletion,
-      ),
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        message:
+          "Job completion returned to the technician.",
+        completion: mapCompletion(
+          rejectedCompletion,
+        ),
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
+    );
   } catch (error) {
     console.error(
       "POST office completion decision error:",
@@ -371,6 +397,7 @@ async function loadCompletionDetail(
     ReturnType<typeof getOfficeAuth>
   >["supabase"],
   completionId: string,
+  companyId: string,
 ) {
   const {
     data: completionData,
@@ -379,6 +406,7 @@ async function loadCompletionDetail(
     .from("job_completions")
     .select("*")
     .eq("id", completionId)
+    .eq("company_id", companyId)
     .maybeSingle();
 
   if (completionError) {
@@ -412,6 +440,7 @@ async function loadCompletionDetail(
       machine_id
     `)
     .eq("id", completion.job_id)
+    .eq("company_id", companyId)
     .maybeSingle();
 
   if (jobError) {
@@ -444,6 +473,7 @@ async function loadCompletionDetail(
             email
           `)
           .eq("id", job.customer_id)
+          .eq("company_id", companyId)
           .maybeSingle()
       : Promise.resolve({
           data: null,
@@ -462,6 +492,7 @@ async function loadCompletionDetail(
             machine_hours
           `)
           .eq("id", job.machine_id)
+          .eq("company_id", companyId)
           .maybeSingle()
       : Promise.resolve({
           data: null,
@@ -483,6 +514,7 @@ async function loadCompletionDetail(
         entry_status
       `)
       .eq("job_id", job.id)
+      .eq("company_id", companyId)
       .order("labour_date", {
         ascending: true,
       })
@@ -504,6 +536,7 @@ async function loadCompletionDetail(
         notes
       `)
       .eq("job_id", job.id)
+      .eq("company_id", companyId)
       .order("created_at", {
         ascending: true,
       }),
@@ -518,6 +551,7 @@ async function loadCompletionDetail(
         created_at
       `)
       .eq("job_id", job.id)
+      .eq("company_id", companyId)
       .order("created_at", {
         ascending: true,
       }),
@@ -725,6 +759,7 @@ async function approveCompletion({
   reviewerName,
   officeNotes,
   reviewedAt,
+  companyId,
 }: {
   supabase: Awaited<
     ReturnType<typeof getOfficeAuth>
@@ -734,6 +769,7 @@ async function approveCompletion({
   reviewerName: string;
   officeNotes: string;
   reviewedAt: string;
+  companyId: string;
 }) {
   const completionUpdate = {
     status: "approved",
@@ -754,6 +790,7 @@ async function approveCompletion({
     .from("job_completions")
     .update(completionUpdate)
     .eq("id", completion.id)
+    .eq("company_id", companyId)
     .eq("status", "submitted")
     .select("*")
     .maybeSingle();
@@ -780,12 +817,14 @@ async function approveCompletion({
         completion.work_carried_out ?? "",
       updated_at: reviewedAt,
     })
-    .eq("id", completion.job_id);
+    .eq("id", completion.job_id)
+    .eq("company_id", companyId);
 
   if (jobUpdateError) {
     await rollbackCompletionDecision(
       supabase,
       completion,
+      companyId,
     );
 
     throw new Error(
@@ -804,6 +843,7 @@ async function rejectCompletion({
   officeNotes,
   rejectionReason,
   reviewedAt,
+  companyId,
 }: {
   supabase: Awaited<
     ReturnType<typeof getOfficeAuth>
@@ -814,6 +854,7 @@ async function rejectCompletion({
   officeNotes: string;
   rejectionReason: string;
   reviewedAt: string;
+  companyId: string;
 }) {
   const {
     data: updatedCompletion,
@@ -832,6 +873,7 @@ async function rejectCompletion({
       updated_at: reviewedAt,
     })
     .eq("id", completion.id)
+    .eq("company_id", companyId)
     .eq("status", "submitted")
     .select("*")
     .maybeSingle();
@@ -855,12 +897,14 @@ async function rejectCompletion({
       status: "in_progress",
       updated_at: reviewedAt,
     })
-    .eq("id", completion.job_id);
+    .eq("id", completion.job_id)
+    .eq("company_id", companyId);
 
   if (jobUpdateError) {
     await rollbackCompletionDecision(
       supabase,
       completion,
+      companyId,
     );
 
     throw new Error(
@@ -876,6 +920,7 @@ async function rollbackCompletionDecision(
     ReturnType<typeof getOfficeAuth>
   >["supabase"],
   completion: CompletionRow,
+  companyId: string,
 ) {
   const {
     error: rollbackError,
@@ -894,7 +939,8 @@ async function rollbackCompletionDecision(
       rejected_at: completion.rejected_at,
       updated_at: completion.updated_at,
     })
-    .eq("id", completion.id);
+    .eq("id", completion.id)
+    .eq("company_id", companyId);
 
   if (rollbackError) {
     console.error(
@@ -920,15 +966,6 @@ function getAuthErrorResponse(
     );
   }
 
-  if (auth.error) {
-    return NextResponse.json(
-      {
-        error: auth.error,
-      },
-      { status: 500 },
-    );
-  }
-
   if (!auth.canReview) {
     return NextResponse.json(
       {
@@ -947,6 +984,7 @@ function mapCompletion(
 ) {
   return {
     id: completion.id,
+    companyId: completion.company_id,
     jobId: completion.job_id,
     assignmentId:
       completion.assignment_id,

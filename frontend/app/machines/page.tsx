@@ -10,6 +10,7 @@ import {
 
 import Card from "../../Components/ui/Card";
 import { supabase } from "@/lib/supabase";
+import { useNavigationUser } from "@/Components/navigation/use-navigation-user";
 
 type Machine = {
   id: string;
@@ -65,6 +66,8 @@ function MachineMeta({
 }
 
 export default function MachinesPage() {
+  const { userState, loading: companyLoading } = useNavigationUser();
+  const companyId = userState.activeCompany?.id ?? "";
   const [machines, setMachines] = useState<Machine[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -77,6 +80,12 @@ export default function MachinesPage() {
 
   const loadMachines = useCallback(async () => {
     setIsLoading(true);
+
+    if (!companyId) {
+      setMachines([]);
+      setIsLoading(companyLoading);
+      return;
+    }
     setErrorMessage("");
 
     const { data, error } = await supabase
@@ -97,6 +106,7 @@ export default function MachinesPage() {
           contact_name
         )
       `)
+      .eq("company_id", companyId)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -148,7 +158,7 @@ export default function MachinesPage() {
 
     setMachines(loadedMachines);
     setIsLoading(false);
-  }, []);
+  }, [companyId, companyLoading]);
 
   useEffect(() => {
     void loadMachines();

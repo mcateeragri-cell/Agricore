@@ -1,13 +1,25 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { getOfficeAuth } from "../../../office/_shared";
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+import {
+  createSupabaseServerClient,
+} from "@/lib/supabase-server";
+import {
+  getOfficeAuth,
+} from "../../../office/_shared";
 import {
   InvoiceNotFoundError,
   loadInvoicePdfData,
 } from "../_pdf/load-data";
-import { renderInvoiceOnlyPdf } from "../_pdf/render";
+import {
+  renderInvoiceOnlyPdf,
+} from "../_pdf/render";
 
-export const dynamic = "force-dynamic";
+export const dynamic =
+  "force-dynamic";
+
 export const runtime = "nodejs";
 
 type RouteContext = {
@@ -21,23 +33,28 @@ export async function GET(
   context: RouteContext,
 ) {
   try {
-    const { id } = await context.params;
+    const { id } =
+      await context.params;
 
-    const auth = await getOfficeAuth();
-    const denied = validateAuth(auth);
+    const auth =
+      await getOfficeAuth();
+
+    const denied =
+      validateAuth(auth);
 
     if (denied) {
       return denied;
     }
 
-    const data = await loadInvoicePdfData({
-      invoiceId: id,
-      auth,
-      includePhotos: false,
-    });
+    const data =
+      await loadInvoicePdfData({
+        invoiceId: id,
+        auth,
+        includePhotos: false,
+      });
 
     const supabase =
-  await createSupabaseServerClient();
+      await createSupabaseServerClient();
 
     const pdfBytes =
       await renderInvoiceOnlyPdf(
@@ -63,7 +80,9 @@ export async function GET(
 
 function validateAuth(
   auth: Awaited<
-    ReturnType<typeof getOfficeAuth>
+    ReturnType<
+      typeof getOfficeAuth
+    >
   >,
 ): NextResponse | null {
   if (!auth.user) {
@@ -75,17 +94,6 @@ function validateAuth(
       },
       {
         status: 401,
-      },
-    );
-  }
-
-  if (auth.error) {
-    return NextResponse.json(
-      {
-        error: auth.error,
-      },
-      {
-        status: 500,
       },
     );
   }
@@ -116,9 +124,12 @@ function pdfResponse(
       headers: {
         "Content-Type":
           "application/pdf",
+
         "Content-Disposition":
           `inline; filename="${filename}"`,
-        "Cache-Control": "no-store",
+
+        "Cache-Control":
+          "no-store",
       },
     },
   );

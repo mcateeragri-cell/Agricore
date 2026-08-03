@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { loadActiveCompany } from "@/lib/company-context-client";
 import Card from "../../../Components/ui/Card";
 
 type StockFormState = {
@@ -94,9 +95,24 @@ export default function NewStockItemPage() {
     setSaving(true);
     setErrorMessage("");
 
+    let activeCompany;
+
+    try {
+      activeCompany = await loadActiveCompany();
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to load the active company.",
+      );
+      setSaving(false);
+      return;
+    }
+
     const { data, error } = await supabase
       .from("stock_items")
       .insert({
+        company_id: activeCompany.id,
         part_number: textOrNull(form.part_number),
         description,
         category: textOrNull(form.category),

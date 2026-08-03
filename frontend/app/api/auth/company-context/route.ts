@@ -4,9 +4,12 @@ import { cookies } from "next/headers";
 import {
   getAuthenticatedUserContext,
 } from "@/lib/auth/require-permission";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import {
+  createSupabaseServerClient,
+} from "@/lib/supabase-server";
 
-const ACTIVE_COMPANY_COOKIE = "agricore_company_id";
+const ACTIVE_COMPANY_COOKIE =
+  "agricore_company_id";
 
 type CompanyMembershipRow = {
   company_id: string;
@@ -24,11 +27,16 @@ type SwitchCompanyRequest = {
 };
 
 function cleanText(value: unknown) {
-  return typeof value === "string" ? value.trim() : "";
+  return typeof value === "string"
+    ? value.trim()
+    : "";
 }
 
-async function loadAvailableCompanies(userId: string) {
-  const supabase = await createSupabaseServerClient();
+async function loadAvailableCompanies(
+  userId: string,
+) {
+  const supabase =
+    await createSupabaseServerClient();
 
   const {
     data: membershipRows,
@@ -38,7 +46,9 @@ async function loadAvailableCompanies(userId: string) {
     .select("company_id, joined_at")
     .eq("user_id", userId)
     .eq("is_active", true)
-    .order("joined_at", { ascending: true });
+    .order("joined_at", {
+      ascending: true,
+    });
 
   if (membershipsError) {
     throw new Error(
@@ -47,14 +57,17 @@ async function loadAvailableCompanies(userId: string) {
   }
 
   const memberships =
-    (membershipRows as CompanyMembershipRow[] | null) ?? [];
+    (membershipRows as
+      | CompanyMembershipRow[]
+      | null) ?? [];
 
   if (memberships.length === 0) {
     return [];
   }
 
   const companyIds = memberships.map(
-    (membership) => membership.company_id,
+    (membership) =>
+      membership.company_id,
   );
 
   const {
@@ -73,43 +86,58 @@ async function loadAvailableCompanies(userId: string) {
   }
 
   const companies =
-    (companyRows as CompanyRow[] | null) ?? [];
+    (companyRows as CompanyRow[] | null) ??
+    [];
 
   const companyById = new Map(
-    companies.map((company) => [company.id, company]),
+    companies.map((company) => [
+      company.id,
+      company,
+    ]),
   );
 
-  return memberships.flatMap((membership) => {
-    const company = companyById.get(membership.company_id);
+  return memberships.flatMap(
+    (membership) => {
+      const company = companyById.get(
+        membership.company_id,
+      );
 
-    if (!company) {
-      return [];
-    }
+      if (!company) {
+        return [];
+      }
 
-    return [
-      {
-        id: company.id,
-        name: cleanText(company.company_name),
-        slug: cleanText(company.slug),
-      },
-    ];
-  });
+      return [
+        {
+          id: company.id,
+          name: cleanText(
+            company.company_name,
+          ),
+          slug: cleanText(company.slug),
+        },
+      ];
+    },
+  );
 }
 
 export async function GET() {
   try {
-    const context = await getAuthenticatedUserContext();
+    const context =
+      await getAuthenticatedUserContext();
 
     if (!context) {
       return NextResponse.json(
-        { error: "Authentication required." },
+        {
+          error:
+            "Authentication required.",
+        },
         { status: 401 },
       );
     }
 
-    const companies = await loadAvailableCompanies(
-      context.userId,
-    );
+    const companies =
+      await loadAvailableCompanies(
+        context.userId,
+      );
 
     return NextResponse.json(
       {
@@ -118,8 +146,10 @@ export async function GET() {
           email: context.email,
           fullName: context.fullName,
           role: context.role || null,
-          platformRole: context.platformRole,
-          permissions: context.permissions,
+          platformRole:
+            context.platformRole,
+          permissions:
+            context.permissions,
         },
         activeCompany: {
           id: context.companyId,
@@ -127,9 +157,10 @@ export async function GET() {
           slug: context.companySlug,
         },
         companies,
+        requiresCompanySelection:
+          companies.length > 1,
       },
       {
-        status: 200,
         headers: {
           "Cache-Control": "no-store",
         },
@@ -142,19 +173,28 @@ export async function GET() {
     );
 
     return NextResponse.json(
-      { error: "Unable to load company context." },
+      {
+        error:
+          "Unable to load company context.",
+      },
       { status: 500 },
     );
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(
+  request: NextRequest,
+) {
   try {
-    const context = await getAuthenticatedUserContext();
+    const context =
+      await getAuthenticatedUserContext();
 
     if (!context) {
       return NextResponse.json(
-        { error: "Authentication required." },
+        {
+          error:
+            "Authentication required.",
+        },
         { status: 401 },
       );
     }
@@ -162,30 +202,43 @@ export async function POST(request: NextRequest) {
     let body: SwitchCompanyRequest;
 
     try {
-      body = (await request.json()) as SwitchCompanyRequest;
+      body =
+        (await request.json()) as
+          SwitchCompanyRequest;
     } catch {
       return NextResponse.json(
-        { error: "A valid JSON request body is required." },
+        {
+          error:
+            "A valid JSON request body is required.",
+        },
         { status: 400 },
       );
     }
 
-    const requestedCompanyId = cleanText(body.companyId);
+    const requestedCompanyId =
+      cleanText(body.companyId);
 
     if (!requestedCompanyId) {
       return NextResponse.json(
-        { error: "companyId is required." },
+        {
+          error:
+            "companyId is required.",
+        },
         { status: 400 },
       );
     }
 
-    const companies = await loadAvailableCompanies(
-      context.userId,
-    );
+    const companies =
+      await loadAvailableCompanies(
+        context.userId,
+      );
 
-    const selectedCompany = companies.find(
-      (company) => company.id === requestedCompanyId,
-    );
+    const selectedCompany =
+      companies.find(
+        (company) =>
+          company.id ===
+          requestedCompanyId,
+      );
 
     if (!selectedCompany) {
       return NextResponse.json(
@@ -197,7 +250,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const cookieStore = await cookies();
+    const cookieStore =
+      await cookies();
 
     cookieStore.set(
       ACTIVE_COMPANY_COOKIE,
@@ -205,18 +259,22 @@ export async function POST(request: NextRequest) {
       {
         httpOnly: true,
         sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
+        secure:
+          process.env.NODE_ENV ===
+          "production",
         path: "/",
-        maxAge: 60 * 60 * 24 * 365,
+        maxAge:
+          60 * 60 * 24 * 365,
       },
     );
 
     return NextResponse.json(
       {
-        activeCompany: selectedCompany,
+        activeCompany:
+          selectedCompany,
+        companies,
       },
       {
-        status: 200,
         headers: {
           "Cache-Control": "no-store",
         },
@@ -229,7 +287,10 @@ export async function POST(request: NextRequest) {
     );
 
     return NextResponse.json(
-      { error: "Unable to switch company." },
+      {
+        error:
+          "Unable to switch company.",
+      },
       { status: 500 },
     );
   }

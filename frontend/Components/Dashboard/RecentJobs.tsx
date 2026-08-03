@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import { supabase } from "@/lib/supabase";
+import { useNavigationUser } from "@/Components/navigation/use-navigation-user";
 
 type RecentJob = {
   id: string;
@@ -144,6 +145,8 @@ function MobileJobCard({
 }
 
 export default function RecentJobs() {
+  const { userState, loading: companyLoading } = useNavigationUser();
+  const companyId = userState.activeCompany?.id ?? "";
   const [recentJobs, setRecentJobs] =
     useState<RecentJob[]>([]);
   const [loading, setLoading] = useState(true);
@@ -169,6 +172,7 @@ export default function RecentJobs() {
           model
         )
       `)
+      .eq("company_id", companyId)
       .order("created_at", {
         ascending: false,
       })
@@ -213,7 +217,7 @@ export default function RecentJobs() {
 
     setRecentJobs(formattedJobs);
     setLoading(false);
-  }, []);
+  }, [companyId, companyLoading]);
 
   useEffect(() => {
     void loadRecentJobs();
@@ -226,6 +230,7 @@ export default function RecentJobs() {
           event: "*",
           schema: "public",
           table: "jobs",
+          filter: `company_id=eq.${companyId}`,
         },
         () => {
           void loadRecentJobs();

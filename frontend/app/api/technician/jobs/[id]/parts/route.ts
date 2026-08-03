@@ -66,17 +66,11 @@ export async function GET(
       );
     }
 
-    if (auth.error) {
-      return NextResponse.json(
-        { error: auth.error },
-        { status: 500 },
-      );
-    }
-
     const assignment = await getAccessibleAssignment(
       auth.supabase,
       jobId,
       auth.user.id,
+      auth.companyId,
       auth.isManager,
     );
 
@@ -110,6 +104,7 @@ export async function GET(
         barcode,
         active
       `)
+      .eq("company_id", auth.companyId)
       .eq("active", true)
       .order("description", { ascending: true })
       .limit(search ? 50 : 100);
@@ -147,6 +142,7 @@ export async function GET(
           updated_at
         `)
         .eq("job_id", jobId)
+        .eq("company_id", auth.companyId)
         .order("created_at", { ascending: false }),
 
       stockQuery,
@@ -172,11 +168,18 @@ export async function GET(
       0,
     );
 
-    return NextResponse.json({
-      parts,
-      stockItems,
-      partsTotal: roundMoney(partsTotal),
-    });
+    return NextResponse.json(
+      {
+        parts,
+        stockItems,
+        partsTotal: roundMoney(partsTotal),
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
+    );
   } catch (error) {
     console.error(
       "GET technician job parts error:",
@@ -210,17 +213,11 @@ export async function POST(
       );
     }
 
-    if (auth.error) {
-      return NextResponse.json(
-        { error: auth.error },
-        { status: 500 },
-      );
-    }
-
     const assignment = await getAccessibleAssignment(
       auth.supabase,
       jobId,
       auth.user.id,
+      auth.companyId,
       auth.isManager,
     );
 
@@ -283,6 +280,7 @@ export async function POST(
           active
         `)
         .eq("id", stockItemId)
+        .eq("company_id", auth.companyId)
         .maybeSingle();
 
     if (stockError) {
@@ -326,6 +324,7 @@ export async function POST(
       await auth.supabase
         .from("job_parts_used")
         .insert({
+          company_id: auth.companyId,
           job_id: jobId,
           stock_item_id: stock.id,
           quantity,
@@ -368,13 +367,15 @@ export async function POST(
           quantity_in_stock: newQuantity,
           updated_at: now,
         })
-        .eq("id", stock.id);
+        .eq("id", stock.id)
+        .eq("company_id", auth.companyId);
 
     if (stockUpdateError) {
       await auth.supabase
         .from("job_parts_used")
         .delete()
-        .eq("id", jobPart.id);
+        .eq("id", jobPart.id)
+        .eq("company_id", auth.companyId);
 
       throw new Error(stockUpdateError.message);
     }
@@ -383,6 +384,7 @@ export async function POST(
       await auth.supabase
         .from("stock_movements")
         .insert({
+          company_id: auth.companyId,
           stock_item_id: stock.id,
           job_id: jobId,
           job_part_id: jobPart.id,
@@ -402,12 +404,14 @@ export async function POST(
             quantity_in_stock: currentQuantity,
             updated_at: new Date().toISOString(),
           })
-          .eq("id", stock.id),
+          .eq("id", stock.id)
+          .eq("company_id", auth.companyId),
 
         auth.supabase
           .from("job_parts_used")
           .delete()
-          .eq("id", jobPart.id),
+          .eq("id", jobPart.id)
+          .eq("company_id", auth.companyId),
       ]);
 
       throw new Error(movementError.message);
@@ -450,12 +454,14 @@ async function getAccessibleAssignment(
   >["supabase"],
   jobId: string,
   userId: string,
+  companyId: string,
   isManager: boolean,
 ): Promise<AssignmentRow | null> {
   let query = supabase
     .from("job_assignments")
     .select("id")
     .eq("job_id", jobId)
+    .eq("company_id", companyId)
     .neq("assignment_status", "cancelled");
 
   if (!isManager) {

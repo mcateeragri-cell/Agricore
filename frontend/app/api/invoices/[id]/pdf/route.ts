@@ -30,7 +30,6 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
 function validateAuth(auth: Awaited<ReturnType<typeof getOfficeAuth>>) {
   if (!auth.user) return NextResponse.json({ error: auth.error ?? "You must be signed in." }, { status: 401 });
-  if (auth.error) return NextResponse.json({ error: auth.error }, { status: 500 });
   if (!auth.canReview) return NextResponse.json({ error: "You do not have permission to view invoice PDFs." }, { status: 403 });
   return null;
 }

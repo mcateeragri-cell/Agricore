@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { loadActiveCompany } from "@/lib/company-context-client";
 import Card from "../../Components/ui/Card";
 
 type StockItem = {
@@ -95,22 +96,33 @@ export default function StockPage() {
     setLoading(true);
     setErrorMessage("");
 
-    const { data, error } = await supabase
-      .from("stock_items")
-      .select("*")
-      .eq("active", true)
-      .order("description", { ascending: true });
+    try {
+      const activeCompany =
+        await loadActiveCompany();
 
-    if (error) {
+      const { data, error } = await supabase
+        .from("stock_items")
+        .select("*")
+        .eq("company_id", activeCompany.id)
+        .eq("active", true)
+        .order("description", { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      setStockItems((data ?? []) as StockItem[]);
+    } catch (error) {
       console.error("Unable to load stock:", error);
-      setErrorMessage(error.message);
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to load stock.",
+      );
       setStockItems([]);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setStockItems((data ?? []) as StockItem[]);
-    setLoading(false);
   }, []);
 
   useEffect(() => {

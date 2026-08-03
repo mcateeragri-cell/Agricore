@@ -117,13 +117,6 @@ export async function POST(
       );
     }
 
-    if (auth.error) {
-      return NextResponse.json(
-        { error: auth.error },
-        { status: 500 },
-      );
-    }
-
     if (!auth.canReview) {
       return NextResponse.json(
         {
@@ -175,6 +168,7 @@ export async function POST(
         total
       `)
       .eq("job_id", jobId)
+      .eq("company_id", auth.companyId)
       .neq("status", "void")
       .maybeSingle();
 
@@ -213,6 +207,7 @@ export async function POST(
         machine_hours
       `)
       .eq("id", jobId)
+      .eq("company_id", auth.companyId)
       .maybeSingle();
 
     if (jobError) {
@@ -274,6 +269,7 @@ export async function POST(
               email
             `)
             .eq("id", job.customer_id)
+            .eq("company_id", auth.companyId)
             .maybeSingle()
         : Promise.resolve({
             data: null,
@@ -287,6 +283,7 @@ export async function POST(
               "id, make, model, registration, serial_number",
             )
             .eq("id", job.machine_id)
+            .eq("company_id", auth.companyId)
             .maybeSingle()
         : Promise.resolve({
             data: null,
@@ -306,6 +303,7 @@ export async function POST(
           approved_at
         `)
         .eq("job_id", jobId)
+        .eq("company_id", auth.companyId)
         .eq("status", "approved")
         .order("approved_at", {
           ascending: false,
@@ -327,6 +325,7 @@ export async function POST(
           entry_status
         `)
         .eq("job_id", jobId)
+        .eq("company_id", auth.companyId)
         .order("labour_date", {
           ascending: true,
         })
@@ -345,6 +344,7 @@ export async function POST(
           notes
         `)
         .eq("job_id", jobId)
+        .eq("company_id", auth.companyId)
         .order("created_at", {
           ascending: true,
         }),
@@ -617,6 +617,7 @@ export async function POST(
     } = await auth.supabase
       .from("invoices")
       .insert({
+        company_id: auth.companyId,
         invoice_number:
           invoiceNumber.trim(),
         job_id: job.id,
@@ -665,6 +666,7 @@ export async function POST(
     const itemRows = invoiceItems.map(
       (item) => ({
         ...item,
+        company_id: auth.companyId,
         invoice_id: invoice.id,
       }),
     );
@@ -681,7 +683,8 @@ export async function POST(
       await auth.supabase
         .from("invoices")
         .delete()
-        .eq("id", invoice.id);
+        .eq("id", invoice.id)
+        .eq("company_id", auth.companyId);
 
       throw new Error(itemError.message);
     }
@@ -695,7 +698,8 @@ export async function POST(
         updated_at:
           new Date().toISOString(),
       })
-      .eq("id", job.id);
+      .eq("id", job.id)
+      .eq("company_id", auth.companyId);
 
     if (jobUpdateError) {
       console.error(
@@ -717,7 +721,12 @@ export async function POST(
           items: insertedItems ?? [],
         },
       },
-      { status: 201 },
+      {
+        status: 201,
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
     );
   } catch (error) {
     console.error(
