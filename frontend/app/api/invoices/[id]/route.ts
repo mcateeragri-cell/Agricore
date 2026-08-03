@@ -133,6 +133,32 @@ export async function GET(
 
     let job = null;
     let machine = null;
+    let customer = null;
+
+    if (invoice.customer_id) {
+      const {
+        data: customerData,
+        error: customerError,
+      } = await auth.supabase
+        .from("customers")
+        .select("contact_name, business_name")
+        .eq("id", invoice.customer_id)
+        .eq("company_id", auth.companyId)
+        .maybeSingle();
+
+      if (customerError) {
+        throw new Error(customerError.message);
+      }
+
+      customer = customerData
+        ? {
+            contactName:
+              customerData.contact_name ?? "",
+            businessName:
+              customerData.business_name ?? "",
+          }
+        : null;
+    }
 
     if (invoice.job_id) {
       const {
@@ -191,6 +217,7 @@ export async function GET(
       items: items ?? [],
       job,
       machine,
+      customer,
     });
   } catch (error) {
     console.error(

@@ -39,6 +39,10 @@ type SendDocumentType =
   | "invoice_only"
   | "service_report_and_invoice";
 
+type SendAddressName =
+  | "contact"
+  | "business";
+
 type InvoiceRow = {
   id: string;
   invoice_number: string;
@@ -117,6 +121,10 @@ type InvoiceDetailResponse = {
   items?: InvoiceItemRow[];
   job?: JobRow | null;
   machine?: MachineRow | null;
+  customer?: {
+    contactName: string;
+    businessName: string;
+  } | null;
   error?: string;
 };
 
@@ -222,6 +230,15 @@ export default function InvoiceDetailPage() {
       "service_report_and_invoice",
     );
 
+  const [sendAddressName, setSendAddressName] =
+    useState<SendAddressName>("contact");
+
+  const [customerContactName, setCustomerContactName] =
+    useState("");
+
+  const [customerBusinessName, setCustomerBusinessName] =
+    useState("");
+
   const [sendRecipient, setSendRecipient] =
     useState("");
 
@@ -274,6 +291,19 @@ export default function InvoiceDetailPage() {
       setJob(body.job ?? null);
       setMachine(body.machine ?? null);
 
+      const loadedContactName =
+        body.customer?.contactName?.trim() ?? "";
+
+      const loadedBusinessName =
+        body.customer?.businessName?.trim() ?? "";
+
+      setCustomerContactName(loadedContactName);
+      setCustomerBusinessName(loadedBusinessName);
+
+      setSendAddressName(
+        loadedContactName ? "contact" : "business",
+      );
+
       setCustomerName(
         loadedInvoice.customer_name ?? "",
       );
@@ -323,8 +353,13 @@ export default function InvoiceDetailPage() {
 
       setSendMessage(
         buildDefaultEmailMessage(
-          loadedInvoice.customer_name,
+          loadedContactName ||
+            loadedBusinessName ||
+            loadedInvoice.customer_name,
           loadedInvoice.invoice_number,
+          asNumber(loadedInvoice.total),
+          loadedInvoice.due_date,
+          loadedInvoice.payment_url,
         ),
       );
 
@@ -801,6 +836,55 @@ export default function InvoiceDetailPage() {
     invoice?.status,
   ]);
 
+  function selectedGreetingName(
+    nextAddressName = sendAddressName,
+  ) {
+    if (nextAddressName === "business") {
+      return (
+        customerBusinessName ||
+        customerContactName ||
+        customerName ||
+        invoice?.customer_name ||
+        "Customer"
+      );
+    }
+
+    return (
+      customerContactName ||
+      customerBusinessName ||
+      customerName ||
+      invoice?.customer_name ||
+      "Customer"
+    );
+  }
+
+  function rebuildSendMessage(
+    nextAddressName = sendAddressName,
+    nextDocumentType = sendDocumentType,
+  ) {
+    if (!invoice) {
+      return;
+    }
+
+    setSendSubject(
+      nextDocumentType === "invoice_only"
+        ? `Invoice ${invoice.invoice_number}`
+        : `Service Report & Invoice ${invoice.invoice_number}`,
+    );
+
+    setSendMessage(
+      buildDefaultEmailMessage(
+        selectedGreetingName(nextAddressName),
+        invoice.invoice_number,
+        calculatedTotals.total,
+        dueDate,
+        includePaymentLinkInEmail
+          ? invoice.payment_url
+          : null,
+      ),
+    );
+  }
+
   function openSendModal() {
     if (!invoice) {
       return;
@@ -812,21 +896,7 @@ export default function InvoiceDetailPage() {
         "",
     );
 
-    setSendSubject(
-      sendDocumentType ===
-        "invoice_only"
-        ? `Invoice ${invoice.invoice_number}`
-        : `Service Report & Invoice ${invoice.invoice_number}`,
-    );
-
-    setSendMessage(
-      buildDefaultEmailMessage(
-        customerName ||
-          invoice.customer_name,
-        invoice.invoice_number,
-      ),
-    );
-
+    rebuildSendMessage();
     setSendModalOpen(true);
   }
 
@@ -834,15 +904,147 @@ export default function InvoiceDetailPage() {
     nextType: SendDocumentType,
   ) {
     setSendDocumentType(nextType);
+    rebuildSendMessage(
+      sendAddressName,
+      nextType,
+    );
+  }
 
-    if (!invoice) {
+  function changeSendAddressName(
+    nextAddressName: SendAddressName,
+  ) {
+    setSendAddressName(nextAddressName);
+    rebuildSendMessage(
+      nextAddressName,
+      sendDocumentType,
+    );
+  }
+
+  function selectedPdfPath() {
+    if (!invoiceId) {
+      return "";
+    }
+
+    return sendDocumentType === "invoice_only"
+      ? `/api/invoices/${invoiceId}/invoice-pdf`
+      : `/api/invoices/${invoiceId}/pdf`;
+  }
+
+  function selectedPdfFilename() {
+    const invoiceNumber =
+      invoice?.invoice_number ?? "invoice";
+
+    return sendDocumentType === "invoice_only"
+      ? `${invoiceNumber}-invoice.pdf`
+      : `${invoiceNumber}-service-report-and-invoice.pdf`;
+  }
+
+  async function shareCustomerDocuments() {
+    if (!invoiceId || !invoice) {
       return;
     }
 
-    setSendSubject(
-      nextType === "invoice_only"
-        ? `Invoice ${invoice.invoice_number}`
-        : `Service Report & Invoice ${invoice.invoice_number}`,
+    setActionLoading("share");
+    setError("");
+    setMessage("");
+
+    try {
+      const saved = await saveInvoice();
+
+      if (!saved) {
+        return;
+      }
+
+      const response = await fetch(
+        selectedPdfPath(),
+        { cache: "no-store" },
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "Unable to generate the selected PDF.",
+        );
+      }
+
+      const blob = await response.blob();
+      const file = new File(
+        [blob],
+        selectedPdfFilename(),
+        { type: "application/pdf" },
+      );
+
+      const shareData = {
+        title: sendSubject.trim(),
+        text: sendMessage.trim(),
+        files: [file],
+      };
+
+      if (
+        typeof navigator.share === "function" &&
+        (
+          typeof navigator.canShare !== "function" ||
+          navigator.canShare({ files: [file] })
+        )
+      ) {
+        await navigator.share(shareData);
+        setMessage(
+          "Document shared successfully.",
+        );
+        return;
+      }
+
+      const downloadUrl =
+        URL.createObjectURL(blob);
+
+      const downloadLink =
+        document.createElement("a");
+
+      downloadLink.href = downloadUrl;
+      downloadLink.download =
+        selectedPdfFilename();
+      downloadLink.click();
+      URL.revokeObjectURL(downloadUrl);
+
+      openWhatsAppMessage();
+      setMessage(
+        "PDF downloaded. Attach it to the WhatsApp message that has opened.",
+      );
+    } catch (caughtError) {
+      if (
+        caughtError instanceof DOMException &&
+        caughtError.name === "AbortError"
+      ) {
+        return;
+      }
+
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Unable to share the customer documents.",
+      );
+    } finally {
+      setActionLoading("");
+    }
+  }
+
+  function openWhatsAppMessage() {
+    const phone = normaliseWhatsAppPhone(
+      customerPhone ||
+        invoice?.customer_phone ||
+        "",
+    );
+
+    const encodedMessage =
+      encodeURIComponent(sendMessage.trim());
+
+    const whatsappUrl = phone
+      ? `https://wa.me/${phone}?text=${encodedMessage}`
+      : `https://wa.me/?text=${encodedMessage}`;
+
+    window.open(
+      whatsappUrl,
+      "_blank",
+      "noopener,noreferrer",
     );
   }
 
@@ -1288,6 +1490,10 @@ export default function InvoiceDetailPage() {
           documentType={
             sendDocumentType
           }
+          addressName={sendAddressName}
+          contactName={customerContactName}
+          businessName={customerBusinessName}
+          customerPhone={customerPhone}
           recipient={sendRecipient}
           subject={sendSubject}
           message={sendMessage}
@@ -1303,8 +1509,14 @@ export default function InvoiceDetailPage() {
           sending={
             actionLoading === "send"
           }
+          sharing={
+            actionLoading === "share"
+          }
           onDocumentTypeChange={
             changeSendDocumentType
+          }
+          onAddressNameChange={
+            changeSendAddressName
           }
           onRecipientChange={
             setSendRecipient
@@ -1327,6 +1539,10 @@ export default function InvoiceDetailPage() {
           onSend={() =>
             void sendCustomerDocuments()
           }
+          onShare={() =>
+            void shareCustomerDocuments()
+          }
+          onWhatsApp={openWhatsAppMessage}
         />
       ) : null}
     </main>
@@ -2255,6 +2471,10 @@ function ActivityTab({
 function SendCustomerModal({
   invoiceNumber,
   documentType,
+  addressName,
+  contactName,
+  businessName,
+  customerPhone,
   recipient,
   subject,
   message,
@@ -2262,7 +2482,9 @@ function SendCustomerModal({
   includePaymentLink,
   hasPaymentLink,
   sending,
+  sharing,
   onDocumentTypeChange,
+  onAddressNameChange,
   onRecipientChange,
   onSubjectChange,
   onMessageChange,
@@ -2270,9 +2492,15 @@ function SendCustomerModal({
   onIncludePaymentLinkChange,
   onClose,
   onSend,
+  onShare,
+  onWhatsApp,
 }: {
   invoiceNumber: string;
   documentType: SendDocumentType;
+  addressName: SendAddressName;
+  contactName: string;
+  businessName: string;
+  customerPhone: string;
   recipient: string;
   subject: string;
   message: string;
@@ -2280,8 +2508,12 @@ function SendCustomerModal({
   includePaymentLink: boolean;
   hasPaymentLink: boolean;
   sending: boolean;
+  sharing: boolean;
   onDocumentTypeChange: (
     value: SendDocumentType,
+  ) => void;
+  onAddressNameChange: (
+    value: SendAddressName,
   ) => void;
   onRecipientChange: (
     value: string,
@@ -2300,6 +2532,8 @@ function SendCustomerModal({
   ) => void;
   onClose: () => void;
   onSend: () => void;
+  onShare: () => void;
+  onWhatsApp: () => void;
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
@@ -2391,6 +2625,58 @@ function SendCustomerModal({
             </div>
           </fieldset>
 
+          <fieldset>
+            <legend className="text-sm font-semibold text-slate-950">
+              Address message to
+            </legend>
+
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <label className="flex cursor-pointer gap-3 rounded-xl border border-slate-200 p-4 hover:border-emerald-400">
+                <input
+                  type="radio"
+                  name="addressName"
+                  checked={addressName === "contact"}
+                  disabled={!contactName}
+                  onChange={() =>
+                    onAddressNameChange("contact")
+                  }
+                  className="mt-1"
+                />
+
+                <span>
+                  <span className="block font-semibold text-slate-950">
+                    {contactName || "No contact name saved"}
+                  </span>
+                  <span className="mt-1 block text-sm text-slate-500">
+                    Use the customer contact name.
+                  </span>
+                </span>
+              </label>
+
+              <label className="flex cursor-pointer gap-3 rounded-xl border border-slate-200 p-4 hover:border-emerald-400">
+                <input
+                  type="radio"
+                  name="addressName"
+                  checked={addressName === "business"}
+                  disabled={!businessName}
+                  onChange={() =>
+                    onAddressNameChange("business")
+                  }
+                  className="mt-1"
+                />
+
+                <span>
+                  <span className="block font-semibold text-slate-950">
+                    {businessName || "No business name saved"}
+                  </span>
+                  <span className="mt-1 block text-sm text-slate-500">
+                    Use the farm or business name.
+                  </span>
+                </span>
+              </label>
+            </div>
+          </fieldset>
+
           <Field
             label="Recipient"
             type="email"
@@ -2399,6 +2685,13 @@ function SendCustomerModal({
               onRecipientChange
             }
           />
+
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+            <span className="font-semibold text-slate-950">
+              WhatsApp number:
+            </span>{" "}
+            {customerPhone || "No customer phone number saved"}
+          </div>
 
           <Field
             label="Subject"
@@ -2466,10 +2759,10 @@ function SendCustomerModal({
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 border-t border-slate-200 p-5">
+        <div className="flex flex-col gap-3 border-t border-slate-200 p-5 sm:flex-row sm:flex-wrap sm:justify-end">
           <button
             type="button"
-            disabled={sending}
+            disabled={sending || sharing}
             onClick={onClose}
             className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
           >
@@ -2478,9 +2771,29 @@ function SendCustomerModal({
 
           <button
             type="button"
-            disabled={sending}
-            onClick={onSend}
+            disabled={sending || sharing}
+            onClick={onWhatsApp}
+            className="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
+          >
+            WhatsApp message
+          </button>
+
+          <button
+            type="button"
+            disabled={sending || sharing}
+            onClick={onShare}
             className="rounded-lg bg-emerald-700 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {sharing
+              ? "Preparing PDF…"
+              : "Share PDF / WhatsApp"}
+          </button>
+
+          <button
+            type="button"
+            disabled={sending || sharing}
+            onClick={onSend}
+            className="rounded-lg bg-blue-700 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {sending
               ? "Sending…"
@@ -2777,27 +3090,61 @@ function buildMachineName(
 }
 
 function buildDefaultEmailMessage(
-  customerName:
-    | string
-    | null
-    | undefined,
+  recipientName: string | null | undefined,
   invoiceNumber: string,
+  total = 0,
+  dueDate: string | null = null,
+  paymentUrl: string | null = null,
 ) {
-  const greetingName =
-    customerName?.trim()
-      ? customerName.trim()
-      : "Customer";
+  const greeting =
+    recipientName?.trim() || "Customer";
 
-  return [
-    `Hi ${greetingName},`,
+  const lines = [
+    `Hi ${greeting},`,
     "",
-    `Please find attached the documents for invoice ${invoiceNumber}.`,
-    "",
-    "You can use the secure payment link in this email where available.",
+    `Please find invoice ${invoiceNumber}.`,
+    `Amount due: ${formatMoney(total)}`,
+    `Due date: ${formatDateDisplay(dueDate)}`,
+  ];
+
+  if (paymentUrl) {
+    lines.push(
+      "",
+      "Pay securely here:",
+      paymentUrl,
+    );
+  }
+
+  lines.push(
     "",
     "Kind regards,",
-    "McAteer Agricultural Services",
-  ].join("\n");
+  );
+
+  return lines.join("\n");
+}
+
+function normaliseWhatsAppPhone(
+  value: string,
+) {
+  const cleaned = value.replace(/[^0-9+]/g, "");
+
+  if (!cleaned) {
+    return "";
+  }
+
+  if (cleaned.startsWith("+")) {
+    return cleaned.slice(1);
+  }
+
+  if (cleaned.startsWith("00")) {
+    return cleaned.slice(2);
+  }
+
+  if (cleaned.startsWith("0")) {
+    return `44${cleaned.slice(1)}`;
+  }
+
+  return cleaned;
 }
 
 function calculateDaysUntilDue(

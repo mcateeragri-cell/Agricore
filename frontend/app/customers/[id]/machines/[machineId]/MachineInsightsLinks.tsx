@@ -22,14 +22,14 @@ export default function MachineInsightsLinks({
     {
       title: "Machine Timeline",
       description:
-        "View jobs, diagnostics, fault codes and hour readings in chronological order.",
+        "View jobs, diagnostics, faults, hour readings, quotes and invoices in one chronological record.",
       href: `/customers/${customerId}/machines/${machineId}/timeline`,
       action: "Open timeline",
     },
     {
       title: "Machine Health",
       description:
-        "View confirmed faults, repeated issues, latest diagnostics and open work.",
+        "Review confirmed faults, repeat issue signals, latest diagnostics and outstanding work.",
       href: `/customers/${customerId}/machines/${machineId}/health`,
       action: "Open health",
     },

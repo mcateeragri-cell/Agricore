@@ -6,8 +6,9 @@ import {
   useEffect,
   useState,
 } from "react";
-import { supabase } from "@/lib/supabase";
+
 import { useNavigationUser } from "@/Components/navigation/use-navigation-user";
+import { supabase } from "@/lib/supabase";
 
 type RecentJob = {
   id: string;
@@ -48,7 +49,9 @@ type SupabaseJob = {
 function getRelatedRecord<T>(
   value: T | T[] | null,
 ): T | null {
-  if (!value) return null;
+  if (!value) {
+    return null;
+  }
 
   return Array.isArray(value)
     ? value[0] ?? null
@@ -127,7 +130,9 @@ function MobileJobCard({
             </p>
           </div>
 
-          <StatusBadge status={job.status} />
+          <StatusBadge
+            status={job.status}
+          />
         </div>
 
         <div className="rounded-lg bg-slate-50 px-3 py-2.5 dark:bg-slate-900">
@@ -145,92 +150,151 @@ function MobileJobCard({
 }
 
 export default function RecentJobs() {
-  const { userState, loading: companyLoading } = useNavigationUser();
-  const companyId = userState.activeCompany?.id ?? "";
+  const {
+    userState,
+    loading: companyLoading,
+  } = useNavigationUser();
+
+  const companyId =
+    userState.activeCompany?.id;
+
   const [recentJobs, setRecentJobs] =
     useState<RecentJob[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [errorMessage, setErrorMessage] =
-    useState("");
 
-  const loadRecentJobs = useCallback(async () => {
-    setErrorMessage("");
+  const [loading, setLoading] =
+    useState(true);
 
-    const { data, error } = await supabase
-      .from("jobs")
-      .select(`
-        id,
-        job_number,
-        status,
-        engineer_name,
-        customers (
-          contact_name,
-          business_name
-        ),
-        machines (
-          make,
-          model
-        )
-      `)
-      .eq("company_id", companyId)
-      .order("created_at", {
-        ascending: false,
-      })
-      .limit(6);
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState("");
 
-    if (error) {
-      console.error(
-        "Unable to load recent jobs:",
-        error,
+  const loadRecentJobs =
+    useCallback(async () => {
+      if (companyLoading) {
+        return;
+      }
+
+      if (!companyId) {
+        setRecentJobs([]);
+        setErrorMessage("");
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setErrorMessage("");
+
+      const { data, error } =
+        await supabase
+          .from("jobs")
+          .select(`
+            id,
+            job_number,
+            status,
+            engineer_name,
+            customers (
+              contact_name,
+              business_name
+            ),
+            machines (
+              make,
+              model
+            )
+          `)
+          .eq(
+            "company_id",
+            companyId,
+          )
+          .order("created_at", {
+            ascending: false,
+          })
+          .limit(6);
+
+      if (error) {
+        console.error(
+          "Unable to load recent jobs:",
+          error,
+        );
+
+        setRecentJobs([]);
+        setErrorMessage(
+          error.message,
+        );
+        setLoading(false);
+        return;
+      }
+
+      const formattedJobs = (
+        (data ?? []) as
+          SupabaseJob[]
+      ).map((job) => {
+        const customer =
+          getRelatedRecord(
+            job.customers,
+          );
+
+        const machine =
+          getRelatedRecord(
+            job.machines,
+          );
+
+        return {
+          id: job.id,
+          job:
+            job.job_number ??
+            "No job number",
+          customer:
+            customer?.business_name ||
+            customer?.contact_name ||
+            "Unknown customer",
+          machine:
+            [
+              machine?.make,
+              machine?.model,
+            ]
+              .filter(Boolean)
+              .join(" ") ||
+            "No machine",
+          status:
+            job.status ?? "open",
+          engineer:
+            job.engineer_name ??
+            "Unassigned",
+        };
+      });
+
+      setRecentJobs(
+        formattedJobs,
       );
-      setErrorMessage(error.message);
       setLoading(false);
+    }, [
+      companyId,
+      companyLoading,
+    ]);
+
+  useEffect(() => {
+    if (
+      companyLoading ||
+      !companyId
+    ) {
       return;
     }
 
-    const formattedJobs = (
-      (data ?? []) as SupabaseJob[]
-    ).map((job) => {
-      const customer = getRelatedRecord(
-        job.customers,
-      );
-      const machine = getRelatedRecord(
-        job.machines,
-      );
-
-      return {
-        id: job.id,
-        job: job.job_number ?? "No job number",
-        customer:
-          customer?.business_name ||
-          customer?.contact_name ||
-          "Unknown customer",
-        machine:
-          [machine?.make, machine?.model]
-            .filter(Boolean)
-            .join(" ") || "No machine",
-        status: job.status ?? "open",
-        engineer:
-          job.engineer_name ?? "Unassigned",
-      };
-    });
-
-    setRecentJobs(formattedJobs);
-    setLoading(false);
-  }, [companyId, companyLoading]);
-
-  useEffect(() => {
     void loadRecentJobs();
 
     const channel = supabase
-      .channel("dashboard-recent-jobs")
+      .channel(
+        `dashboard-recent-jobs-${companyId}`,
+      )
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
           table: "jobs",
-          filter: `company_id=eq.${companyId}`,
+          filter:
+            `company_id=eq.${companyId}`,
         },
         () => {
           void loadRecentJobs();
@@ -238,18 +302,28 @@ export default function RecentJobs() {
       )
       .subscribe();
 
-    const fallbackRefresh = window.setInterval(
-      () => {
-        void loadRecentJobs();
-      },
-      60_000,
-    );
+    const fallbackRefresh =
+      window.setInterval(
+        () => {
+          void loadRecentJobs();
+        },
+        60_000,
+      );
 
     return () => {
-      window.clearInterval(fallbackRefresh);
-      void supabase.removeChannel(channel);
+      window.clearInterval(
+        fallbackRefresh,
+      );
+
+      void supabase.removeChannel(
+        channel,
+      );
     };
-  }, [loadRecentJobs]);
+  }, [
+    companyId,
+    companyLoading,
+    loadRecentJobs,
+  ]);
 
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
@@ -264,8 +338,8 @@ export default function RecentJobs() {
           </h2>
 
           <p className="mt-1 text-sm font-medium text-slate-600 dark:text-slate-400">
-            Latest workshop and field-service
-            activity
+            Latest workshop and
+            field-service activity
           </p>
         </div>
 
@@ -277,7 +351,8 @@ export default function RecentJobs() {
         </Link>
       </header>
 
-      {loading ? (
+      {loading ||
+      companyLoading ? (
         <div className="p-8 text-center text-sm font-medium text-slate-600 dark:text-slate-400">
           Loading recent jobs...
         </div>
@@ -285,7 +360,8 @@ export default function RecentJobs() {
         <div className="p-5">
           <div className="rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/30">
             <p className="text-sm font-semibold text-red-700 dark:text-red-300">
-              Unable to load recent jobs.
+              Unable to load recent
+              jobs.
             </p>
 
             <p className="mt-1 text-xs text-red-600 dark:text-red-400">
@@ -310,19 +386,22 @@ export default function RecentJobs() {
           </p>
 
           <p className="mt-2 text-sm font-medium text-slate-600 dark:text-slate-400">
-            New workshop and field-service jobs
-            will appear here.
+            New workshop and
+            field-service jobs will
+            appear here.
           </p>
         </div>
       ) : (
         <>
           <div className="divide-y divide-slate-200 lg:hidden dark:divide-slate-800">
-            {recentJobs.map((job) => (
-              <MobileJobCard
-                key={job.id}
-                job={job}
-              />
-            ))}
+            {recentJobs.map(
+              (job) => (
+                <MobileJobCard
+                  key={job.id}
+                  job={job}
+                />
+              ),
+            )}
           </div>
 
           <div className="hidden overflow-x-auto lg:block">
@@ -332,15 +411,19 @@ export default function RecentJobs() {
                   <th className="px-5 py-3 font-bold">
                     Job
                   </th>
+
                   <th className="px-5 py-3 font-bold">
                     Customer
                   </th>
+
                   <th className="px-5 py-3 font-bold">
                     Machine
                   </th>
+
                   <th className="px-5 py-3 font-bold">
                     Status
                   </th>
+
                   <th className="px-5 py-3 font-bold">
                     Engineer
                   </th>
@@ -348,39 +431,43 @@ export default function RecentJobs() {
               </thead>
 
               <tbody className="divide-y divide-slate-200 text-sm dark:divide-slate-800">
-                {recentJobs.map((job) => (
-                  <tr
-                    key={job.id}
-                    className="transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/70"
-                  >
-                    <td className="px-5 py-4">
-                      <Link
-                        href={`/jobs/${job.id}`}
-                        className="font-bold text-emerald-700 hover:underline dark:text-emerald-400"
-                      >
-                        {job.job}
-                      </Link>
-                    </td>
+                {recentJobs.map(
+                  (job) => (
+                    <tr
+                      key={job.id}
+                      className="transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/70"
+                    >
+                      <td className="px-5 py-4">
+                        <Link
+                          href={`/jobs/${job.id}`}
+                          className="font-bold text-emerald-700 hover:underline dark:text-emerald-400"
+                        >
+                          {job.job}
+                        </Link>
+                      </td>
 
-                    <td className="px-5 py-4 font-bold text-slate-900 dark:text-slate-100">
-                      {job.customer}
-                    </td>
+                      <td className="px-5 py-4 font-bold text-slate-900 dark:text-slate-100">
+                        {job.customer}
+                      </td>
 
-                    <td className="px-5 py-4 font-medium text-slate-700 dark:text-slate-400">
-                      {job.machine}
-                    </td>
+                      <td className="px-5 py-4 font-medium text-slate-700 dark:text-slate-400">
+                        {job.machine}
+                      </td>
 
-                    <td className="px-5 py-4">
-                      <StatusBadge
-                        status={job.status}
-                      />
-                    </td>
+                      <td className="px-5 py-4">
+                        <StatusBadge
+                          status={
+                            job.status
+                          }
+                        />
+                      </td>
 
-                    <td className="px-5 py-4 font-semibold text-slate-800 dark:text-slate-200">
-                      {job.engineer}
-                    </td>
-                  </tr>
-                ))}
+                      <td className="px-5 py-4 font-semibold text-slate-800 dark:text-slate-200">
+                        {job.engineer}
+                      </td>
+                    </tr>
+                  ),
+                )}
               </tbody>
             </table>
           </div>

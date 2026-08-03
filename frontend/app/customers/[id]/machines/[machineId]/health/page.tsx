@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 
+import { useNavigationUser } from "@/Components/navigation/use-navigation-user";
 import { supabase } from "@/lib/supabase";
 
 type MachineRow = {
@@ -68,6 +69,14 @@ export default function MachineHealthPage() {
   const customerId = params.id;
   const machineId = params.machineId;
 
+  const {
+    userState,
+    loading: companyLoading,
+  } = useNavigationUser();
+
+  const companyId =
+    userState.activeCompany?.id ?? "";
+
   const [machine, setMachine] = useState<MachineRow | null>(null);
   const [diagnostics, setDiagnostics] = useState<DiagnosticRow[]>([]);
   const [faults, setFaults] = useState<FaultRow[]>([]);
@@ -77,8 +86,22 @@ export default function MachineHealthPage() {
 
   useEffect(() => {
     async function loadHealth() {
+      if (companyLoading) {
+        return;
+      }
+
       setLoading(true);
       setErrorMessage("");
+
+      if (!companyId) {
+        setMachine(null);
+        setDiagnostics([]);
+        setFaults([]);
+        setJobs([]);
+        setErrorMessage("No active company is selected.");
+        setLoading(false);
+        return;
+      }
 
       const [
         machineResult,
@@ -90,6 +113,7 @@ export default function MachineHealthPage() {
           .from("machines")
           .select("id, make, model, hours")
           .eq("id", machineId)
+          .eq("company_id", companyId)
           .maybeSingle(),
         supabase
           .from("machine_diagnostic_reports")
@@ -97,6 +121,7 @@ export default function MachineHealthPage() {
             "id, report_date, created_at, reported_hours",
           )
           .eq("machine_id", machineId)
+          .eq("company_id", companyId)
           .order("created_at", { ascending: false }),
         supabase
           .from("machine_diagnostic_faults")
@@ -104,6 +129,7 @@ export default function MachineHealthPage() {
             "id, fault_code, description, status, severity, created_at",
           )
           .eq("machine_id", machineId)
+          .eq("company_id", companyId)
           .order("created_at", { ascending: false }),
         supabase
           .from("jobs")
@@ -111,6 +137,7 @@ export default function MachineHealthPage() {
             "id, status, job_number, fault_reported, created_at",
           )
           .eq("machine_id", machineId)
+          .eq("company_id", companyId)
           .order("created_at", { ascending: false }),
       ]);
 
@@ -140,7 +167,7 @@ export default function MachineHealthPage() {
     }
 
     void loadHealth();
-  }, [machineId]);
+  }, [companyId, companyLoading, machineId]);
 
   const summary = useMemo(() => {
     const activeFaults = faults.filter(
@@ -214,7 +241,7 @@ export default function MachineHealthPage() {
         </p>
       </header>
 
-      {loading ? (
+      {loading || companyLoading ? (
         <section className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
           Loading machine health...
         </section>

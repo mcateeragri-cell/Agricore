@@ -51,6 +51,7 @@ type Assignment = {
   scheduled_end: string;
   assignment_status: AssignmentStatus;
   notes: string | null;
+  updated_at: string | null;
   jobs: Job | Job[] | null;
 };
 
@@ -169,7 +170,7 @@ export default function DispatchPage() {
   useEffect(() => {
     const interval = window.setInterval(() => {
       void loadDispatch(false);
-    }, 20_000);
+    }, 10_000);
 
     return () => {
       window.clearInterval(interval);
@@ -251,10 +252,19 @@ export default function DispatchPage() {
           assignment.assignment_status === "travelling" ||
           assignment.assignment_status === "in_progress",
       ).length,
+      travelling: assignments.filter(
+        (assignment) =>
+          assignment.assignment_status === "travelling",
+      ).length,
+      working: assignments.filter(
+        (assignment) =>
+          assignment.assignment_status === "in_progress",
+      ).length,
       completed: assignments.filter(
         (assignment) =>
           assignment.assignment_status === "completed",
       ).length,
+      overdue: assignments.filter(isAssignmentOverdue).length,
     };
   }, [data?.assignments]);
 
@@ -585,28 +595,18 @@ export default function DispatchPage() {
           </div>
         ) : null}
 
-        <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <SummaryCard
-            label="Jobs today"
-            value={summary.total}
-            description="Total assigned"
-          />
-          <SummaryCard
-            label="Scheduled"
-            value={summary.scheduled}
-            description="Awaiting or confirmed"
-          />
-          <SummaryCard
-            label="Active"
-            value={summary.active}
-            description="Travelling or working"
-          />
-          <SummaryCard
-            label="Completed"
-            value={summary.completed}
-            description="Finished today"
-          />
+        <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <SummaryCard label="Jobs today" value={summary.total} description="Total assigned" />
+          <SummaryCard label="Travelling" value={summary.travelling} description="En route now" tone="blue" />
+          <SummaryCard label="Working" value={summary.working} description="On active jobs" tone="emerald" />
+          <SummaryCard label="Completed" value={summary.completed} description="Finished today" tone="slate" />
+          <SummaryCard label="Overdue" value={summary.overdue} description="Past scheduled finish" tone="red" />
         </section>
+
+        <LiveStatusStrip
+          technicians={data?.technicians ?? []}
+          assignments={data?.assignments ?? []}
+        />
 
         <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -945,12 +945,7 @@ export default function DispatchPage() {
                               </div>
                             </div>
 
-                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
-                              {assignments.length}{" "}
-                              {assignments.length === 1
-                                ? "job"
-                                : "jobs"}
-                            </span>
+                            <TechnicianLiveBadge assignments={assignments} />
                           </div>
                         </header>
 
@@ -1004,17 +999,134 @@ export default function DispatchPage() {
   );
 }
 
+function LiveStatusStrip({
+  technicians,
+  assignments,
+}: {
+  technicians: Technician[];
+  assignments: Assignment[];
+}) {
+  return (
+    <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">Live field status</p>
+          <h2 className="mt-1 text-xl font-bold text-slate-950">Technicians now</h2>
+        </div>
+        <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
+          Auto-refresh 10s
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {technicians.map((technician) => {
+          const technicianAssignments = assignments.filter(
+            (assignment) => assignment.user_id === technician.user_id,
+          );
+          const live = getLiveAssignment(technicianAssignments);
+          const job = live ? getRelated(live.jobs) : null;
+          const status = live?.assignment_status ?? "available";
+
+          return (
+            <article key={technician.user_id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate font-bold text-slate-950">{technician.full_name}</p>
+                  <p className="truncate text-xs text-slate-500">{technician.job_title ?? "Technician"}</p>
+                </div>
+                <LiveStatusBadge status={status} />
+              </div>
+              <p className="mt-3 truncate text-sm font-semibold text-slate-700">
+                {job ? `${job.job_number} · ${getCustomerName(job)}` : "No active job"}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                {live ? `Updated ${formatRelativeTime(live.updated_at)}` : "Available for assignment"}
+              </p>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function TechnicianLiveBadge({ assignments }: { assignments: Assignment[] }) {
+  const live = getLiveAssignment(assignments);
+  return <LiveStatusBadge status={live?.assignment_status ?? "available"} />;
+}
+
+function LiveStatusBadge({ status }: { status: string }) {
+  const normalised = status.toLowerCase();
+  const styles: Record<string, string> = {
+    travelling: "bg-blue-100 text-blue-700",
+    in_progress: "bg-emerald-100 text-emerald-700",
+    completed: "bg-slate-200 text-slate-700",
+    confirmed: "bg-amber-100 text-amber-700",
+    scheduled: "bg-amber-100 text-amber-700",
+    available: "bg-white text-slate-600 border border-slate-200",
+  };
+  const labels: Record<string, string> = {
+    travelling: "Travelling",
+    in_progress: "Working",
+    completed: "Completed",
+    confirmed: "Confirmed",
+    scheduled: "Scheduled",
+    available: "Available",
+  };
+  return (
+    <span className={`rounded-full px-3 py-1 text-xs font-bold ${styles[normalised] ?? styles.available}`}>
+      {labels[normalised] ?? "Available"}
+    </span>
+  );
+}
+
+function getLiveAssignment(assignments: Assignment[]) {
+  return assignments.find((assignment) =>
+    ["travelling", "in_progress"].includes(assignment.assignment_status),
+  ) ?? assignments.find((assignment) =>
+    ["confirmed", "scheduled"].includes(assignment.assignment_status),
+  ) ?? null;
+}
+
+function isAssignmentOverdue(assignment: Assignment) {
+  if (["completed", "cancelled"].includes(assignment.assignment_status)) return false;
+  const end = new Date(assignment.scheduled_end).getTime();
+  return Number.isFinite(end) && end < Date.now();
+}
+
+function formatRelativeTime(value: string | null) {
+  if (!value) return "just now";
+  const time = new Date(value).getTime();
+  if (!Number.isFinite(time)) return "just now";
+  const minutes = Math.max(0, Math.round((Date.now() - time) / 60000));
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
 function SummaryCard({
   label,
   value,
   description,
+  tone = "slate",
 }: {
   label: string;
   value: number;
   description: string;
+  tone?: "slate" | "blue" | "emerald" | "red";
 }) {
+  const toneClass = {
+    slate: "border-slate-200 bg-white",
+    blue: "border-blue-200 bg-blue-50",
+    emerald: "border-emerald-200 bg-emerald-50",
+    red: "border-red-200 bg-red-50",
+  }[tone];
+
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <article className={`rounded-2xl border p-5 shadow-sm ${toneClass}`}>
       <p className="text-sm font-semibold text-slate-500">
         {label}
       </p>
@@ -1104,6 +1216,13 @@ function DispatchCard({
           {assignment.notes}
         </p>
       ) : null}
+
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500">
+        <span>Updated {formatRelativeTime(assignment.updated_at)}</span>
+        {isAssignmentOverdue(assignment) ? (
+          <span className="rounded-full bg-red-100 px-2.5 py-1 font-bold text-red-700">Overdue</span>
+        ) : null}
+      </div>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
         <PriorityBadge

@@ -18,88 +18,71 @@ type CustomerCardProps = {
   machine: Machine | null;
 };
 
-export default function CustomerCard({
-  customer,
-  machine,
-}: CustomerCardProps) {
+export default function CustomerCard({ customer, machine }: CustomerCardProps) {
+  const mapQuery = encodeURIComponent(customer?.name ?? "");
+
   return (
-    <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="text-lg font-bold text-slate-950">
-        Customer & Machine
-      </h2>
-
-      <div className="mt-5 grid gap-5 md:grid-cols-2">
+    <section className="mt-4 rounded-3xl border border-white/50 bg-white/90 p-5 shadow-lg backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/85">
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-            Customer
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">
+            Site details
           </p>
-
-          <div className="mt-2 space-y-2">
-            <Row
-              label="Business"
-              value={customer?.name}
-            />
-
-            <Row
-              label="Contact"
-              value={customer?.contactName}
-            />
-
-            <Row
-              label="Telephone"
-              value={customer?.phone}
-            />
-
-            <Row
-              label="Email"
-              value={customer?.email}
-            />
-          </div>
+          <h2 className="mt-1 text-xl font-black text-slate-950 dark:text-white">
+            Customer & machine
+          </h2>
         </div>
+      </div>
 
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-            Machine
-          </p>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <DetailCard label="Customer" value={customer?.name} />
+        <DetailCard label="Contact" value={customer?.contactName} />
+        <DetailCard label="Machine" value={machine?.displayName} />
+        <DetailCard
+          label="Registration"
+          value={machine?.registration || machine?.serialNumber}
+        />
+      </div>
 
-          <div className="mt-2 space-y-2">
-            <Row
-              label="Machine"
-              value={machine?.displayName}
-            />
-
-            <Row
-              label="Registration"
-              value={machine?.registration}
-            />
-
-            <Row
-              label="Serial"
-              value={machine?.serialNumber}
-            />
-          </div>
-        </div>
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <a
+          href={customer?.phone ? `tel:${customer.phone}` : undefined}
+          aria-disabled={!customer?.phone}
+          className={`flex min-h-14 items-center justify-center rounded-xl px-4 text-sm font-black ${
+            customer?.phone
+              ? "bg-[#0c4a3a] text-white hover:bg-[#083c2f]"
+              : "cursor-not-allowed bg-slate-200 text-slate-500"
+          }`}
+        >
+          Call customer
+        </a>
+        <a
+          href={customer?.name ? `https://maps.apple.com/?q=${mapQuery}` : undefined}
+          target="_blank"
+          rel="noreferrer"
+          aria-disabled={!customer?.name}
+          className={`flex min-h-14 items-center justify-center rounded-xl border px-4 text-sm font-black ${
+            customer?.name
+              ? "border-slate-300 bg-white text-slate-900 hover:border-emerald-400 hover:bg-emerald-50 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+              : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+          }`}
+        >
+          Open maps
+        </a>
       </div>
     </section>
   );
 }
 
-function Row({
-  label,
-  value,
-}: {
-  label: string;
-  value?: string | null;
-}) {
+function DetailCard({ label, value }: { label: string; value?: string | null }) {
   return (
-    <div className="flex justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2">
-      <span className="text-sm font-semibold text-slate-500">
+    <div className="rounded-2xl bg-slate-100 p-4 dark:bg-slate-800">
+      <p className="text-xs font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">
         {label}
-      </span>
-
-      <span className="text-right text-sm font-bold text-slate-900">
+      </p>
+      <p className="mt-1 text-sm font-black text-slate-900 dark:text-white">
         {value || "—"}
-      </span>
+      </p>
     </div>
   );
 }

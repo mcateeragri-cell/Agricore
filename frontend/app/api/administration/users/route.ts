@@ -1,9 +1,22 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+import {
+  createClient,
+  type SupabaseClient,
+  type User,
+} from "@supabase/supabase-js";
+
+import {
+  getAuthenticatedUserContext,
+} from "@/lib/auth/require-permission";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-type AppRole =
+type CompanyRole =
+  | "company_admin"
   | "administrator"
   | "service_manager"
   | "office"
@@ -13,22 +26,24 @@ type AppRole =
   | "read_only";
 
 type CreateUserBody = {
-  email?: string;
-  temporary_password?: string;
-  full_name?: string;
-  phone?: string;
-  job_title?: string;
-  role?: AppRole;
-  is_active?: boolean;
-  calendar_colour?: string;
-  hourly_cost?: string | number | null;
-  charge_out_rate?: string | number | null;
-  contracted_hours_per_week?: string | number | null;
-  holiday_entitlement_days?: string | number | null;
-  notes?: string;
+  company_id?: unknown;
+  email?: unknown;
+  temporary_password?: unknown;
+  full_name?: unknown;
+  phone?: unknown;
+  job_title?: unknown;
+  role?: unknown;
+  is_active?: unknown;
+  calendar_colour?: unknown;
+  hourly_cost?: unknown;
+  charge_out_rate?: unknown;
+  contracted_hours_per_week?: unknown;
+  holiday_entitlement_days?: unknown;
+  notes?: unknown;
 };
 
-const VALID_ROLES: AppRole[] = [
+const VALID_ROLES = new Set<CompanyRole>([
+  "company_admin",
   "administrator",
   "service_manager",
   "office",
@@ -36,35 +51,24 @@ const VALID_ROLES: AppRole[] = [
   "technician",
   "apprentice",
   "read_only",
-];
+]);
 
-function createSupabaseClients() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const publishableKey =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  const secretKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+function createAdminClient(): SupabaseClient {
+  const supabaseUrl =
+    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
 
-  if (!supabaseUrl) {
+  const serviceRoleKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+
+  if (!supabaseUrl || !serviceRoleKey) {
     throw new Error(
-      "NEXT_PUBLIC_SUPABASE_URL is not configured.",
+      "NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be configured.",
     );
   }
 
-  if (!publishableKey) {
-    throw new Error(
-      "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY is not configured.",
-    );
-  }
-
-  if (!secretKey) {
-    throw new Error(
-      "SUPABASE_SERVICE_ROLE_KEY is not configured.",
-    );
-  }
-
-  const authClient = createClient(
+  return createClient(
     supabaseUrl,
-    publishableKey,
+    serviceRoleKey,
     {
       auth: {
         persistSession: false,
@@ -73,35 +77,35 @@ function createSupabaseClients() {
       },
     },
   );
-
-  const adminClient = createClient(
-    supabaseUrl,
-    secretKey,
-    {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    },
-  );
-
-  return {
-    authClient,
-    adminClient,
-  };
 }
 
-function cleanText(value: unknown): string | null {
+function cleanText(
+  value: unknown,
+  maximumLength = 500,
+): string | null {
   if (typeof value !== "string") {
     return null;
   }
 
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
+  const trimmed = value
+    .trim()
+    .slice(0, maximumLength);
+
+  return trimmed || null;
 }
 
-function cleanNumeric(value: unknown): number | null {
+function cleanEmail(
+  value: unknown,
+): string | null {
+  return (
+    cleanText(value, 320)?.toLowerCase() ??
+    null
+  );
+}
+
+function cleanNumeric(
+  value: unknown,
+): number | null {
   if (
     value === null ||
     value === undefined ||
@@ -112,351 +116,695 @@ function cleanNumeric(value: unknown): number | null {
 
   const parsed = Number(value);
 
-  if (!Number.isFinite(parsed)) {
+  if (
+    !Number.isFinite(parsed) ||
+    parsed < 0
+  ) {
     throw new Error(
-      "A numeric field contains an invalid value.",
+      "Numeric values must be valid non-negative numbers.",
     );
-  }
-
-  if (parsed < 0) {
-    throw new Error("Numeric values cannot be negative.");
   }
 
   return parsed;
 }
 
-function getBearerToken(
-  request: NextRequest,
-): string | null {
-  const authorization =
-    request.headers.get("authorization");
+function asRole(
+  value: unknown,
+): CompanyRole | null {
+  return (
+    typeof value === "string" &&
+    VALID_ROLES.has(
+      value as CompanyRole,
+    )
+  )
+    ? (value as CompanyRole)
+    : null;
+}
 
-  if (!authorization) {
+function canCreateRole(
+  permissions: string[],
+  actingRole: CompanyRole | null,
+  requestedRole: CompanyRole,
+) {
+  const canManageAll =
+    actingRole === "company_admin" ||
+    actingRole === "administrator" ||
+    permissions.includes(
+      "users.manage_all",
+    );
+
+  if (canManageAll) {
+    return true;
+  }
+
+  return (
+    permissions.includes(
+      "users.manage_technicians",
+    ) &&
+    (
+      requestedRole === "technician" ||
+      requestedRole === "apprentice"
+    )
+  );
+}
+
+async function findUserByEmail(
+  adminClient: SupabaseClient,
+  email: string,
+): Promise<User | null> {
+  for (
+    let page = 1;
+    page <= 20;
+    page += 1
+  ) {
+    const { data, error } =
+      await adminClient.auth.admin.listUsers({
+        page,
+        perPage: 100,
+      });
+
+    if (error) {
+      throw new Error(
+        `Unable to search authentication users: ${error.message}`,
+      );
+    }
+
+    const match = (
+      data.users ?? []
+    ).find(
+      (user) =>
+        user.email?.toLowerCase() ===
+        email,
+    );
+
+    if (match) {
+      return match;
+    }
+
+    if (
+      (data.users ?? []).length < 100
+    ) {
+      break;
+    }
+  }
+
+  return null;
+}
+
+async function loadTargetCompanyAccess(
+  adminClient: SupabaseClient,
+  actingUserId: string,
+  companyId: string,
+) {
+  const [
+    companyResult,
+    membershipResult,
+    profileResult,
+    roleResult,
+  ] = await Promise.all([
+    adminClient
+      .from("companies")
+      .select(
+        "id, company_name, is_active",
+      )
+      .eq("id", companyId)
+      .eq("is_active", true)
+      .maybeSingle(),
+
+    adminClient
+      .from("company_members")
+      .select("is_active")
+      .eq("company_id", companyId)
+      .eq("user_id", actingUserId)
+      .maybeSingle(),
+
+    adminClient
+      .from(
+        "company_member_profiles",
+      )
+      .select("is_active")
+      .eq("company_id", companyId)
+      .eq("user_id", actingUserId)
+      .maybeSingle(),
+
+    adminClient
+      .from("company_member_roles")
+      .select("role")
+      .eq("company_id", companyId)
+      .eq("user_id", actingUserId)
+      .maybeSingle(),
+  ]);
+
+  const firstError =
+    companyResult.error ||
+    membershipResult.error ||
+    profileResult.error ||
+    roleResult.error;
+
+  if (firstError) {
+    throw new Error(
+      `Unable to verify company access: ${firstError.message}`,
+    );
+  }
+
+  if (!companyResult.data) {
     return null;
   }
 
-  const [scheme, token] = authorization.split(" ");
-
   if (
-    scheme?.toLowerCase() !== "bearer" ||
-    !token?.trim()
+    membershipResult.data
+      ?.is_active !== true ||
+    profileResult.data
+      ?.is_active === false
   ) {
     return null;
   }
 
-  return token.trim();
+  const actingRole = asRole(
+    roleResult.data?.role,
+  );
+
+  if (!actingRole) {
+    return null;
+  }
+
+  const {
+    data: permissionRows,
+    error: permissionsError,
+  } = await adminClient
+    .from(
+      "company_role_permissions",
+    )
+    .select(
+      "permission_key, allowed",
+    )
+    .eq("company_id", companyId)
+    .eq("role", actingRole)
+    .eq("allowed", true);
+
+  if (permissionsError) {
+    throw new Error(
+      `Unable to load company permissions: ${permissionsError.message}`,
+    );
+  }
+
+  return {
+    companyId:
+      companyResult.data.id,
+    companyName:
+      companyResult.data.company_name,
+    actingRole,
+    permissions: Array.from(
+      new Set(
+        (permissionRows ?? [])
+          .map(
+            (row) =>
+              row.permission_key,
+          )
+          .filter(Boolean),
+      ),
+    ),
+  };
 }
 
-export async function POST(request: NextRequest) {
-  let createdAuthUserId: string | null = null;
+export async function POST(
+  request: NextRequest,
+) {
+  const auth =
+    await getAuthenticatedUserContext();
+
+  if (!auth) {
+    return NextResponse.json(
+      {
+        error:
+          "Authentication required.",
+      },
+      {
+        status: 401,
+      },
+    );
+  }
+
+  let body: CreateUserBody;
 
   try {
-    const token = getBearerToken(request);
-
-    if (!token) {
-      return NextResponse.json(
-        {
-          error:
-            "You must be signed in before creating a staff account.",
-        },
-        { status: 401 },
-      );
-    }
-
-    /*
-     * Supabase API keys begin with sb_publishable_ or
-     * sb_secret_. Neither is a signed-in user's access token.
-     */
-    if (
-      token.startsWith("sb_publishable_") ||
-      token.startsWith("sb_secret_")
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "The frontend sent a Supabase API key instead of the signed-in user's access token.",
-        },
-        { status: 401 },
-      );
-    }
-
-    const { authClient, adminClient } =
-      createSupabaseClients();
-
-    const {
-      data: { user: actingUser },
-      error: actingUserError,
-    } = await authClient.auth.getUser(token);
-
-    if (actingUserError || !actingUser) {
-      console.error(
-        "Unable to verify acting user:",
-        actingUserError,
-      );
-
-      return NextResponse.json(
-        {
-          error:
-            actingUserError?.message ??
-            "Your login session is invalid or has expired. Sign out and sign back in.",
-        },
-        { status: 401 },
-      );
-    }
-
-    const {
-      data: actingRoleRecord,
-      error: actingRoleError,
-    } = await adminClient
-      .from("app_user_roles")
-      .select("role")
-      .eq("user_id", actingUser.id)
-      .maybeSingle();
-
-    if (actingRoleError) {
-      throw actingRoleError;
-    }
-
-    if (!actingRoleRecord?.role) {
-      return NextResponse.json(
-        {
-          error:
-            "Your account does not have an application role.",
-        },
-        { status: 403 },
-      );
-    }
-
-    const {
-      data: permissionRecords,
-      error: permissionError,
-    } = await adminClient
-      .from("app_role_permissions")
-      .select("permission_key, allowed")
-      .eq("role", actingRoleRecord.role)
-      .in("permission_key", [
-        "users.manage_all",
-        "users.manage_technicians",
-      ]);
-
-    if (permissionError) {
-      throw permissionError;
-    }
-
-    const allowedPermissions = new Set(
-      (permissionRecords ?? [])
-        .filter((permission) => permission.allowed)
-        .map((permission) => permission.permission_key),
+    body =
+      (await request.json()) as
+        CreateUserBody;
+  } catch {
+    return NextResponse.json(
+      {
+        error:
+          "A valid JSON request body is required.",
+      },
+      {
+        status: 400,
+      },
     );
+  }
 
-    const canManageAll = allowedPermissions.has(
-      "users.manage_all",
-    );
+  const requestedCompanyId =
+    cleanText(body.company_id, 100) ??
+    auth.companyId;
 
-    const canManageTechnicians =
-      allowedPermissions.has(
-        "users.manage_technicians",
-      );
+  const email =
+    cleanEmail(body.email);
 
-    if (!canManageAll && !canManageTechnicians) {
-      return NextResponse.json(
-        {
-          error:
-            "You do not have permission to create users.",
-        },
-        { status: 403 },
-      );
-    }
+  const fullName =
+    cleanText(body.full_name, 200);
 
-    const body =
-      (await request.json()) as CreateUserBody;
-
-    const email =
-      cleanText(body.email)?.toLowerCase() ?? null;
-    const password = cleanText(
+  const temporaryPassword =
+    cleanText(
       body.temporary_password,
+      200,
     );
-    const fullName = cleanText(body.full_name);
-    const requestedRole = body.role;
 
-    if (!email) {
-      return NextResponse.json(
-        { error: "Email address is required." },
-        { status: 400 },
+  const requestedRole =
+    asRole(body.role);
+
+  if (!requestedCompanyId) {
+    return NextResponse.json(
+      {
+        error:
+          "Select the company this staff member should belong to.",
+      },
+      {
+        status: 400,
+      },
+    );
+  }
+
+  if (
+    !email ||
+    !email.includes("@")
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "Enter a valid email address.",
+      },
+      {
+        status: 400,
+      },
+    );
+  }
+
+  if (!fullName) {
+    return NextResponse.json(
+      {
+        error:
+          "Full name is required.",
+      },
+      {
+        status: 400,
+      },
+    );
+  }
+
+  if (!requestedRole) {
+    return NextResponse.json(
+      {
+        error:
+          "A valid company role is required.",
+      },
+      {
+        status: 400,
+      },
+    );
+  }
+
+  let hourlyCost: number | null;
+  let chargeOutRate: number | null;
+  let contractedHours: number | null;
+  let holidayEntitlement: number | null;
+
+  try {
+    hourlyCost =
+      cleanNumeric(body.hourly_cost);
+
+    chargeOutRate =
+      cleanNumeric(
+        body.charge_out_rate,
       );
-    }
 
-    if (!fullName) {
-      return NextResponse.json(
-        { error: "Full name is required." },
-        { status: 400 },
+    contractedHours =
+      cleanNumeric(
+        body.contracted_hours_per_week,
       );
-    }
 
-    if (!password || password.length < 8) {
+    holidayEntitlement =
+      cleanNumeric(
+        body.holiday_entitlement_days,
+      );
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "A numeric value is invalid.",
+      },
+      {
+        status: 400,
+      },
+    );
+  }
+
+  const adminClient =
+    createAdminClient();
+
+  let createdAuthUserId:
+    | string
+    | null = null;
+
+  let targetUser: User | null =
+    null;
+
+  try {
+    const targetAccess =
+      await loadTargetCompanyAccess(
+        adminClient,
+        auth.userId,
+        requestedCompanyId,
+      );
+
+    if (!targetAccess) {
       return NextResponse.json(
         {
           error:
-            "The temporary password must contain at least 8 characters.",
+            "You do not have an active membership in the selected company.",
         },
-        { status: 400 },
+        {
+          status: 403,
+        },
       );
     }
 
     if (
-      !requestedRole ||
-      !VALID_ROLES.includes(requestedRole)
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "A valid application role is required.",
-        },
-        { status: 400 },
-      );
-    }
-
-    if (
-      !canManageAll &&
-      !["technician", "apprentice"].includes(
+      !canCreateRole(
+        targetAccess.permissions,
+        targetAccess.actingRole,
         requestedRole,
       )
     ) {
       return NextResponse.json(
         {
           error:
-            "You can only create Technician or Apprentice accounts.",
+            "You do not have permission to create that role in the selected company.",
         },
-        { status: 403 },
+        {
+          status: 403,
+        },
       );
     }
 
-    const hourlyCost = cleanNumeric(body.hourly_cost);
-    const chargeOutRate = cleanNumeric(
-      body.charge_out_rate,
-    );
-    const contractedHours = cleanNumeric(
-      body.contracted_hours_per_week,
-    );
-    const holidayEntitlement = cleanNumeric(
-      body.holiday_entitlement_days,
-    );
+    targetUser =
+      await findUserByEmail(
+        adminClient,
+        email,
+      );
+
+    if (!targetUser) {
+      if (
+        !temporaryPassword ||
+        temporaryPassword.length < 8
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "A temporary password of at least 8 characters is required for a new account.",
+          },
+          {
+            status: 400,
+          },
+        );
+      }
+
+      const { data, error } =
+        await adminClient
+          .auth.admin.createUser({
+            email,
+            password:
+              temporaryPassword,
+            email_confirm: true,
+            user_metadata: {
+              full_name: fullName,
+            },
+          });
+
+      if (
+        error ||
+        !data.user
+      ) {
+        throw new Error(
+          error?.message ||
+            "Unable to create the user account.",
+        );
+      }
+
+      targetUser = data.user;
+      createdAuthUserId =
+        data.user.id;
+    }
 
     const {
-      data: createdUserData,
-      error: createAuthError,
-    } = await adminClient.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: {
-        full_name: fullName,
-      },
-    });
+      data: existingMembership,
+      error:
+        membershipLookupError,
+    } = await adminClient
+      .from("company_members")
+      .select(
+        "company_id, user_id",
+      )
+      .eq(
+        "company_id",
+        requestedCompanyId,
+      )
+      .eq(
+        "user_id",
+        targetUser.id,
+      )
+      .maybeSingle();
 
-    if (createAuthError) {
+    if (membershipLookupError) {
+      throw membershipLookupError;
+    }
+
+    if (existingMembership) {
       return NextResponse.json(
-        { error: createAuthError.message },
-        { status: 400 },
+        {
+          error:
+            "This user already belongs to the selected company.",
+        },
+        {
+          status: 409,
+        },
       );
     }
 
-    if (!createdUserData.user) {
-      throw new Error(
-        "Supabase did not return the newly created user.",
-      );
-    }
+    const now =
+      new Date().toISOString();
 
-    createdAuthUserId = createdUserData.user.id;
-
-    const { error: profileError } =
-      await adminClient
-        .from("app_user_profiles")
-        .insert({
-          user_id: createdAuthUserId,
-          full_name: fullName,
-          phone: cleanText(body.phone),
-          job_title: cleanText(body.job_title),
-          is_active: body.is_active ?? true,
-          calendar_colour:
-            cleanText(body.calendar_colour) ??
-            "#103d2e",
-          hourly_cost: hourlyCost,
-          charge_out_rate: chargeOutRate,
-          contracted_hours_per_week:
-            contractedHours,
-          holiday_entitlement_days:
-            holidayEntitlement,
-          notes: cleanText(body.notes),
-        });
-
-    if (profileError) {
-      throw new Error(
-        `Unable to create staff profile: ${profileError.message}`,
-      );
-    }
-
-    const { error: roleError } = await adminClient
-      .from("app_user_roles")
+    const {
+      error: membershipError,
+    } = await adminClient
+      .from("company_members")
       .insert({
-        user_id: createdAuthUserId,
-        role: requestedRole,
+        company_id:
+          requestedCompanyId,
+        user_id:
+          targetUser.id,
+        is_active:
+          body.is_active !== false,
+        joined_at: now,
+        updated_at: now,
       });
 
-    if (roleError) {
+    if (membershipError) {
       throw new Error(
-        `Unable to assign staff role: ${roleError.message}`,
+        `Unable to create company membership: ${membershipError.message}`,
+      );
+    }
+
+    const [
+      profileResult,
+      roleResult,
+    ] = await Promise.all([
+      adminClient
+        .from(
+          "company_member_profiles",
+        )
+        .upsert(
+          {
+            company_id:
+              requestedCompanyId,
+            user_id:
+              targetUser.id,
+            full_name:
+              fullName,
+            phone:
+              cleanText(
+                body.phone,
+                50,
+              ),
+            job_title:
+              cleanText(
+                body.job_title,
+                100,
+              ),
+            is_active:
+              body.is_active !==
+              false,
+            calendar_colour:
+              cleanText(
+                body.calendar_colour,
+                20,
+              ) ?? "#103D2E",
+            hourly_cost:
+              hourlyCost,
+            charge_out_rate:
+              chargeOutRate,
+            contracted_hours_per_week:
+              contractedHours,
+            holiday_entitlement_days:
+              holidayEntitlement,
+            notes:
+              cleanText(
+                body.notes,
+                2000,
+              ),
+            updated_at: now,
+          },
+          {
+            onConflict:
+              "company_id,user_id",
+          },
+        ),
+
+      adminClient
+        .from(
+          "company_member_roles",
+        )
+        .upsert(
+          {
+            company_id:
+              requestedCompanyId,
+            user_id:
+              targetUser.id,
+            role: requestedRole,
+            updated_at: now,
+          },
+          {
+            onConflict:
+              "company_id,user_id",
+          },
+        ),
+    ]);
+
+    if (profileResult.error) {
+      throw new Error(
+        `Unable to create the company profile: ${profileResult.error.message}`,
+      );
+    }
+
+    if (roleResult.error) {
+      throw new Error(
+        `Unable to assign the company role: ${roleResult.error.message}`,
       );
     }
 
     return NextResponse.json(
       {
-        user_id: createdAuthUserId,
+        user_id:
+          targetUser.id,
+        company_id:
+          requestedCompanyId,
+        company_name:
+          targetAccess.companyName,
+        existing_auth_user:
+          createdAuthUserId === null,
         message:
-          "Staff account created successfully.",
+          createdAuthUserId === null
+            ? `Existing AgriCore user added to ${targetAccess.companyName}.`
+            : `Staff account created for ${targetAccess.companyName}.`,
       },
-      { status: 201 },
+      {
+        status: 201,
+        headers: {
+          "Cache-Control":
+            "no-store",
+        },
+      },
     );
   } catch (error) {
     console.error(
-      "Create staff user failed:",
+      "Create company user failed:",
       error,
     );
 
-    try {
-      if (createdAuthUserId) {
-        const { adminClient } =
-          createSupabaseClients();
-
-        await adminClient
-          .from("app_user_roles")
+    if (targetUser) {
+      await Promise.all([
+        adminClient
+          .from(
+            "company_member_roles",
+          )
           .delete()
-          .eq("user_id", createdAuthUserId);
+          .eq(
+            "company_id",
+            requestedCompanyId,
+          )
+          .eq(
+            "user_id",
+            targetUser.id,
+          ),
 
-        await adminClient
-          .from("app_user_profiles")
+        adminClient
+          .from(
+            "company_member_profiles",
+          )
           .delete()
-          .eq("user_id", createdAuthUserId);
+          .eq(
+            "company_id",
+            requestedCompanyId,
+          )
+          .eq(
+            "user_id",
+            targetUser.id,
+          ),
 
-        await adminClient.auth.admin.deleteUser(
-          createdAuthUserId,
-        );
-      }
-    } catch (rollbackError) {
-      console.error(
-        "Unable to roll back failed user creation:",
-        rollbackError,
-      );
+        adminClient
+          .from(
+            "company_members",
+          )
+          .delete()
+          .eq(
+            "company_id",
+            requestedCompanyId,
+          )
+          .eq(
+            "user_id",
+            targetUser.id,
+          ),
+      ]);
     }
 
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Unable to create staff account.";
+    if (createdAuthUserId) {
+      await adminClient
+        .auth.admin.deleteUser(
+          createdAuthUserId,
+        );
+    }
 
     return NextResponse.json(
-      { error: message },
-      { status: 500 },
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to create the staff account.",
+      },
+      {
+        status: 500,
+      },
     );
   }
 }

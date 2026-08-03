@@ -14,30 +14,24 @@ export default function JobHeader({
   scheduledEnd,
 }: JobHeaderProps) {
   return (
-    <header className="overflow-hidden rounded-3xl bg-[#103d2e] text-white shadow-sm">
-      <div className="p-6">
-        <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-200">
+    <header className="overflow-hidden rounded-[2rem] border border-emerald-900/20 bg-gradient-to-br from-[#0b4b38] via-[#0d5a43] to-[#103d2e] text-white shadow-xl">
+      <div className="p-5 sm:p-7">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-200">
           {jobNumber}
         </p>
-
-        <h1 className="mt-2 text-2xl font-bold">
+        <h1 className="mt-2 text-3xl font-black tracking-tight">
           {customerName}
         </h1>
-
-        <p className="mt-1 text-sm text-emerald-100">
+        <p className="mt-1 text-base font-bold text-emerald-100">
           {machineName}
         </p>
 
-        <div className="mt-5 rounded-2xl bg-white/10 px-4 py-3">
-          <p className="text-xs font-bold uppercase tracking-wide text-emerald-200">
+        <div className="mt-5 rounded-2xl border border-white/10 bg-white/10 px-4 py-4 backdrop-blur">
+          <p className="text-xs font-black uppercase tracking-wide text-emerald-200">
             Scheduled
           </p>
-
-          <p className="mt-1 font-bold">
-            {formatRange(
-              scheduledStart,
-              scheduledEnd,
-            )}
+          <p className="mt-1 text-lg font-black">
+            {formatRange(scheduledStart, scheduledEnd)}
           </p>
         </div>
       </div>
@@ -45,22 +39,13 @@ export default function JobHeader({
   );
 }
 
-function formatRange(
-  startValue: string,
-  endValue: string,
-) {
-  return `${formatDate(startValue)} · ${formatTime(
-    startValue,
-  )}–${formatTime(endValue)}`;
+function formatRange(startValue: string, endValue: string) {
+  return `${formatDate(startValue)} · ${formatTime(startValue)}–${formatTime(endValue)}`;
 }
 
 function formatDate(value: string) {
   const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "Schedule not recorded";
-  }
-
+  if (Number.isNaN(date.getTime())) return "Schedule not recorded";
   return new Intl.DateTimeFormat("en-GB", {
     weekday: "short",
     day: "numeric",
@@ -70,11 +55,7 @@ function formatDate(value: string) {
 
 function formatTime(value: string) {
   const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "—";
-  }
-
+  if (Number.isNaN(date.getTime())) return "—";
   return new Intl.DateTimeFormat("en-GB", {
     hour: "2-digit",
     minute: "2-digit",

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigationUser } from "@/Components/navigation/use-navigation-user";
 import { supabase } from "@/lib/supabase";
 
 type AppRole =
@@ -69,6 +70,7 @@ type UserFormState = {
 };
 
 type CreateUserFormState = UserFormState & {
+  company_id: string;
   email: string;
   temporary_password: string;
 };
@@ -113,6 +115,7 @@ const EMPTY_USER_FORM: UserFormState = {
 
 const EMPTY_CREATE_FORM: CreateUserFormState = {
   ...EMPTY_USER_FORM,
+  company_id: "",
   email: "",
   temporary_password: "",
 };
@@ -186,6 +189,17 @@ function errorMessage(error: unknown): string {
 }
 
 export default function UsersPageClient() {
+  const {
+    userState,
+    loading: companyContextLoading,
+  } = useNavigationUser();
+
+  const availableCompanies =
+    userState.companies ?? [];
+
+  const activeCompanyId =
+    userState.activeCompany?.id ?? "";
+
   const [users, setUsers] = useState<StaffUser[]>([]);
   const [permissions, setPermissions] = useState<PermissionState>({
     canView: false,
@@ -562,6 +576,7 @@ export default function UsersPageClient() {
       const result = (await response.json()) as {
         error?: string;
         user_id?: string;
+        message?: string;
       };
 
       if (!response.ok) {
@@ -571,8 +586,14 @@ export default function UsersPageClient() {
       await loadUsers();
 
       setCreateModalOpen(false);
-      setCreateForm(EMPTY_CREATE_FORM);
-      setSuccess("New staff account created successfully.");
+      setCreateForm({
+        ...EMPTY_CREATE_FORM,
+        company_id: activeCompanyId,
+      });
+      setSuccess(
+        result.message ??
+          "New staff account created successfully.",
+      );
     } catch (createError) {
       setError(errorMessage(createError));
     } finally {
@@ -679,11 +700,19 @@ export default function UsersPageClient() {
   }
 
   function openCreateModal() {
+    if (!activeCompanyId) {
+      setError(
+        "Select an active company before adding a staff member.",
+      );
+      return;
+    }
+
     const defaultRole =
       allowedCreateRoles[0]?.value ?? "technician";
 
     setCreateForm({
       ...EMPTY_CREATE_FORM,
+      company_id: activeCompanyId,
       role: defaultRole,
     });
 
@@ -743,6 +772,7 @@ export default function UsersPageClient() {
             <button
               type="button"
               onClick={openCreateModal}
+              disabled={companyContextLoading || !activeCompanyId}
               className="inline-flex items-center justify-center rounded-xl bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-900"
             >
               Add staff member
@@ -1052,6 +1082,34 @@ export default function UsersPageClient() {
                   className={inputClassName}
                 />
               </FormField>
+
+              {availableCompanies.length > 1 && (
+                <FormField label="Company" required>
+                  <select
+                    required
+                    value={createForm.company_id}
+                    onChange={(event) =>
+                      setCreateForm((current) => ({
+                        ...current,
+                        company_id:
+                          event.target.value,
+                      }))
+                    }
+                    className={inputClassName}
+                  >
+                    {availableCompanies.map(
+                      (company) => (
+                        <option
+                          key={company.id}
+                          value={company.id}
+                        >
+                          {company.name}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </FormField>
+              )}
 
               <FormField label="Temporary password" required>
                 <input

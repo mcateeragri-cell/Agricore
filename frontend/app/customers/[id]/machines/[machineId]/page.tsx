@@ -14,12 +14,11 @@ import { supabase } from "@/lib/supabase";
 import Card from "../../../../../Components/ui/Card";
 import EditMachineModal from "./EditMachineModal";
 import HourHistory from "./HourHistory";
-import JobsPreview from "./JobsPreview";
 import MachineDetails from "./MachineDetails";
 import MachineHeader from "./MachineHeader";
 import MachineInsightsLinks from "./MachineInsightsLinks";
+import MachineIntelligencePanel from "./MachineIntelligencePanel";
 import MachineNotes from "./MachineNotes";
-import MachineSummary from "./MachineSummary";
 import RecordHoursModal from "./RecordHoursModal";
 import {
   emptyHourReadingForm,
@@ -677,11 +676,13 @@ export default function MachineProfilePage() {
       </nav>
 
       <section className="grid gap-6 xl:grid-cols-3">
-        <MachineDetails
-          machine={machine}
-        />
+        <MachineDetails machine={machine} />
 
-        <MachineSummary />
+        <MachineIntelligencePanel
+          companyId={companyId}
+          customerId={customer.id}
+          machineId={machine.id}
+        />
       </section>
 
       <HourHistory
@@ -696,12 +697,8 @@ export default function MachineProfilePage() {
         machineId={machine.id}
       />
 
-      <section className="grid gap-6 lg:grid-cols-2">
-        <JobsPreview />
-
-        <MachineNotes
-          notes={machine.notes}
-        />
+      <section>
+        <MachineNotes notes={machine.notes} />
       </section>
 
       {showEditForm && (
