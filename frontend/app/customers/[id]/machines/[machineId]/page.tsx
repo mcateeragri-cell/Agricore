@@ -30,6 +30,7 @@ import {
   type Machine,
   type MachineForm,
 } from "./types";
+import ServiceProgrammesPanel from "./ServiceProgrammesPanel";
 
 export default function MachineProfilePage() {
   const params = useParams<{
@@ -234,6 +235,11 @@ export default function MachineProfilePage() {
                   machineResult.data
                     .hours,
                 ),
+          usageProfile:
+            machineResult.data.usage_profile ?? "medium",
+          estimatedHoursPerWeek: String(
+            machineResult.data.estimated_hours_per_week ?? 25,
+          ),
           notes:
             machineResult.data.notes ??
             "",
@@ -299,6 +305,8 @@ export default function MachineProfilePage() {
       serialNumber:
         machine.serialNumber,
       hours: machine.hours,
+      usageProfile: machine.usageProfile,
+      estimatedHoursPerWeek: machine.estimatedHoursPerWeek,
       notes: machine.notes,
     });
 
@@ -357,12 +365,26 @@ export default function MachineProfilePage() {
         ? Number(machineForm.hours)
         : null;
 
+    const estimatedHoursPerWeek = Number(
+      machineForm.estimatedHoursPerWeek,
+    );
+
     if (
       yearValue !== null &&
       Number.isNaN(yearValue)
     ) {
       setSaveError(
         "Enter a valid machine year.",
+      );
+      return;
+    }
+
+    if (
+      !Number.isFinite(estimatedHoursPerWeek) ||
+      estimatedHoursPerWeek < 0
+    ) {
+      setSaveError(
+        "Enter valid estimated hours per week.",
       );
       return;
     }
@@ -399,6 +421,8 @@ export default function MachineProfilePage() {
           machineForm.serialNumber
             .trim(),
         hours: hoursValue,
+        usage_profile: machineForm.usageProfile,
+        estimated_hours_per_week: estimatedHoursPerWeek,
         notes:
           machineForm.notes.trim(),
       })
@@ -695,6 +719,17 @@ export default function MachineProfilePage() {
       <MachineInsightsLinks
         customerId={customer.id}
         machineId={machine.id}
+      />
+
+      <ServiceProgrammesPanel
+        companyId={companyId}
+        machineId={machine.id}
+        machineMake={machine.make}
+        machineModel={machine.model}
+        currentHours={Number(machine.hours || 0)}
+        estimatedHoursPerWeek={Number(
+          machine.estimatedHoursPerWeek || 0,
+        )}
       />
 
       <section>

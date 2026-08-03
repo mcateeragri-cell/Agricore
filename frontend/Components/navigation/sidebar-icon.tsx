@@ -53,6 +53,15 @@ export default function SidebarIcon({
         </svg>
       );
 
+    case "service":
+      return (
+        <svg {...commonProps}>
+          <path d="M5 3h14v18H5z" />
+          <path d="M9 7h6M9 11h6M9 15h3" />
+          <path d="M16 15l1.5 1.5L21 13" />
+        </svg>
+      );
+
     case "jobs":
       return (
         <svg {...commonProps}>

@@ -28,6 +28,7 @@ export type IconName =
   | "roles"
   | "manufacturers"
   | "templates"
+  | "service"
   | "settings"
   | "chevron"
   | "logout"

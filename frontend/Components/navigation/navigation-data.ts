@@ -7,6 +7,7 @@ export const mainNavigationItems: NavigationItem[] = [
   { name: "Dashboard", href: "/", icon: "dashboard" },
   { name: "Customers", href: "/customers", icon: "customers" },
   { name: "Machines", href: "/machines", icon: "machines" },
+  { name: "Service Programmes", href: "/service-programmes", icon: "service" },
   { name: "Jobs", href: "/jobs", icon: "jobs" },
   { name: "Dispatch", href: "/dispatch", icon: "calendar" },
   { name: "Calendar", href: "/calendar", icon: "calendar" },

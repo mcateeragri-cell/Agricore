@@ -36,6 +36,8 @@ type Machine = {
   registration: string;
   serialNumber: string;
   hours: string;
+  usageProfile: "light" | "medium" | "heavy";
+  estimatedHoursPerWeek: string;
   notes: string;
 };
 
@@ -59,6 +61,8 @@ const emptyMachineForm = {
   registration: "",
   serialNumber: "",
   hours: "",
+  usageProfile: "medium" as "light" | "medium" | "heavy",
+  estimatedHoursPerWeek: "25",
   notes: "",
 };
 
@@ -181,6 +185,10 @@ export default function CustomerProfilePage() {
           machine.hours === undefined
             ? ""
             : String(machine.hours),
+        usageProfile: machine.usage_profile ?? "medium",
+        estimatedHoursPerWeek: String(
+          machine.estimated_hours_per_week ?? 25,
+        ),
         notes: machine.notes ?? "",
       }),
     );
@@ -357,6 +365,16 @@ export default function CustomerProfilePage() {
       ? Number(machineForm.hours)
       : null;
 
+    const estimatedHoursPerWeek = Number(
+      machineForm.estimatedHoursPerWeek,
+    );
+
+    if (!Number.isFinite(estimatedHoursPerWeek) || estimatedHoursPerWeek < 0) {
+      setMachineError("Enter valid estimated hours per week.");
+      setIsSavingMachine(false);
+      return;
+    }
+
     const { error } = await supabase
       .from("machines")
       .insert({
@@ -371,6 +389,8 @@ export default function CustomerProfilePage() {
         serial_number:
           machineForm.serialNumber.trim(),
         hours: hoursValue,
+        usage_profile: machineForm.usageProfile,
+        estimated_hours_per_week: estimatedHoursPerWeek,
         notes: machineForm.notes.trim(),
       });
 
@@ -1129,6 +1149,51 @@ export default function CustomerProfilePage() {
                     }
                     className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2.5 font-normal outline-none focus:border-[#176b4d] focus:ring-2 focus:ring-[#176b4d]/10"
                     placeholder="e.g. 4385"
+                  />
+                </label>
+
+                <label className="text-sm font-semibold">
+                  Usage level
+                  <select
+                    value={machineForm.usageProfile}
+                    onChange={(event) => {
+                      const profile = event.target.value as
+                        | "light"
+                        | "medium"
+                        | "heavy";
+                      setMachineForm((current) => ({
+                        ...current,
+                        usageProfile: profile,
+                        estimatedHoursPerWeek:
+                          profile === "light"
+                            ? "10"
+                            : profile === "heavy"
+                              ? "50"
+                              : "25",
+                      }));
+                    }}
+                    className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2.5 font-normal outline-none focus:border-[#176b4d] focus:ring-2 focus:ring-[#176b4d]/10"
+                  >
+                    <option value="light">Light usage</option>
+                    <option value="medium">Medium usage</option>
+                    <option value="heavy">Heavy usage</option>
+                  </select>
+                </label>
+
+                <label className="text-sm font-semibold">
+                  Estimated hours per week
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={machineForm.estimatedHoursPerWeek}
+                    onChange={(event) =>
+                      updateMachineForm(
+                        "estimatedHoursPerWeek",
+                        event.target.value,
+                      )
+                    }
+                    className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2.5 font-normal outline-none focus:border-[#176b4d] focus:ring-2 focus:ring-[#176b4d]/10"
                   />
                 </label>
 

@@ -14,6 +14,8 @@ export type Machine = {
   registration: string;
   serialNumber: string;
   hours: string;
+  usageProfile: "light" | "medium" | "heavy";
+  estimatedHoursPerWeek: string;
   notes: string;
 };
 
@@ -25,6 +27,8 @@ export type MachineForm = {
   registration: string;
   serialNumber: string;
   hours: string;
+  usageProfile: "light" | "medium" | "heavy";
+  estimatedHoursPerWeek: string;
   notes: string;
 };
 
@@ -56,6 +60,8 @@ export const emptyMachineForm: MachineForm = {
   registration: "",
   serialNumber: "",
   hours: "",
+  usageProfile: "medium",
+  estimatedHoursPerWeek: "25",
   notes: "",
 };
 

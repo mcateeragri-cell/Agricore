@@ -138,6 +138,38 @@ export default function EditMachineModal({
               />
             </Field>
 
+            <Field label="Usage level">
+              <select
+                value={form.usageProfile}
+                onChange={(event) => {
+                  const profile = event.target.value;
+                  onChange("usageProfile", profile);
+                  onChange(
+                    "estimatedHoursPerWeek",
+                    profile === "light" ? "10" : profile === "heavy" ? "50" : "25",
+                  );
+                }}
+                className={inputClassName}
+              >
+                <option value="light">Light usage</option>
+                <option value="medium">Medium usage</option>
+                <option value="heavy">Heavy usage</option>
+              </select>
+            </Field>
+
+            <Field label="Estimated hours per week">
+              <input
+                type="number"
+                min="0"
+                step="0.1"
+                value={form.estimatedHoursPerWeek}
+                onChange={(event) =>
+                  onChange("estimatedHoursPerWeek", event.target.value)
+                }
+                className={inputClassName}
+              />
+            </Field>
+
             <label className="text-sm font-semibold md:col-span-2">
               Machine notes
               <textarea
