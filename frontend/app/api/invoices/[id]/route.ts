@@ -101,6 +101,7 @@ export async function GET(
       .from("invoices")
       .select("*")
       .eq("id", id)
+      .eq("company_id", auth.companyId)
       .maybeSingle();
 
     if (invoiceError) {
@@ -123,6 +124,7 @@ export async function GET(
       .from("invoice_items")
       .select("*")
       .eq("invoice_id", id)
+      .eq("company_id", auth.companyId)
       .order("sort_order", {
         ascending: true,
       });
@@ -178,6 +180,7 @@ export async function GET(
           status
         `)
         .eq("id", invoice.job_id)
+        .eq("company_id", auth.companyId)
         .maybeSingle();
 
       if (jobError) {
@@ -200,6 +203,7 @@ export async function GET(
             serial_number
           `)
           .eq("id", jobData.machine_id)
+          .eq("company_id", auth.companyId)
           .maybeSingle();
 
         if (machineError) {
@@ -283,6 +287,7 @@ export async function PATCH(
       .from("invoices")
       .select("*")
       .eq("id", id)
+      .eq("company_id", auth.companyId)
       .maybeSingle();
 
     if (existingError) {
@@ -510,7 +515,8 @@ export async function PATCH(
       } = await auth.supabase
         .from("invoice_items")
         .delete()
-        .eq("invoice_id", id);
+        .eq("invoice_id", id)
+        .eq("company_id", auth.companyId);
 
       if (deleteItemsError) {
         throw new Error(
@@ -526,6 +532,7 @@ export async function PATCH(
           .insert(
             normalisedItems.map((item) => ({
               ...item,
+              company_id: auth.companyId,
               invoice_id: id,
             })),
           );
@@ -545,6 +552,7 @@ export async function PATCH(
       .from("invoices")
       .update(updateData)
       .eq("id", id)
+      .eq("company_id", auth.companyId)
       .select("*")
       .single();
 
@@ -559,6 +567,7 @@ export async function PATCH(
       .from("invoice_items")
       .select("*")
       .eq("invoice_id", id)
+      .eq("company_id", auth.companyId)
       .order("sort_order", {
         ascending: true,
       });
