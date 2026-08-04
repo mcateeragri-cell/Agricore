@@ -939,12 +939,18 @@ export default function InvoiceDetailPage() {
       : `${invoiceNumber}-service-report-and-invoice.pdf`;
   }
 
-  async function shareCustomerDocuments() {
+  async function downloadCustomerPdf(
+    openWhatsAppAfterDownload = false,
+  ) {
     if (!invoiceId || !invoice) {
       return;
     }
 
-    setActionLoading("share");
+    setActionLoading(
+      openWhatsAppAfterDownload
+        ? "share"
+        : "download",
+    );
     setError("");
     setMessage("");
 
@@ -967,32 +973,6 @@ export default function InvoiceDetailPage() {
       }
 
       const blob = await response.blob();
-      const file = new File(
-        [blob],
-        selectedPdfFilename(),
-        { type: "application/pdf" },
-      );
-
-      const shareData = {
-        title: sendSubject.trim(),
-        text: sendMessage.trim(),
-        files: [file],
-      };
-
-      if (
-        typeof navigator.share === "function" &&
-        (
-          typeof navigator.canShare !== "function" ||
-          navigator.canShare({ files: [file] })
-        )
-      ) {
-        await navigator.share(shareData);
-        setMessage(
-          "Document shared successfully.",
-        );
-        return;
-      }
-
       const downloadUrl =
         URL.createObjectURL(blob);
 
@@ -1002,29 +982,46 @@ export default function InvoiceDetailPage() {
       downloadLink.href = downloadUrl;
       downloadLink.download =
         selectedPdfFilename();
-      downloadLink.click();
-      URL.revokeObjectURL(downloadUrl);
 
-      openWhatsAppMessage();
-      setMessage(
-        "PDF downloaded. Attach it to the WhatsApp message that has opened.",
+      document.body.appendChild(
+        downloadLink,
       );
-    } catch (caughtError) {
-      if (
-        caughtError instanceof DOMException &&
-        caughtError.name === "AbortError"
-      ) {
+
+      downloadLink.click();
+      downloadLink.remove();
+
+      window.setTimeout(() => {
+        URL.revokeObjectURL(
+          downloadUrl,
+        );
+      }, 1_000);
+
+      if (openWhatsAppAfterDownload) {
+        openWhatsAppMessage();
+
+        setMessage(
+          "PDF downloaded and WhatsApp opened. Attach the downloaded PDF to the message.",
+        );
+
         return;
       }
 
+      setMessage(
+        "PDF downloaded successfully.",
+      );
+    } catch (caughtError) {
       setError(
         caughtError instanceof Error
           ? caughtError.message
-          : "Unable to share the customer documents.",
+          : "Unable to download the customer documents.",
       );
     } finally {
       setActionLoading("");
     }
+  }
+
+  async function shareCustomerDocuments() {
+    await downloadCustomerPdf(true);
   }
 
   function openWhatsAppMessage() {
@@ -1512,6 +1509,9 @@ export default function InvoiceDetailPage() {
           sharing={
             actionLoading === "share"
           }
+          downloading={
+            actionLoading === "download"
+          }
           onDocumentTypeChange={
             changeSendDocumentType
           }
@@ -1541,6 +1541,12 @@ export default function InvoiceDetailPage() {
           }
           onShare={() =>
             void shareCustomerDocuments()
+          }
+          onDownload={() =>
+            void downloadCustomerPdf()
+          }
+          onCopyPaymentLink={() =>
+            void copyPaymentLink()
           }
           onWhatsApp={openWhatsAppMessage}
         />
@@ -2483,6 +2489,7 @@ function SendCustomerModal({
   hasPaymentLink,
   sending,
   sharing,
+  downloading,
   onDocumentTypeChange,
   onAddressNameChange,
   onRecipientChange,
@@ -2493,6 +2500,8 @@ function SendCustomerModal({
   onClose,
   onSend,
   onShare,
+  onDownload,
+  onCopyPaymentLink,
   onWhatsApp,
 }: {
   invoiceNumber: string;
@@ -2509,6 +2518,7 @@ function SendCustomerModal({
   hasPaymentLink: boolean;
   sending: boolean;
   sharing: boolean;
+  downloading: boolean;
   onDocumentTypeChange: (
     value: SendDocumentType,
   ) => void;
@@ -2533,6 +2543,8 @@ function SendCustomerModal({
   onClose: () => void;
   onSend: () => void;
   onShare: () => void;
+  onDownload: () => void;
+  onCopyPaymentLink: () => void;
   onWhatsApp: () => void;
 }) {
   return (
@@ -2759,45 +2771,93 @@ function SendCustomerModal({
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-slate-200 p-5 sm:flex-row sm:flex-wrap sm:justify-end">
+        <div className="border-t border-slate-200 p-5">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              disabled={
+                sending ||
+                sharing ||
+                downloading
+              }
+              onClick={onSend}
+              className="rounded-xl bg-blue-700 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {sending
+                ? "Sending email…"
+                : "Email customer"}
+            </button>
+
+            <button
+              type="button"
+              disabled={
+                sending ||
+                sharing ||
+                downloading
+              }
+              onClick={onWhatsApp}
+              className="rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              WhatsApp customer
+            </button>
+
+            <button
+              type="button"
+              disabled={
+                sending ||
+                sharing ||
+                downloading
+              }
+              onClick={onDownload}
+              className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {downloading
+                ? "Downloading PDF…"
+                : "Download PDF"}
+            </button>
+
+            <button
+              type="button"
+              disabled={
+                sending ||
+                sharing ||
+                downloading
+              }
+              onClick={onShare}
+              className="rounded-xl border border-emerald-300 bg-emerald-50 px-5 py-3 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {sharing
+                ? "Preparing PDF…"
+                : "Download PDF + WhatsApp"}
+            </button>
+
+            {hasPaymentLink ? (
+              <button
+                type="button"
+                disabled={
+                  sending ||
+                  sharing ||
+                  downloading
+                }
+                onClick={onCopyPaymentLink}
+                className="rounded-xl border border-amber-300 bg-amber-50 px-5 py-3 text-sm font-semibold text-amber-900 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2"
+              >
+                Copy Revolut payment link
+              </button>
+            ) : null}
+          </div>
+
           <button
             type="button"
-            disabled={sending || sharing}
+            disabled={
+              sending ||
+              sharing ||
+              downloading
+            }
             onClick={onClose}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+            className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
           >
             Cancel
-          </button>
-
-          <button
-            type="button"
-            disabled={sending || sharing}
-            onClick={onWhatsApp}
-            className="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
-          >
-            WhatsApp message
-          </button>
-
-          <button
-            type="button"
-            disabled={sending || sharing}
-            onClick={onShare}
-            className="rounded-lg bg-emerald-700 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {sharing
-              ? "Preparing PDF…"
-              : "Share PDF / WhatsApp"}
-          </button>
-
-          <button
-            type="button"
-            disabled={sending || sharing}
-            onClick={onSend}
-            className="rounded-lg bg-blue-700 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {sending
-              ? "Sending…"
-              : "Send email"}
           </button>
         </div>
       </div>
