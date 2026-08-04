@@ -9,24 +9,40 @@ export const dynamic = "force-dynamic";
 
 const SETTINGS_PERMISSION = "settings.manage";
 
+type AuthenticatedContext = NonNullable<
+  Awaited<ReturnType<typeof getAuthenticatedUserContext>>
+>;
+
+type SettingsAuthResult =
+  | {
+      context: AuthenticatedContext;
+      response: null;
+    }
+  | {
+      context: null;
+      response: NextResponse;
+    };
+
 function cleanText(value: unknown): string | null {
   if (typeof value !== "string") return null;
+
   const trimmed = value.trim();
-  return trimmed.length ? trimmed : null;
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 function validHex(value: unknown, fallback: string): string {
   if (typeof value !== "string") return fallback;
+
   return /^#[0-9A-Fa-f]{6}$/.test(value)
     ? value.toUpperCase()
     : fallback;
 }
 
-function hasSettingsAccess(permissions: string[]) {
+function hasSettingsAccess(permissions: string[]): boolean {
   return permissions.includes(SETTINGS_PERMISSION);
 }
 
-async function getSettingsAuth() {
+async function getSettingsAuth(): Promise<SettingsAuthResult> {
   const context = await getAuthenticatedUserContext();
 
   if (!context) {
@@ -52,12 +68,18 @@ async function getSettingsAuth() {
     };
   }
 
-  return { context, response: null };
+  return {
+    context,
+    response: null,
+  };
 }
 
-export async function GET() {
+export async function GET(): Promise<NextResponse> {
   const auth = await getSettingsAuth();
-  if (!auth.context) return auth.response;
+
+  if (!auth.context) {
+    return auth.response;
+  }
 
   const supabase = await createSupabaseServerClient();
 
@@ -69,6 +91,7 @@ export async function GET() {
 
   if (error) {
     console.error("Unable to load company settings:", error);
+
     return NextResponse.json(
       { error: error.message },
       { status: 500 },
@@ -104,7 +127,10 @@ export async function GET() {
   }
 
   return NextResponse.json(
-    { settings: data, logoUrl },
+    {
+      settings: data,
+      logoUrl,
+    },
     {
       headers: {
         "Cache-Control": "no-store",
@@ -113,9 +139,14 @@ export async function GET() {
   );
 }
 
-export async function PUT(request: NextRequest) {
+export async function PUT(
+  request: NextRequest,
+): Promise<NextResponse> {
   const auth = await getSettingsAuth();
-  if (!auth.context) return auth.response;
+
+  if (!auth.context) {
+    return auth.response;
+  }
 
   let body: Partial<CompanySettingsUpdate>;
 
@@ -168,8 +199,7 @@ export async function PUT(request: NextRequest) {
     ),
     invoice_footer: cleanText(body.invoice_footer),
     payment_terms_days:
-      Number.isFinite(paymentTerms) &&
-      paymentTerms >= 0
+      Number.isFinite(paymentTerms) && paymentTerms >= 0
         ? Math.round(paymentTerms)
         : 7,
     bank_name: cleanText(body.bank_name),
@@ -190,6 +220,7 @@ export async function PUT(request: NextRequest) {
 
   if (error) {
     console.error("Unable to update company settings:", error);
+
     return NextResponse.json(
       { error: error.message },
       { status: 500 },
@@ -206,5 +237,7 @@ export async function PUT(request: NextRequest) {
     );
   }
 
-  return NextResponse.json({ settings: data });
+  return NextResponse.json({
+    settings: data,
+  });
 }

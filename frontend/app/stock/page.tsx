@@ -16,8 +16,8 @@ type StockItem = {
   unit_cost: number;
   unit_price: number;
   quantity_in_stock: number;
-  minimum_stock_level: number;
-  storage_location: string | null;
+  minimum_stock: number;
+  location: string | null;
   barcode: string | null;
   notes: string | null;
   active: boolean;
@@ -46,7 +46,7 @@ function formatQuantity(value: number | string | null) {
 
 function getStockStatus(item: StockItem) {
   const quantity = Number(item.quantity_in_stock ?? 0);
-  const minimum = Number(item.minimum_stock_level ?? 0);
+  const minimum = Number(item.minimum_stock ?? 0);
 
   if (quantity <= 0) {
     return {
@@ -76,7 +76,7 @@ function getStockStatus(item: StockItem) {
 
 function getStockBarWidth(item: StockItem) {
   const quantity = Number(item.quantity_in_stock ?? 0);
-  const minimum = Number(item.minimum_stock_level ?? 0);
+  const minimum = Number(item.minimum_stock ?? 0);
   const target = Math.max(minimum * 2, 1);
 
   return Math.max(0, Math.min(100, (quantity / target) * 100));
@@ -179,7 +179,7 @@ export default function StockPage() {
           item.category,
           item.manufacturer,
           item.supplier,
-          item.storage_location,
+          item.location,
           item.barcode,
         ].some((value) => value?.toLowerCase().includes(search));
 
@@ -484,13 +484,13 @@ export default function StockPage() {
                       <div>
                         <p className="text-xs text-slate-500">Minimum</p>
                         <p className="font-semibold text-slate-900">
-                          {formatQuantity(item.minimum_stock_level)}
+                          {formatQuantity(item.minimum_stock)}
                         </p>
                       </div>
                       <div>
                         <p className="text-xs text-slate-500">Location</p>
                         <p className="font-semibold text-slate-900">
-                          {item.storage_location || "—"}
+                          {item.location || "—"}
                         </p>
                       </div>
                       <div>
@@ -575,7 +575,7 @@ export default function StockPage() {
                         </td>
 
                         <td className="px-3 py-4 text-sm text-slate-600">
-                          {item.storage_location || "—"}
+                          {item.location || "—"}
                         </td>
 
                         <td className="min-w-40 px-3 py-4 text-right">
@@ -584,7 +584,7 @@ export default function StockPage() {
                               {formatQuantity(item.quantity_in_stock)}
                             </span>
                             <span className="text-xs text-slate-400">
-                              / min {formatQuantity(item.minimum_stock_level)}
+                              / min {formatQuantity(item.minimum_stock)}
                             </span>
                           </div>
                           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">

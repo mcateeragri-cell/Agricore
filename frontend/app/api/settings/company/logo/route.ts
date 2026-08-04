@@ -16,15 +16,29 @@ const ALLOWED_TYPES = new Set([
   "image/jpeg",
 ]);
 
+type AuthenticatedContext = NonNullable<
+  Awaited<ReturnType<typeof getAuthenticatedUserContext>>
+>;
+
+type LogoAuthResult =
+  | {
+      context: AuthenticatedContext;
+      response: null;
+    }
+  | {
+      context: null;
+      response: NextResponse;
+    };
+
 function hasSettingsAccess(
   permissions: string[],
-) {
+): boolean {
   return permissions.includes(
     "settings.manage",
   );
 }
 
-async function getAuth() {
+async function getAuth(): Promise<LogoAuthResult> {
   const context =
     await getAuthenticatedUserContext();
 
@@ -51,14 +65,20 @@ async function getAuth() {
     };
   }
 
-  return { context, response: null };
+  return {
+    context,
+    response: null,
+  };
 }
 
 export async function POST(
   request: NextRequest,
-) {
+): Promise<NextResponse> {
   const auth = await getAuth();
-  if (!auth.context) return auth.response;
+
+  if (!auth.context) {
+    return auth.response;
+  }
 
   const formData = await request.formData();
   const file = formData.get("logo");
@@ -113,7 +133,10 @@ export async function POST(
 
   const extension =
     file.type === "image/png" ? "png" : "jpg";
-  const path = `${auth.context.companyId}/logo-${Date.now()}.${extension}`;
+
+  const path =
+    `${auth.context.companyId}/logo-${Date.now()}.${extension}`;
+
   const bytes = new Uint8Array(
     await file.arrayBuffer(),
   );
@@ -193,9 +216,12 @@ export async function POST(
   );
 }
 
-export async function DELETE() {
+export async function DELETE(): Promise<NextResponse> {
   const auth = await getAuth();
-  if (!auth.context) return auth.response;
+
+  if (!auth.context) {
+    return auth.response;
+  }
 
   const supabase =
     await createSupabaseServerClient();

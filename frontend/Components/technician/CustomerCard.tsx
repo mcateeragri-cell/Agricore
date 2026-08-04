@@ -4,6 +4,10 @@ type Customer = {
   contactName: string;
   phone: string;
   email: string;
+  address?: string;
+  postcode?: string;
+  latitude?: number | null;
+  longitude?: number | null;
 };
 
 type Machine = {
@@ -19,7 +23,22 @@ type CustomerCardProps = {
 };
 
 export default function CustomerCard({ customer, machine }: CustomerCardProps) {
-  const mapQuery = encodeURIComponent(customer?.name ?? "");
+  const destination = [
+    customer?.address,
+    customer?.postcode,
+    customer?.name,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  const mapQuery = encodeURIComponent(destination);
+  const coordinateQuery =
+    customer?.latitude !== null &&
+    customer?.latitude !== undefined &&
+    customer?.longitude !== null &&
+    customer?.longitude !== undefined
+      ? `${customer.latitude},${customer.longitude}`
+      : mapQuery;
 
   return (
     <section className="mt-4 rounded-3xl border border-white/50 bg-white/90 p-5 shadow-lg backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/85">
@@ -37,6 +56,12 @@ export default function CustomerCard({ customer, machine }: CustomerCardProps) {
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <DetailCard label="Customer" value={customer?.name} />
         <DetailCard label="Contact" value={customer?.contactName} />
+        <DetailCard
+          label="Location"
+          value={[customer?.address, customer?.postcode]
+            .filter(Boolean)
+            .join(", ")}
+        />
         <DetailCard label="Machine" value={machine?.displayName} />
         <DetailCard
           label="Registration"
@@ -57,12 +82,12 @@ export default function CustomerCard({ customer, machine }: CustomerCardProps) {
           Call customer
         </a>
         <a
-          href={customer?.name ? `https://maps.apple.com/?q=${mapQuery}` : undefined}
+          href={destination ? `https://maps.apple.com/?daddr=${coordinateQuery}` : undefined}
           target="_blank"
           rel="noreferrer"
-          aria-disabled={!customer?.name}
+          aria-disabled={!destination}
           className={`flex min-h-14 items-center justify-center rounded-xl border px-4 text-sm font-black ${
-            customer?.name
+            destination
               ? "border-slate-300 bg-white text-slate-900 hover:border-emerald-400 hover:bg-emerald-50 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
               : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
           }`}

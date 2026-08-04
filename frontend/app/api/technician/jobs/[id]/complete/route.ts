@@ -33,6 +33,12 @@ type CompletionRequest = {
   labourChecked?: boolean;
 
   technicianNotes?: string;
+  location?: {
+    latitude?: unknown;
+    longitude?: unknown;
+    accuracy?: unknown;
+    capturedAt?: unknown;
+  } | null;
 };
 
 type AssignmentRow = {
@@ -347,6 +353,39 @@ export async function POST(
     );
 
     if (action === "submit") {
+      const { data: serviceJob, error: serviceJobError } =
+        await auth.supabase
+          .from("jobs")
+          .select("service_programme_assignment_id,service_checklist")
+          .eq("id", jobId)
+          .eq("company_id", auth.companyId)
+          .maybeSingle();
+
+      if (serviceJobError) {
+        throw new Error(serviceJobError.message);
+      }
+
+      if (serviceJob?.service_programme_assignment_id) {
+        const checklist = Array.isArray(serviceJob.service_checklist)
+          ? serviceJob.service_checklist
+          : [];
+
+        const incomplete = checklist.some((item) => {
+          if (!item || typeof item !== "object") return true;
+          return (item as Record<string, unknown>).completed !== true;
+        });
+
+        if (checklist.length === 0 || incomplete) {
+          return NextResponse.json(
+            {
+              error:
+                "Complete and save every service checklist item before submitting this service job.",
+            },
+            { status: 400 },
+          );
+        }
+      }
+
       const validationError =
         validateSubmission({
           diagnosis,
@@ -404,6 +443,17 @@ export async function POST(
       labour_checked: labourChecked,
 
       technician_notes: technicianNotes,
+
+      completion_latitude:
+        action === "submit" ? cleanCoordinate(body.location?.latitude, -90, 90) : null,
+      completion_longitude:
+        action === "submit" ? cleanCoordinate(body.location?.longitude, -180, 180) : null,
+      completion_location_accuracy_m:
+        action === "submit" ? cleanNonNegativeNumber(body.location?.accuracy) : null,
+      completion_location_captured_at:
+        action === "submit" && typeof body.location?.capturedAt === "string"
+          ? body.location.capturedAt
+          : null,
 
       status: completionStatus,
       submitted_at:
@@ -802,6 +852,18 @@ function validateSubmission(values: {
   }
 
   return "";
+}
+
+function cleanCoordinate(value: unknown, minimum: number, maximum: number) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= minimum && parsed <= maximum
+    ? parsed
+    : null;
+}
+
+function cleanNonNegativeNumber(value: unknown) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
 function cleanText(

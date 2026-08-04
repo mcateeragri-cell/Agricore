@@ -1,0 +1,36 @@
+AgriCore v1.2 — Stock Control Phase 1
+
+INSTALLATION
+1. In Supabase SQL Editor, run:
+   supabase/migrations/20260804_stock_control_phase1.sql
+
+2. Extract this ZIP into:
+   C:\projects\Agricore\frontend
+
+3. Allow the matching app/stock files to overwrite.
+
+4. Run:
+   taskkill /F /IM node.exe
+   Remove-Item ".\.next" -Recurse -Force -ErrorAction SilentlyContinue
+   npm.cmd run build
+   npm.cmd run dev
+
+INCLUDED
+- Company-isolated stock_items schema and RLS policies.
+- Stock dashboard with search and filters.
+- Stock valuation, low-stock and out-of-stock figures.
+- New-stock-item page.
+- Stock-item edit/archive page.
+- Fields ready for reserved stock, reorder level, unit and VAT in later phases.
+- Compatibility migration for legacy minimum_stock_level/storage_location columns.
+
+TEST
+- Create one stock item in McAteer.
+- Confirm it appears under McAteer only.
+- Switch to Glenagri and confirm it is absent.
+- Create a Glenagri stock item and repeat the isolation check.
+- Edit quantity and minimum stock; confirm Low Stock/Out of Stock cards update.
+- Archive an item and confirm it disappears from the active list.
+
+NEXT PHASE
+Stock movements: goods in, goods out, adjustments, transfers and audit history.

@@ -1,0 +1,27 @@
+AgriCore v1.3 - Mobile Technician Service Workflow
+
+INSTALL
+1. Extract this ZIP into C:\projects\Agricore\frontend
+2. Overwrite matching files.
+3. No new SQL migration is required if Sprint 4 Phase 2 was already installed.
+4. Run:
+   taskkill /F /IM node.exe
+   Remove-Item ".\.next" -Recurse -Force -ErrorAction SilentlyContinue
+   npm.cmd run build
+   npm.cmd run dev
+
+WHAT CHANGED
+- Service checklist is returned to the technician only from jobs linked to a service programme.
+- Normal repair jobs do not display a service checklist.
+- Technicians can tick and save checklist items from the mobile job screen.
+- Service jobs cannot be submitted to office review until every checklist item is completed and saved.
+- Existing travel, labour, parts, signature, completion and office-review workflows are preserved.
+
+TEST
+1. Open a normal repair job: no Service Checklist card should appear.
+2. Create a job from a machine service programme.
+3. Open it as the assigned technician: the Service Checklist card should appear.
+4. Tick items and press Save service checklist.
+5. Try submitting before all items are complete: submission should be blocked.
+6. Complete all items, save, then submit to office review.
+7. Switch company and confirm no service/job data crosses companies.

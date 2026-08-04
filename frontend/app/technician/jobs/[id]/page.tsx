@@ -24,6 +24,7 @@ import PhotoViewer, {
   type TechnicianJobPhoto,
 } from "@/Components/technician/PhotoViewer";
 import QuickActions from "@/Components/technician/QuickActions";
+import ServiceChecklistCard from "@/Components/technician/ServiceChecklistCard";
 import TravelCard from "@/Components/technician/TravelCard";
 import { supabase } from "@/lib/supabase";
 
@@ -31,6 +32,7 @@ import type {
   TechnicianJobAction,
   TechnicianJobActionResponse,
   TechnicianJobDetailResponse,
+  TechnicianServiceChecklistItem,
 } from "@/types/technician";
 
 type TechnicianStockItem = {
@@ -148,8 +150,17 @@ export default function TechnicianJobPage() {
   const [completionSaving, setCompletionSaving] =
     useState(false);
 
+  const [serviceChecklist, setServiceChecklist] =
+    useState<TechnicianServiceChecklistItem[]>([]);
+
+  const [checklistSaving, setChecklistSaving] =
+    useState(false);
+
   const [completionSubmitting, setCompletionSubmitting] =
     useState(false);
+
+  const [travelRefreshToken, setTravelRefreshToken] =
+    useState(0);
 
   const [completionOpen, setCompletionOpen] =
     useState(false);
@@ -184,8 +195,12 @@ export default function TechnicianJobPage() {
       );
     }
 
-    setJobData(
-      result as TechnicianJobDetailResponse,
+    const loadedJob =
+      result as TechnicianJobDetailResponse;
+
+    setJobData(loadedJob);
+    setServiceChecklist(
+      loadedJob.job.serviceChecklist ?? [],
     );
   }, [jobId]);
 
@@ -362,6 +377,11 @@ export default function TechnicianJobPage() {
     clearMessages();
 
     try {
+      const location =
+        action === "start_travel" || action === "arrive_on_site"
+          ? await getCurrentLocation()
+          : null;
+
       const response = await authenticatedFetch(
         `/api/technician/jobs/${jobId}`,
         {
@@ -369,7 +389,7 @@ export default function TechnicianJobPage() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ action }),
+          body: JSON.stringify({ action, location }),
         },
       );
 
@@ -396,6 +416,52 @@ export default function TechnicianJobPage() {
       setError(getErrorMessage(caughtError));
     } finally {
       setActionBusy(null);
+    }
+  }
+
+
+  async function saveServiceChecklist() {
+    if (!jobData?.job.isServiceJob || readOnly) {
+      return;
+    }
+
+    setChecklistSaving(true);
+    clearMessages();
+
+    try {
+      const response = await authenticatedFetch(
+        `/api/technician/jobs/${jobId}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            action: "update_service_checklist",
+            serviceChecklist,
+          }),
+        },
+      );
+
+      const result: unknown = await readJson(response);
+
+      if (!response.ok) {
+        throw new Error(
+          getApiError(
+            result,
+            "Unable to save the service checklist.",
+          ),
+        );
+      }
+
+      setSuccess(
+        getApiMessage(result, "Service checklist saved."),
+      );
+      await loadJob();
+    } catch (caughtError) {
+      setError(getErrorMessage(caughtError));
+    } finally {
+      setChecklistSaving(false);
     }
   }
 
@@ -443,6 +509,9 @@ export default function TechnicianJobPage() {
     setSuccess("");
 
     try {
+      const completionLocation =
+        action === "submit" ? await getCurrentLocation() : null;
+
       const response = await authenticatedFetch(
         `/api/technician/jobs/${jobId}/complete`,
         {
@@ -453,6 +522,7 @@ export default function TechnicianJobPage() {
           body: JSON.stringify({
             action,
             ...completionForm,
+            location: completionLocation,
           }),
         },
       );
@@ -486,6 +556,55 @@ export default function TechnicianJobPage() {
       if (action === "submit") {
         setCompletionOpen(false);
         setCompletionStep(1);
+
+        const recordReturnJourney = window.confirm(
+          "Job submitted. Do you want to start a return journey now?",
+        );
+
+        if (recordReturnJourney) {
+          const returnLocation =
+            await getCurrentLocation();
+
+          const travelResponse =
+            await authenticatedFetch(
+              `/api/technician/jobs/${jobId}/travel`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type":
+                    "application/json",
+                },
+                body: JSON.stringify({
+                  action: "start",
+                  direction: "return",
+                  startLatitude:
+                    returnLocation?.latitude ?? null,
+                  startLongitude:
+                    returnLocation?.longitude ?? null,
+                }),
+              },
+            );
+
+          const travelResult: unknown =
+            await readJson(travelResponse);
+
+          if (!travelResponse.ok) {
+            setError(
+              getApiError(
+                travelResult,
+                "The job was submitted, but the return journey could not be started.",
+              ),
+            );
+          } else {
+            setSuccess(
+              "Job submitted and return journey started.",
+            );
+          }
+        }
+
+        setTravelRefreshToken(
+          (current) => current + 1,
+        );
 
         await Promise.all([
           loadJob(),
@@ -992,9 +1111,23 @@ export default function TechnicianJobPage() {
           </p>
         </section>
 
+
+        {jobData.job.isServiceJob ? (
+          <ServiceChecklistCard
+            programmeName={jobData.job.serviceProgrammeName}
+            items={serviceChecklist}
+            readOnly={readOnly}
+            saving={checklistSaving}
+            onChange={setServiceChecklist}
+            onSave={() => void saveServiceChecklist()}
+          />
+        ) : null}
+
         <TravelCard
           jobId={jobId}
           disabled={readOnly}
+          completed={completed}
+          refreshToken={travelRefreshToken}
           onChanged={() => void loadJob()}
         />
 
@@ -1499,6 +1632,38 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error
     ? error.message
     : "An unexpected error occurred.";
+}
+
+async function getCurrentLocation() {
+  if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
+    return null;
+  }
+
+  return new Promise<{
+    latitude: number;
+    longitude: number;
+    accuracy: number | null;
+    capturedAt: string;
+  } | null>((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: Number.isFinite(position.coords.accuracy)
+            ? position.coords.accuracy
+            : null,
+          capturedAt: new Date(position.timestamp).toISOString(),
+        });
+      },
+      () => resolve(null),
+      {
+        enableHighAccuracy: true,
+        timeout: 10_000,
+        maximumAge: 60_000,
+      },
+    );
+  });
 }
 
 function normalise(value: string) {

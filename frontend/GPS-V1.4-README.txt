@@ -1,0 +1,48 @@
+AgriCore v1.4 - Essential Field GPS
+===================================
+
+SCOPE
+-----
+This release adds only the essential GPS functions:
+- Requests device location when a technician presses Start Travel.
+- Records location when a technician presses Arrived on Site.
+- Records location when a completed job is submitted to the office.
+- Uses the saved customer address/postcode for Apple Maps navigation.
+- Supports optional customer latitude/longitude for exact navigation.
+- Shows the technician's last captured travel/arrival location on Dispatch.
+- Keeps GPS company-isolated through existing company_id filters.
+- Does not add continuous or background tracking.
+
+INSTALL
+-------
+1. Extract this ZIP into:
+   C:\projects\Agricore\frontend
+
+2. In Supabase SQL Editor, run:
+   supabase/migrations/20260804_field_gps.sql
+
+3. Stop Node, clear cache and build:
+   taskkill /F /IM node.exe
+   Remove-Item ".\.next" -Recurse -Force -ErrorAction SilentlyContinue
+   npm.cmd run build
+
+4. Start locally:
+   npm.cmd run dev
+
+TEST
+----
+1. Open AgriCore over HTTPS on a phone, or localhost during development.
+2. Sign in as a technician and open an assigned job.
+3. Press Start Travel and allow location access.
+4. Confirm the assignment changes to Travelling.
+5. Press Arrived on Site and confirm arrival.
+6. Open Dispatch in the office account and confirm "View last GPS" appears.
+7. Complete and submit the job; location is saved with the completion when permission is available.
+8. Switch companies and confirm locations are not visible across companies.
+
+NOTES
+-----
+- Browser GPS requires HTTPS in production. Localhost is permitted for development.
+- If a technician denies location permission, the job workflow still continues, but no GPS coordinate is stored for that action.
+- This release does not continuously track technicians and does not run location services outside explicit job actions.
+- Customer latitude/longitude fields are optional. Navigation falls back to address and postcode.

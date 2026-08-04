@@ -9,15 +9,6 @@ import {
 import {
   createSupabaseServerClient,
 } from "@/lib/supabase-server";
-
-type AssignmentPayload = {
-  jobId?: string;
-  userId?: string;
-  scheduledStart?: string;
-  scheduledEnd?: string;
-  notes?: string;
-};
-
 function canManageDispatch(
   permissions: string[],
 ) {
@@ -27,6 +18,16 @@ function canManageDispatch(
     permissions.includes("calendar.manage")
   );
 }
+
+type AssignmentPayload = {
+  jobId?: string;
+  userId?: string;
+  scheduledStart?: string;
+  scheduledEnd?: string;
+  notes?: string;
+};
+
+
 
 export async function GET(
   request: NextRequest,
@@ -207,6 +208,67 @@ export async function GET(
       );
     }
 
+    const assignmentRows = assignmentsResult.data ?? [];
+    const activeUserIds = Array.from(
+      new Set(assignmentRows.map((assignment) => assignment.user_id)),
+    );
+
+    const locationByUser = new Map<string, {
+      jobId: string;
+      latitude: number;
+      longitude: number;
+      capturedAt: string;
+      phase: "travel_start" | "arrival";
+    }>();
+
+    if (activeUserIds.length > 0) {
+      const { data: travelRows, error: travelError } = await supabase
+        .from("job_travel_sessions")
+        .select(`
+          job_id,
+          technician_user_id,
+          started_at,
+          arrived_at,
+          start_latitude,
+          start_longitude,
+          end_latitude,
+          end_longitude
+        `)
+        .eq("company_id", auth.companyId)
+        .in("technician_user_id", activeUserIds)
+        .gte("started_at", startOfDay)
+        .order("started_at", { ascending: false });
+
+      if (travelError) {
+        throw new Error(`Unable to load technician locations: ${travelError.message}`);
+      }
+
+      for (const row of travelRows ?? []) {
+        if (locationByUser.has(row.technician_user_id)) continue;
+
+        const hasArrival =
+          row.end_latitude !== null && row.end_longitude !== null;
+        const latitude = hasArrival ? row.end_latitude : row.start_latitude;
+        const longitude = hasArrival ? row.end_longitude : row.start_longitude;
+        const capturedAt = hasArrival ? row.arrived_at : row.started_at;
+
+        if (latitude === null || longitude === null || !capturedAt) continue;
+
+        locationByUser.set(row.technician_user_id, {
+          jobId: row.job_id,
+          latitude: Number(latitude),
+          longitude: Number(longitude),
+          capturedAt,
+          phase: hasArrival ? "arrival" : "travel_start",
+        });
+      }
+    }
+
+    const assignmentsWithLocation = assignmentRows.map((assignment) => ({
+      ...assignment,
+      last_location: locationByUser.get(assignment.user_id) ?? null,
+    }));
+
     return NextResponse.json(
       {
         date: selectedDate,
@@ -214,7 +276,7 @@ export async function GET(
           techniciansResult.data ?? [],
         jobs: jobsResult.data ?? [],
         assignments:
-          assignmentsResult.data ?? [],
+          assignmentsWithLocation,
       },
       {
         headers: {

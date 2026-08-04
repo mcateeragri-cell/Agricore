@@ -6,12 +6,21 @@ import {
   useState,
 } from "react";
 
+type TravelDirection =
+  | "outbound"
+  | "return"
+  | "additional";
+
 type TravelSession = {
   id: string;
   status: string;
-  direction: string;
+  direction: TravelDirection;
   started_at: string;
   arrived_at: string | null;
+  start_latitude: number | null;
+  start_longitude: number | null;
+  end_latitude: number | null;
+  end_longitude: number | null;
   start_odometer_miles: number | null;
   end_odometer_miles: number | null;
   confirmed_distance_miles: number | null;
@@ -28,12 +37,21 @@ type TravelResponse = {
 type TravelCardProps = {
   jobId: string;
   disabled?: boolean;
+  completed?: boolean;
+  refreshToken?: number;
   onChanged?: () => void;
+};
+
+type CapturedLocation = {
+  latitude: number;
+  longitude: number;
 };
 
 export default function TravelCard({
   jobId,
   disabled = false,
+  completed = false,
+  refreshToken = 0,
   onChanged,
 }: TravelCardProps) {
   const [sessions, setSessions] =
@@ -47,9 +65,7 @@ export default function TravelCard({
   async function load() {
     const response = await fetch(
       `/api/technician/jobs/${jobId}/travel`,
-      {
-        cache: "no-store",
-      },
+      { cache: "no-store" },
     );
 
     const result =
@@ -71,24 +87,51 @@ export default function TravelCard({
 
   useEffect(() => {
     void load();
-  }, [jobId]);
+  }, [jobId, refreshToken]);
 
   const elapsed = useElapsed(
     activeSession?.started_at ?? null,
   );
 
-  const latestCompleted = useMemo(
+  const outboundCompleted = useMemo(
     () =>
       sessions.find(
         (session) =>
+          session.direction === "outbound" &&
           session.status === "completed",
       ) ?? null,
     [sessions],
   );
 
-  async function startTravel() {
+  const returnCompleted = useMemo(
+    () =>
+      sessions.find(
+        (session) =>
+          session.direction === "return" &&
+          session.status === "completed",
+      ) ?? null,
+    [sessions],
+  );
+
+  const canStartOutbound =
+    !completed &&
+    !disabled &&
+    !activeSession &&
+    !outboundCompleted;
+
+  const canStartReturn =
+    completed &&
+    !activeSession &&
+    Boolean(outboundCompleted) &&
+    !returnCompleted;
+
+  async function startJourney(
+    direction: "outbound" | "return",
+  ) {
     const startMileageText = window.prompt(
-      "Starting odometer mileage (optional):",
+      direction === "return"
+        ? "Return journey starting odometer mileage (optional):"
+        : "Starting odometer mileage (optional):",
       "",
     );
 
@@ -109,22 +152,28 @@ export default function TravelCard({
       return;
     }
 
+    const location = await captureLocation();
+
     await submit({
       action: "start",
+      direction,
       startOdometerMiles,
+      startLatitude: location?.latitude ?? null,
+      startLongitude: location?.longitude ?? null,
     });
   }
 
   async function arrive() {
+    if (!activeSession) {
+      return;
+    }
+
     const endMileageText = window.prompt(
-      "Ending odometer mileage (optional):",
-      activeSession?.start_odometer_miles !==
-        null &&
-        activeSession?.start_odometer_miles !==
-          undefined
-        ? String(
-            activeSession.start_odometer_miles,
-          )
+      activeSession.direction === "return"
+        ? "Return journey ending odometer mileage (optional):"
+        : "Ending odometer mileage (optional):",
+      activeSession.start_odometer_miles !== null
+        ? String(activeSession.start_odometer_miles)
         : "",
     );
 
@@ -145,9 +194,14 @@ export default function TravelCard({
       return;
     }
 
+    const location = await captureLocation();
+
     await submit({
       action: "arrive",
+      direction: activeSession.direction,
       endOdometerMiles,
+      endLatitude: location?.latitude ?? null,
+      endLongitude: location?.longitude ?? null,
     });
   }
 
@@ -197,6 +251,11 @@ export default function TravelCard({
     }
   }
 
+  const activeLabel =
+    activeSession?.direction === "return"
+      ? "Return journey in progress"
+      : "Travelling to customer";
+
   return (
     <section className="mt-4 rounded-2xl border border-white/50 bg-white/80 p-5 shadow-sm backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/75">
       <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300">
@@ -205,99 +264,103 @@ export default function TravelCard({
 
       <h2 className="mt-1 text-lg font-bold text-slate-950 dark:text-white">
         {activeSession
-          ? "Travelling"
+          ? activeLabel
           : "Journey recording"}
       </h2>
 
       {activeSession ? (
-        <div className="mt-4">
-          <div className="grid grid-cols-2 gap-3">
-            <Info
-              label="Elapsed"
-              value={elapsed}
-            />
-
-            <Info
-              label="Start mileage"
-              value={
-                activeSession.start_odometer_miles ===
-                null
-                  ? "Not entered"
-                  : `${Number(
-                      activeSession.start_odometer_miles,
-                    ).toLocaleString()} mi`
-              }
-            />
-          </div>
-
+        <div className="mt-4 rounded-2xl bg-amber-50 p-4 dark:bg-amber-950/40">
+          <p className="text-xs font-black uppercase tracking-wide text-amber-700 dark:text-amber-300">
+            {activeSession.direction === "return"
+              ? "Returning"
+              : "Outbound"}
+          </p>
+          <p className="mt-1 text-3xl font-black text-amber-950 dark:text-amber-100">
+            {elapsed}
+          </p>
           <button
             type="button"
-            disabled={disabled || busy}
+            disabled={busy}
             onClick={() => void arrive()}
-            className="mt-4 min-h-16 w-full rounded-2xl bg-amber-500 px-5 text-lg font-bold text-slate-950 shadow-sm transition hover:bg-amber-400 disabled:opacity-45"
+            className="mt-4 min-h-14 w-full rounded-xl bg-[#0c4a3a] px-5 text-base font-black text-white disabled:opacity-45"
           >
-            {busy ? "Saving…" : "Arrived"}
+            {busy
+              ? "Saving location…"
+              : activeSession.direction === "return"
+                ? "Return complete"
+                : "Arrived on site"}
           </button>
         </div>
-      ) : (
-        <div className="mt-4">
-          {latestCompleted ? (
-            <div className="mb-4 rounded-xl bg-slate-100/80 p-4 dark:bg-slate-800/80">
-              <p className="text-sm font-bold text-slate-900 dark:text-white">
-                Latest journey
-              </p>
+      ) : canStartOutbound ? (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() =>
+            void startJourney("outbound")
+          }
+          className="mt-4 min-h-16 w-full rounded-2xl bg-[#0c4a3a] px-5 text-left text-white shadow-sm disabled:opacity-45"
+        >
+          <span className="block text-xl font-black">
+            Start travel
+          </span>
+          <span className="mt-1 block text-sm font-semibold text-emerald-100">
+            Capture departure location and begin outward travel.
+          </span>
+        </button>
+      ) : canStartReturn ? (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() =>
+            void startJourney("return")
+          }
+          className="mt-4 min-h-16 w-full rounded-2xl bg-amber-600 px-5 text-left text-white shadow-sm disabled:opacity-45"
+        >
+          <span className="block text-xl font-black">
+            Start return journey
+          </span>
+          <span className="mt-1 block text-sm font-semibold text-amber-100">
+            Optional — use this when travelling back after the completed job.
+          </span>
+        </button>
+      ) : null}
 
-              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                {latestCompleted.confirmed_distance_miles !==
-                null
-                  ? `${Number(
-                      latestCompleted.confirmed_distance_miles,
-                    ).toLocaleString()} miles`
-                  : "Mileage not confirmed"}
-                {latestCompleted.travel_minutes !==
-                null
-                  ? ` · ${latestCompleted.travel_minutes} minutes`
-                  : ""}
-              </p>
-            </div>
-          ) : null}
-
-          <button
-            type="button"
-            disabled={disabled || busy}
-            onClick={() => void startTravel()}
-            className="min-h-16 w-full rounded-2xl bg-[#0c4a3a] px-5 text-lg font-bold text-white shadow-sm transition hover:bg-[#0a3f31] disabled:opacity-45"
-          >
-            {busy ? "Starting…" : "Start travel"}
-          </button>
-        </div>
-      )}
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <JourneySummary
+          label="Outward"
+          session={outboundCompleted}
+        />
+        <JourneySummary
+          label="Return"
+          session={returnCompleted}
+        />
+      </div>
 
       {error ? (
-        <p className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-200">
+        <p className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
           {error}
         </p>
       ) : null}
 
       {message ? (
-        <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/50 dark:text-emerald-200">
+        <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
           {message}
         </p>
       ) : null}
 
       <p className="mt-3 text-xs font-semibold text-slate-500 dark:text-slate-400">
-        Travel charges are calculated for office use and are not shown here.
+        GPS is captured only when a journey button is pressed. Travel remains editable by the office before invoicing.
       </p>
     </section>
   );
 }
 
-function Info({
+function JourneySummary({
   label,
-  value,
+  session,
 }: {
   label: string;
-  value: string;
+  session: TravelSession | null;
 }) {
   return (
     <div className="rounded-xl bg-slate-100/80 p-4 dark:bg-slate-800/80">
@@ -305,10 +368,44 @@ function Info({
         {label}
       </p>
       <p className="mt-1 font-bold text-slate-950 dark:text-white">
-        {value}
+        {session
+          ? `${session.travel_minutes ?? 0} minutes`
+          : "Not recorded"}
       </p>
+      {session?.confirmed_distance_miles !== null &&
+      session?.confirmed_distance_miles !== undefined ? (
+        <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
+          {session.confirmed_distance_miles.toFixed(1)} miles
+        </p>
+      ) : null}
     </div>
   );
+}
+
+async function captureLocation(): Promise<CapturedLocation | null> {
+  if (
+    typeof navigator === "undefined" ||
+    !navigator.geolocation
+  ) {
+    return null;
+  }
+
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+      },
+      () => resolve(null),
+      {
+        enableHighAccuracy: true,
+        timeout: 12_000,
+        maximumAge: 30_000,
+      },
+    );
+  });
 }
 
 function useElapsed(startedAt: string | null) {
@@ -317,41 +414,37 @@ function useElapsed(startedAt: string | null) {
   );
 
   useEffect(() => {
-    if (!startedAt) return;
+    if (!startedAt) {
+      return;
+    }
 
-    const timer = window.setInterval(
+    const interval = window.setInterval(
       () => setNow(Date.now()),
-      1000,
+      1_000,
     );
 
-    return () =>
-      window.clearInterval(timer);
+    return () => window.clearInterval(interval);
   }, [startedAt]);
 
-  if (!startedAt) return "00:00:00";
-
-  const started = new Date(startedAt).getTime();
-
-  if (!Number.isFinite(started)) {
+  if (!startedAt) {
     return "00:00:00";
   }
 
-  const totalSeconds = Math.max(
+  const seconds = Math.max(
     0,
-    Math.floor((now - started) / 1000),
+    Math.floor(
+      (now - new Date(startedAt).getTime()) /
+        1_000,
+    ),
   );
 
-  const hours = Math.floor(
-    totalSeconds / 3600,
-  );
+  const hours = Math.floor(seconds / 3_600);
   const minutes = Math.floor(
-    (totalSeconds % 3600) / 60,
+    (seconds % 3_600) / 60,
   );
-  const seconds = totalSeconds % 60;
+  const remainingSeconds = seconds % 60;
 
-  return [hours, minutes, seconds]
-    .map((value) =>
-      String(value).padStart(2, "0"),
-    )
+  return [hours, minutes, remainingSeconds]
+    .map((value) => String(value).padStart(2, "0"))
     .join(":");
 }

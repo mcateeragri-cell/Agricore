@@ -34,6 +34,9 @@ type JobRow = {
   work_carried_out: string | null;
   internal_notes: string | null;
   machine_hours: number | null;
+  service_programme_assignment_id: string | null;
+  service_programme_name: string | null;
+  service_checklist: unknown;
 };
 
 type LabourRow = {
@@ -85,7 +88,10 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         diagnosis,
         work_carried_out,
         internal_notes,
-        machine_hours
+        machine_hours,
+        service_programme_assignment_id,
+        service_programme_name,
+        service_checklist
       `)
       .eq("id", id)
       .eq("company_id", auth.companyId)
@@ -103,7 +109,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       job.customer_id
         ? auth.supabase
             .from("customers")
-            .select("id,business_name,contact_name,phone,email")
+            .select("id,business_name,contact_name,phone,email,address,postcode,latitude,longitude")
             .eq("id", job.customer_id)
             .eq("company_id", auth.companyId)
             .maybeSingle()
@@ -146,6 +152,10 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       contact_name: string | null;
       phone: string | null;
       email: string | null;
+      address: string | null;
+      postcode: string | null;
+      latitude: number | null;
+      longitude: number | null;
     } | null;
 
     const machine = machineResult.data as {
@@ -185,6 +195,16 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         workCarriedOut: job.work_carried_out ?? "",
         internalNotes: job.internal_notes ?? "",
         machineHours: job.machine_hours,
+        serviceProgrammeAssignmentId:
+          job.service_programme_assignment_id,
+        serviceProgrammeName:
+          job.service_programme_name ?? "",
+        serviceChecklist: normaliseChecklist(
+          job.service_checklist,
+        ),
+        isServiceJob: Boolean(
+          job.service_programme_assignment_id,
+        ),
       },
       customer: customer
         ? {
@@ -196,6 +216,10 @@ export async function GET(_request: NextRequest, context: RouteContext) {
             contactName: customer.contact_name ?? "",
             phone: customer.phone ?? "",
             email: customer.email ?? "",
+            address: customer.address ?? "",
+            postcode: customer.postcode ?? "",
+            latitude: customer.latitude,
+            longitude: customer.longitude,
           }
         : null,
       machine: machine
@@ -261,8 +285,46 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const body = (await request.json()) as TechnicianJobActionRequest;
     const now = new Date();
 
+    async function recordLocation(eventType: "start_travel" | "arrived") {
+      const location = body.location;
+      if (!location) return;
+
+      const payload = {
+        action: eventType === "start_travel" ? "start" : "arrive",
+        ...(eventType === "start_travel"
+          ? {
+              startLatitude: location.latitude,
+              startLongitude: location.longitude,
+            }
+          : {
+              endLatitude: location.latitude,
+              endLongitude: location.longitude,
+            }),
+      };
+
+      const travelRequest = new NextRequest(
+        new URL(`/api/technician/jobs/${id}/travel`, request.url),
+        {
+          method: "POST",
+          headers: request.headers,
+          body: JSON.stringify(payload),
+        },
+      );
+
+      const travelModule = await import("./travel/route");
+      const travelResponse = await travelModule.POST(travelRequest, {
+        params: Promise.resolve({ id }),
+      });
+
+      if (!travelResponse.ok && travelResponse.status !== 409) {
+        const result = await travelResponse.json().catch(() => null);
+        throw new Error(result?.error ?? "Unable to record GPS location.");
+      }
+    }
+
     switch (body.action) {
       case "start_travel":
+        await recordLocation("start_travel");
         await updateAssignment(
           auth.supabase,
           assignment.id,
@@ -275,6 +337,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         return NextResponse.json({ message: "Travel started." });
 
       case "arrive_on_site":
+        await recordLocation("arrived");
         await updateAssignment(
           auth.supabase,
           assignment.id,
@@ -364,6 +427,47 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         return NextResponse.json({ message: "Labour timer stopped." });
       }
 
+
+      case "update_service_checklist": {
+        const { data: jobRow, error: jobError } = await auth.supabase
+          .from("jobs")
+          .select("service_programme_assignment_id")
+          .eq("id", id)
+          .eq("company_id", auth.companyId)
+          .maybeSingle();
+
+        if (jobError) {
+          throw new Error(jobError.message);
+        }
+
+        if (!jobRow?.service_programme_assignment_id) {
+          return NextResponse.json(
+            { error: "This repair job does not have a service checklist." },
+            { status: 409 },
+          );
+        }
+
+        const checklist = normaliseChecklist(
+          body.serviceChecklist,
+        );
+
+        const { error: checklistError } = await auth.supabase
+          .from("jobs")
+          .update({
+            service_checklist: checklist,
+            updated_at: now.toISOString(),
+          })
+          .eq("id", id)
+          .eq("company_id", auth.companyId);
+
+        if (checklistError) {
+          throw new Error(checklistError.message);
+        }
+
+        return NextResponse.json({
+          message: "Service checklist saved.",
+        });
+      }
       case "complete_job": {
         const diagnosis = body.diagnosis?.trim() ?? "";
         const workCarriedOut = body.workCarriedOut?.trim() ?? "";
@@ -542,4 +646,42 @@ function mapLabourEntry(row: LabourRow): TechnicianLabourEntry {
     description: row.description ?? "",
     entryStatus: row.entry_status ?? "completed",
   };
+}
+function normaliseChecklist(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item, index) => {
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+
+      const record = item as Record<string, unknown>;
+      const description =
+        typeof record.description === "string"
+          ? record.description.trim()
+          : "";
+
+      if (!description) {
+        return null;
+      }
+
+      return {
+        id:
+          typeof record.id === "string" && record.id.trim()
+            ? record.id
+            : `service-item-${index + 1}`,
+        description,
+        completed: record.completed === true,
+      };
+    })
+    .filter(
+      (item): item is {
+        id: string;
+        description: string;
+        completed: boolean;
+      } => item !== null,
+    );
 }

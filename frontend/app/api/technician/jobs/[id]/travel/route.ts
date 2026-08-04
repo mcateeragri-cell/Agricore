@@ -519,6 +519,18 @@ export async function POST(
       );
     }
 
+    if (asDirection(body.direction) === "return") {
+      await supabase
+        .from("job_assignments")
+        .update({
+          assignment_status: "travelling",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("job_id", jobId)
+        .eq("company_id", auth.companyId)
+        .eq("user_id", auth.userId);
+    }
+
     return NextResponse.json({
       session: publicTravelSession(
         session as Record<
@@ -526,7 +538,10 @@ export async function POST(
           unknown
         >,
       ),
-      message: "Travel started.",
+      message:
+        asDirection(body.direction) === "return"
+          ? "Return journey started."
+          : "Travel started.",
     });
   }
 
@@ -630,6 +645,18 @@ export async function POST(
     );
   }
 
+  if (activeSession.direction === "return") {
+    await supabase
+      .from("job_assignments")
+      .update({
+        assignment_status: "completed",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("job_id", jobId)
+      .eq("company_id", auth.companyId)
+      .eq("user_id", auth.userId);
+  }
+
   return NextResponse.json({
     session: publicTravelSession(
       session as Record<
@@ -637,6 +664,9 @@ export async function POST(
         unknown
       >,
     ),
-    message: "Arrival recorded.",
+    message:
+      activeSession.direction === "return"
+        ? "Return journey completed."
+        : "Arrival recorded.",
   });
 }

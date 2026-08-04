@@ -53,6 +53,13 @@ type Assignment = {
   notes: string | null;
   updated_at: string | null;
   jobs: Job | Job[] | null;
+  last_location: {
+    jobId: string;
+    latitude: number;
+    longitude: number;
+    capturedAt: string;
+    phase: "travel_start" | "arrival";
+  } | null;
 };
 
 type AssignmentStatus =
@@ -1043,6 +1050,16 @@ function LiveStatusStrip({
               <p className="mt-1 text-xs text-slate-500">
                 {live ? `Updated ${formatRelativeTime(live.updated_at)}` : "Available for assignment"}
               </p>
+              {live?.last_location ? (
+                <a
+                  href={`https://maps.google.com/?q=${live.last_location.latitude},${live.last_location.longitude}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 inline-flex text-xs font-bold text-emerald-700 hover:underline"
+                >
+                  View last GPS · {formatRelativeTime(live.last_location.capturedAt)}
+                </a>
+              ) : null}
             </article>
           );
         })}
@@ -1215,6 +1232,18 @@ function DispatchCard({
         <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
           {assignment.notes}
         </p>
+      ) : null}
+
+      {assignment.last_location ? (
+        <a
+          href={`https://maps.google.com/?q=${assignment.last_location.latitude},${assignment.last_location.longitude}`}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-3 flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100"
+        >
+          <span>Last GPS: {assignment.last_location.phase === "arrival" ? "On site" : "Travel started"}</span>
+          <span>{formatRelativeTime(assignment.last_location.capturedAt)}</span>
+        </a>
       ) : null}
 
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500">
