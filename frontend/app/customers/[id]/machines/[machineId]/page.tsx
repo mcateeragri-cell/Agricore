@@ -723,6 +723,7 @@ export default function MachineProfilePage() {
 
       <ServiceProgrammesPanel
         companyId={companyId}
+        customerId={customer.id}
         machineId={machine.id}
         machineMake={machine.make}
         machineModel={machine.model}

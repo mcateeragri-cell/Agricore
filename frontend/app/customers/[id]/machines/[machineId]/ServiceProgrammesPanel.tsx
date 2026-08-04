@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+
 import { supabase } from "@/lib/supabase";
 import Button from "../../../../../Components/ui/Button";
 import Card from "../../../../../Components/ui/Card";
@@ -8,11 +10,15 @@ import Card from "../../../../../Components/ui/Card";
 type Programme = {
   id: string;
   name: string;
-  manufacturer: string | null;
-  model_pattern: string | null;
   interval_hours: number | null;
   interval_months: number | null;
   estimated_labour_hours: number | null;
+};
+
+type ProgrammeItem = {
+  id: string;
+  description: string;
+  sort_order: number;
 };
 
 type Assignment = {
@@ -25,6 +31,7 @@ type Assignment = {
 
 type Props = {
   companyId: string;
+  customerId: string;
   machineId: string;
   machineMake: string;
   machineModel: string;
@@ -52,6 +59,7 @@ function formatDate(value: Date) {
 
 export default function ServiceProgrammesPanel({
   companyId,
+  customerId,
   machineId,
   machineMake,
   machineModel,
@@ -59,24 +67,28 @@ export default function ServiceProgrammesPanel({
   estimatedHoursPerWeek,
 }: Props) {
   const [programmes, setProgrammes] = useState<Programme[]>([]);
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [assignment, setAssignment] = useState<Assignment | null>(null);
+  const [items, setItems] = useState<ProgrammeItem[]>([]);
   const [selectedProgrammeId, setSelectedProgrammeId] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
     if (!companyId || !machineId) return;
+
     setLoading(true);
     setError("");
 
     const [programmeResult, assignmentResult] = await Promise.all([
       supabase
         .from("service_programmes")
-        .select("id, name, manufacturer, model_pattern, interval_hours, interval_months, estimated_labour_hours")
+        .select("id, name, interval_hours, interval_months, estimated_labour_hours")
         .eq("company_id", companyId)
         .eq("active", true)
         .order("name"),
+
       supabase
         .from("machine_service_programmes")
         .select(`
@@ -87,8 +99,6 @@ export default function ServiceProgrammesPanel({
           service_programmes (
             id,
             name,
-            manufacturer,
-            model_pattern,
             interval_hours,
             interval_months,
             estimated_labour_hours
@@ -96,17 +106,42 @@ export default function ServiceProgrammesPanel({
         `)
         .eq("company_id", companyId)
         .eq("machine_id", machineId)
-        .eq("active", true),
+        .eq("active", true)
+        .maybeSingle(),
     ]);
 
     if (programmeResult.error || assignmentResult.error) {
-      setError(programmeResult.error?.message ?? assignmentResult.error?.message ?? "Unable to load service programmes.");
+      setError(
+        programmeResult.error?.message ??
+          assignmentResult.error?.message ??
+          "Unable to load service programme.",
+      );
       setLoading(false);
       return;
     }
 
+    const nextAssignment =
+      (assignmentResult.data as Assignment | null) ?? null;
+
     setProgrammes((programmeResult.data ?? []) as Programme[]);
-    setAssignments((assignmentResult.data ?? []) as Assignment[]);
+    setAssignment(nextAssignment);
+
+    if (nextAssignment) {
+      const itemResult = await supabase
+        .from("service_programme_items")
+        .select("id, description, sort_order")
+        .eq("company_id", companyId)
+        .eq("programme_id", nextAssignment.programme_id)
+        .eq("item_type", "checklist")
+        .order("sort_order");
+
+      if (!itemResult.error) {
+        setItems((itemResult.data ?? []) as ProgrammeItem[]);
+      }
+    } else {
+      setItems([]);
+    }
+
     setLoading(false);
   }, [companyId, machineId]);
 
@@ -114,15 +149,65 @@ export default function ServiceProgrammesPanel({
     void load();
   }, [load]);
 
-  const available = useMemo(() => {
-    const assigned = new Set(assignments.map((item) => item.programme_id));
-    return programmes.filter((programme) => !assigned.has(programme.id));
-  }, [assignments, programmes]);
+  const status = useMemo(() => {
+    if (!assignment) return null;
+
+    const programme = one(assignment.service_programmes);
+    if (!programme) return null;
+
+    const intervalHours =
+      programme.interval_hours === null
+        ? null
+        : Number(programme.interval_hours);
+
+    const remaining =
+      intervalHours === null
+        ? null
+        : Number(assignment.last_service_hours ?? currentHours) +
+            intervalHours -
+            currentHours;
+
+    let predicted: Date | null = null;
+
+    if (remaining !== null && estimatedHoursPerWeek > 0) {
+      predicted = new Date();
+      predicted.setDate(
+        predicted.getDate() +
+          Math.ceil(
+            (Math.max(0, remaining) / estimatedHoursPerWeek) * 7,
+          ),
+      );
+    }
+
+    if (programme.interval_months && assignment.last_service_date) {
+      const calendarDue = addMonths(
+        assignment.last_service_date,
+        Number(programme.interval_months),
+      );
+      if (!predicted || calendarDue < predicted) predicted = calendarDue;
+    }
+
+    const overdue =
+      (remaining !== null && remaining < 0) ||
+      Boolean(predicted && predicted.getTime() < Date.now());
+
+    const dueSoon =
+      !overdue &&
+      ((remaining !== null && remaining <= 50) ||
+        Boolean(
+          predicted &&
+            predicted.getTime() - Date.now() <= 7 * 86_400_000,
+        ));
+
+    return { programme, remaining, predicted, overdue, dueSoon };
+  }, [assignment, currentHours, estimatedHoursPerWeek]);
 
   async function assignProgramme() {
-    if (!selectedProgrammeId) return;
+    if (!selectedProgrammeId || assignment) return;
+
     setSaving(true);
     setError("");
+    setMessage("");
 
     const { error: insertError } = await supabase
       .from("machine_service_programmes")
@@ -137,121 +222,266 @@ export default function ServiceProgrammesPanel({
 
     if (insertError) {
       setError(insertError.message);
-      setSaving(false);
-      return;
+    } else {
+      setSelectedProgrammeId("");
+      setMessage("Service programme assigned.");
+      await load();
     }
 
-    setSelectedProgrammeId("");
-    await load();
     setSaving(false);
   }
 
-  async function removeAssignment(id: string) {
+  async function removeAssignment() {
+    if (!assignment) return;
+
     const { error: updateError } = await supabase
       .from("machine_service_programmes")
       .update({ active: false, updated_at: new Date().toISOString() })
-      .eq("id", id)
+      .eq("id", assignment.id)
       .eq("company_id", companyId);
 
-    if (updateError) {
-      setError(updateError.message);
-      return;
+    if (updateError) setError(updateError.message);
+    else await load();
+  }
+
+  async function createServiceJob() {
+    if (!assignment || !status) return;
+
+    setSaving(true);
+    setError("");
+    setMessage("");
+
+    const checklist = items.map((item) => ({
+      id: item.id,
+      description: item.description,
+      completed: false,
+    }));
+
+    const { data, error: insertError } = await supabase
+      .from("jobs")
+      .insert({
+        company_id: companyId,
+        customer_id: customerId,
+        machine_id: machineId,
+        status: "open",
+        priority: status.overdue ? "high" : "normal",
+        fault_reported: `Scheduled service — ${status.programme.name}`,
+        machine_hours: currentHours,
+        service_programme_assignment_id: assignment.id,
+        service_programme_name: status.programme.name,
+        service_checklist: checklist,
+      })
+      .select("id")
+      .single();
+
+    if (insertError) {
+      setError(insertError.message);
+    } else if (data?.id) {
+      window.location.href = `/jobs/${data.id}`;
     }
 
-    await load();
+    setSaving(false);
+  }
+
+  async function markCompleted() {
+    if (!assignment || !status) return;
+
+    setSaving(true);
+    setError("");
+    setMessage("");
+
+    const today = new Date().toISOString().slice(0, 10);
+
+    const [assignmentResult, eventResult] = await Promise.all([
+      supabase
+        .from("machine_service_programmes")
+        .update({
+          last_service_hours: currentHours,
+          last_service_date: today,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", assignment.id)
+        .eq("company_id", companyId),
+
+      supabase.from("machine_service_events").insert({
+        company_id: companyId,
+        machine_id: machineId,
+        programme_id: assignment.programme_id,
+        assignment_id: assignment.id,
+        service_name: status.programme.name,
+        service_date: today,
+        service_hours: currentHours,
+        checklist: items.map((item) => ({
+          description: item.description,
+          completed: true,
+        })),
+      }),
+    ]);
+
+    const resultError = assignmentResult.error || eventResult.error;
+
+    if (resultError) {
+      setError(resultError.message);
+    } else {
+      setMessage("Service completion recorded and next interval calculated.");
+      await load();
+    }
+
+    setSaving(false);
   }
 
   return (
     <Card className="p-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">Service planning</p>
-          <h2 className="mt-1 text-xl font-bold">Service programmes</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Predict upcoming maintenance for {machineMake} {machineModel} using its recorded weekly usage.
-          </p>
-        </div>
+      <div>
+        <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
+          Service planning
+        </p>
+        <h2 className="mt-1 text-xl font-bold">Service programme</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          One active programme for {machineMake} {machineModel}.
+        </p>
+      </div>
 
-        <div className="flex w-full max-w-xl flex-col gap-2 sm:flex-row">
+      {error ? (
+        <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {error}
+        </div>
+      ) : null}
+
+      {message ? (
+        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+          {message}
+        </div>
+      ) : null}
+
+      {loading ? (
+        <p className="mt-5 text-sm text-slate-500">Loading service programme…</p>
+      ) : !assignment ? (
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row">
           <select
             value={selectedProgrammeId}
             onChange={(event) => setSelectedProgrammeId(event.target.value)}
-            className="min-h-11 flex-1 rounded-xl border border-slate-300 px-3 text-sm"
+            className="w-full rounded-xl border border-slate-300 px-4 py-2.5"
           >
-            <option value="">Select programme…</option>
-            {available.map((programme) => (
-              <option key={programme.id} value={programme.id}>{programme.name}</option>
+            <option value="">Select service programme</option>
+            {programmes.map((programme) => (
+              <option key={programme.id} value={programme.id}>
+                {programme.name}
+              </option>
             ))}
           </select>
-          <Button onClick={assignProgramme} disabled={!selectedProgrammeId || saving}>
-            {saving ? "Assigning…" : "Assign"}
+
+          <Button
+            type="button"
+            disabled={saving || !selectedProgrammeId}
+            onClick={() => void assignProgramme()}
+          >
+            Assign
           </Button>
         </div>
-      </div>
+      ) : status ? (
+        <div className="mt-5">
+          <div
+            className={`rounded-2xl border p-5 ${
+              status.overdue
+                ? "border-red-200 bg-red-50"
+                : status.dueSoon
+                  ? "border-amber-200 bg-amber-50"
+                  : "border-emerald-200 bg-emerald-50"
+            }`}
+          >
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="font-bold text-slate-950">
+                  {status.programme.name}
+                </p>
+                <p className="mt-1 text-sm font-semibold">
+                  {status.overdue
+                    ? "Overdue"
+                    : status.dueSoon
+                      ? "Due soon"
+                      : "On schedule"}
+                </p>
+              </div>
 
-      {error && <div className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+              <Link
+                href={`/customers/${customerId}/machines/${machineId}/timeline`}
+                className="text-sm font-bold text-emerald-700 hover:underline"
+              >
+                View history
+              </Link>
+            </div>
 
-      {loading ? (
-        <p className="mt-5 text-sm text-slate-500">Loading service programmes…</p>
-      ) : assignments.length === 0 ? (
-        <div className="mt-5 rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
-          No service programmes assigned yet. Create programmes from the Service Programmes page, then assign them here.
+            <dl className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-xl bg-white/75 p-3">
+                <dt className="text-xs text-slate-500">Current hours</dt>
+                <dd className="mt-1 font-bold">
+                  {currentHours.toLocaleString()} hrs
+                </dd>
+              </div>
+
+              <div className="rounded-xl bg-white/75 p-3">
+                <dt className="text-xs text-slate-500">Hours remaining</dt>
+                <dd className="mt-1 font-bold">
+                  {status.remaining === null
+                    ? "Date based"
+                    : `${Math.round(status.remaining)} hrs`}
+                </dd>
+              </div>
+
+              <div className="rounded-xl bg-white/75 p-3">
+                <dt className="text-xs text-slate-500">Predicted due</dt>
+                <dd className="mt-1 font-bold">
+                  {status.predicted
+                    ? formatDate(status.predicted)
+                    : "Not enough data"}
+                </dd>
+              </div>
+            </dl>
+
+            {items.length > 0 ? (
+              <div className="mt-4">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-600">
+                  Checklist
+                </p>
+                <ul className="mt-2 space-y-2 text-sm">
+                  {items.map((item) => (
+                    <li key={item.id}>• {item.description}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Button
+                type="button"
+                disabled={saving}
+                onClick={() => void createServiceJob()}
+              >
+                Create service job
+              </Button>
+
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={saving}
+                onClick={() => void markCompleted()}
+              >
+                Record completed service
+              </Button>
+
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => void removeAssignment()}
+                className="rounded-xl px-4 py-2.5 text-sm font-bold text-red-700 hover:bg-red-100"
+              >
+                Remove programme
+              </button>
+            </div>
+          </div>
         </div>
-      ) : (
-        <div className="mt-5 grid gap-4 lg:grid-cols-2">
-          {assignments.map((assignment) => {
-            const programme = one(assignment.service_programmes);
-            if (!programme) return null;
-            const nextHours = programme.interval_hours === null
-              ? null
-              : Number(assignment.last_service_hours ?? currentHours) + Number(programme.interval_hours);
-            const remaining = nextHours === null ? null : nextHours - currentHours;
-            const weekly = Math.max(estimatedHoursPerWeek, 0);
-            const dueByHours = remaining !== null && weekly > 0
-              ? new Date(Date.now() + Math.max(remaining, 0) / weekly * 7 * 86400000)
-              : null;
-            const dueByDate = programme.interval_months && assignment.last_service_date
-              ? addMonths(assignment.last_service_date, programme.interval_months)
-              : null;
-            const predicted = [dueByHours, dueByDate]
-              .filter((date): date is Date => Boolean(date))
-              .sort((a, b) => a.getTime() - b.getTime())[0] ?? null;
-            const overdue = (remaining !== null && remaining <= 0) || (dueByDate !== null && dueByDate.getTime() < Date.now());
-            const dueSoon = !overdue && ((remaining !== null && remaining <= Math.max(weekly * 4, 50)) || (predicted !== null && predicted.getTime() - Date.now() <= 30 * 86400000));
-
-            return (
-              <article key={assignment.id} className="rounded-2xl border border-slate-200 p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="font-bold text-slate-950">{programme.name}</h3>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {[programme.manufacturer, programme.model_pattern].filter(Boolean).join(" • ") || "General programme"}
-                    </p>
-                  </div>
-                  <span className={`rounded-full px-3 py-1 text-xs font-bold ${overdue ? "bg-red-100 text-red-700" : dueSoon ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}>
-                    {overdue ? "Overdue" : dueSoon ? "Due soon" : "On schedule"}
-                  </span>
-                </div>
-
-                <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <dt className="text-slate-500">Hours remaining</dt>
-                    <dd className="mt-1 font-bold">{remaining === null ? "Date based" : `${Math.round(remaining)} hrs`}</dd>
-                  </div>
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <dt className="text-slate-500">Predicted due</dt>
-                    <dd className="mt-1 font-bold">{predicted ? formatDate(predicted) : "Not enough data"}</dd>
-                  </div>
-                </dl>
-
-                <button type="button" onClick={() => void removeAssignment(assignment.id)} className="mt-4 text-sm font-bold text-red-700 hover:underline">
-                  Remove programme
-                </button>
-              </article>
-            );
-          })}
-        </div>
-      )}
+      ) : null}
     </Card>
   );
 }

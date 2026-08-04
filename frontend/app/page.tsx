@@ -3,6 +3,7 @@ import QuickActions from "../Components/Dashboard/QuickActions";
 import RecentJobs from "../Components/Dashboard/RecentJobs";
 import Schedule from "../Components/Dashboard/Schedule";
 import SummaryCards from "../Components/Dashboard/SummaryCards";
+import ServiceDueSummary from "../Components/Dashboard/ServiceDueSummary";
 
 export default function Home() {
   return (
@@ -25,6 +26,7 @@ export default function Home() {
         </section>
 
         <SummaryCards />
+        <ServiceDueSummary />
 
         <section className="mt-6 grid min-w-0 gap-6 xl:mt-8 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
           <div className="min-w-0">

@@ -18,7 +18,8 @@ type TimelineType =
   | "fault"
   | "hours"
   | "quote"
-  | "invoice";
+  | "invoice"
+  | "service";
 
 type TimelineItem = {
   id: string;
@@ -78,6 +79,16 @@ type QuoteRow = {
   created_at: string;
 };
 
+type ServiceEventRow = {
+  id: string;
+  service_name: string;
+  service_date: string;
+  service_hours: number | null;
+  technician_name: string | null;
+  checklist: Array<{ description?: string; completed?: boolean }> | null;
+  created_at: string;
+};
+
 type InvoiceRow = {
   id: string;
   invoice_number: string;
@@ -96,6 +107,7 @@ const FILTERS: Array<{ value: "all" | TimelineType; label: string }> = [
   { value: "fault", label: "Faults" },
   { value: "quote", label: "Quotes" },
   { value: "invoice", label: "Invoices" },
+  { value: "service", label: "Services" },
 ];
 
 export default function MachineTimelinePage() {
@@ -124,7 +136,7 @@ export default function MachineTimelinePage() {
     setLoading(true);
     setErrorMessage("");
 
-    const [jobsResult, diagnosticsResult, faultsResult, hoursResult, quotesResult] =
+    const [jobsResult, diagnosticsResult, faultsResult, hoursResult, quotesResult, serviceEventsResult] =
       await Promise.all([
         supabase
           .from("jobs")
@@ -174,6 +186,15 @@ export default function MachineTimelinePage() {
           .eq("company_id", companyId)
           .eq("machine_id", machineId)
           .order("created_at", { ascending: false }),
+
+        supabase
+          .from("machine_service_events")
+          .select(
+            "id, service_name, service_date, service_hours, technician_name, checklist, created_at",
+          )
+          .eq("company_id", companyId)
+          .eq("machine_id", machineId)
+          .order("service_date", { ascending: false }),
       ]);
 
     const firstError =
@@ -181,7 +202,8 @@ export default function MachineTimelinePage() {
       diagnosticsResult.error ||
       faultsResult.error ||
       hoursResult.error ||
-      quotesResult.error;
+      quotesResult.error ||
+      serviceEventsResult.error;
 
     if (firstError) {
       setErrorMessage(firstError.message);
@@ -274,6 +296,26 @@ export default function MachineTimelinePage() {
         href: `/quotes/${quote.id}`,
       })),
 
+
+
+      ...((serviceEventsResult.data ?? []) as ServiceEventRow[]).map((event) => ({
+        id: `service-${event.id}`,
+        type: "service" as const,
+        date: event.service_date || event.created_at,
+        title: `${event.service_name} completed`,
+        description: [
+          event.service_hours !== null
+            ? `${Number(event.service_hours).toLocaleString()} hrs`
+            : "",
+          event.technician_name,
+          Array.isArray(event.checklist)
+            ? `${event.checklist.filter((item) => item.completed).length} checklist items`
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" · "),
+      })),
+
       ...invoices.map((invoice) => ({
         id: `invoice-${invoice.id}`,
         type: "invoice" as const,
@@ -315,7 +357,7 @@ export default function MachineTimelinePage() {
           Complete machine timeline
         </h1>
         <p className="mt-2 text-sm text-slate-600">
-          Jobs, diagnostics, faults, hour readings, quotes and invoices in one view.
+          Jobs, services, diagnostics, faults, hour readings, quotes and invoices in one view.
         </p>
 
         <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
