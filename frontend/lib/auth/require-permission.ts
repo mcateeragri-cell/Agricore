@@ -342,6 +342,14 @@ export async function requirePermission(
     requiredPermissions,
   );
 
+  if (
+    userContext.platformRole === "super_admin" ||
+    userContext.platformRole === "platform_admin" ||
+    userContext.role === "company_admin"
+  ) {
+    return userContext;
+  }
+
   if (required.length === 0) {
     return userContext;
   }

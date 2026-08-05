@@ -1,0 +1,20 @@
+AGRiCORE ADMINISTRATION UPDATE
+
+This package adds working Administration pages for:
+- Manufacturers
+- Service Templates
+
+Installation
+1. Back up your existing frontend folder.
+2. Extract this ZIP over C:\projects\Agricore\frontend and allow files to be replaced.
+3. In Supabase Dashboard > SQL Editor, run:
+   supabase/migrations/20260804_administration_manufacturers_service_templates.sql
+4. In C:\projects\Agricore\frontend run:
+   npm run build
+   npm run dev
+5. Open:
+   http://localhost:3000/administration/manufacturers
+   http://localhost:3000/administration/service-templates
+
+The pages enforce the existing service_templates.view, service_templates.manage,
+and service_templates.approve permissions and keep data separated by active company.

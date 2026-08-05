@@ -55,7 +55,7 @@ export const administrationItems: AdministrationItem[] = [
   },
   {
     name: "Company Settings",
-    href: "/administration/settings",
+    href: "/settings/company",
     icon: "settings",
     permissions: ["settings.manage"],
   },

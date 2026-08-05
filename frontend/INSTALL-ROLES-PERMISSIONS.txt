@@ -1,0 +1,17 @@
+AgriCore Roles & Permissions update
+===================================
+
+1. Extract this ZIP over C:\projects\Agricore\frontend and allow replacement.
+2. Ensure .env.local contains SUPABASE_SERVICE_ROLE_KEY (do not expose it as NEXT_PUBLIC_*).
+3. Run:
+   npm run build
+   npm run dev
+4. Open:
+   http://localhost:3000/administration/roles
+
+No database migration is required. The update uses the existing
+company_role_permissions table.
+
+Company Administrator and AgriCore Super Administrator now automatically
+pass company permission guards. The Company Administrator role is protected
+and always retains full company access.

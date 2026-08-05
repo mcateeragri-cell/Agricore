@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { loadActiveCompany } from "@/lib/company-context-client";
 import { supabase } from "@/lib/supabase";
 import Card from "../../../Components/ui/Card";
 
@@ -22,15 +23,22 @@ type Machine = {
   hours: number | null;
 };
 
+type Engineer = {
+  userId: string;
+  fullName: string;
+};
+
 export default function NewJobPage() {
   const router = useRouter();
 
+  const [activeCompanyId, setActiveCompanyId] = useState("");
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
+  const [engineers, setEngineers] = useState<Engineer[]>([]);
 
   const [customerId, setCustomerId] = useState("");
   const [machineId, setMachineId] = useState("");
-  const [engineerName, setEngineerName] = useState("James McAteer");
+  const [engineerName, setEngineerName] = useState("");
   const [priority, setPriority] = useState("normal");
   const [faultReported, setFaultReported] = useState("");
   const [machineHours, setMachineHours] = useState("");
@@ -44,64 +52,137 @@ export default function NewJobPage() {
       setLoadingData(true);
       setErrorMessage("");
 
-      const [customersResult, machinesResult] = await Promise.all([
-        supabase
-          .from("customers")
-          .select("id, contact_name, business_name")
-          .order("business_name", { ascending: true }),
+      try {
+        const activeCompany =
+          await loadActiveCompany();
 
-        supabase
-          .from("machines")
-          .select(
-            "id, customer_id, make, model, registration, serial_number, hours"
-          )
-          .order("make", { ascending: true }),
-      ]);
+        setActiveCompanyId(activeCompany.id);
 
-      if (customersResult.error) {
-        console.error(customersResult.error);
-        setErrorMessage(
-          `Unable to load customers: ${customersResult.error.message}`
-        );
-        setLoadingData(false);
-        return;
-      }
+        const [
+          customersResult,
+          machinesResult,
+          engineersResult,
+        ] = await Promise.all([
+          supabase
+            .from("customers")
+            .select(
+              "id, contact_name, business_name",
+            )
+            .eq(
+              "company_id",
+              activeCompany.id,
+            )
+            .order("business_name", {
+              ascending: true,
+            }),
 
-      if (machinesResult.error) {
-        console.error(machinesResult.error);
-        setErrorMessage(
-          `Unable to load machines: ${machinesResult.error.message}`
-        );
-        setLoadingData(false);
-        return;
-      }
+          supabase
+            .from("machines")
+            .select(
+              "id, customer_id, make, model, registration, serial_number, hours",
+            )
+            .eq(
+              "company_id",
+              activeCompany.id,
+            )
+            .order("make", {
+              ascending: true,
+            }),
 
-      const formattedCustomers: Customer[] = (
-        customersResult.data ?? []
-      ).map((customer) => ({
-        id: customer.id,
-        contactName: customer.contact_name ?? "",
-        businessName: customer.business_name ?? "",
-      }));
+          supabase
+            .from("company_member_profiles")
+            .select("user_id, full_name")
+            .eq(
+              "company_id",
+              activeCompany.id,
+            )
+            .eq("is_active", true)
+            .order("full_name", {
+              ascending: true,
+            }),
+        ]);
 
-      const formattedMachines: Machine[] = (machinesResult.data ?? []).map(
-        (machine) => ({
+        if (customersResult.error) {
+          throw new Error(
+            `Unable to load customers: ${customersResult.error.message}`,
+          );
+        }
+
+        if (machinesResult.error) {
+          throw new Error(
+            `Unable to load machines: ${machinesResult.error.message}`,
+          );
+        }
+
+        if (engineersResult.error) {
+          throw new Error(
+            `Unable to load engineers: ${engineersResult.error.message}`,
+          );
+        }
+
+        const formattedCustomers: Customer[] = (
+          customersResult.data ?? []
+        ).map((customer) => ({
+          id: customer.id,
+          contactName:
+            customer.contact_name ?? "",
+          businessName:
+            customer.business_name ?? "",
+        }));
+
+        const formattedMachines: Machine[] = (
+          machinesResult.data ?? []
+        ).map((machine) => ({
           id: machine.id,
           customerId: machine.customer_id,
           make: machine.make ?? "",
           model: machine.model ?? "",
-          registration: machine.registration ?? "",
-          serialNumber: machine.serial_number ?? "",
+          registration:
+            machine.registration ?? "",
+          serialNumber:
+            machine.serial_number ?? "",
           hours:
-            machine.hours === null || machine.hours === undefined
+            machine.hours === null ||
+            machine.hours === undefined
               ? null
               : Number(machine.hours),
-        })
-      );
+        }));
 
-      setCustomers(formattedCustomers);
-      setMachines(formattedMachines);
-      setLoadingData(false);
+        const formattedEngineers: Engineer[] = (
+          engineersResult.data ?? []
+        )
+          .filter(
+            (engineer) =>
+              typeof engineer.full_name ===
+                "string" &&
+              engineer.full_name.trim().length > 0,
+          )
+          .map((engineer) => ({
+            userId: engineer.user_id,
+            fullName: engineer.full_name.trim(),
+          }));
+
+        setCustomers(formattedCustomers);
+        setMachines(formattedMachines);
+        setEngineers(formattedEngineers);
+      } catch (error) {
+        console.error(
+          "Unable to load new-job data:",
+          error,
+        );
+
+        setActiveCompanyId("");
+        setCustomers([]);
+        setMachines([]);
+        setEngineers([]);
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Unable to load job form data.",
+        );
+      } finally {
+        setLoadingData(false);
+      }
     }
 
     void loadFormData();
@@ -139,6 +220,13 @@ export default function NewJobPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    if (!activeCompanyId) {
+      setErrorMessage(
+        "No active company is available.",
+      );
+      return;
+    }
+
     if (!customerId) {
       setErrorMessage("Select a customer.");
       return;
@@ -171,6 +259,7 @@ export default function NewJobPage() {
     const { data, error } = await supabase
       .from("jobs")
       .insert({
+        company_id: activeCompanyId,
         customer_id: customerId,
         machine_id: machineId,
         engineer_name: engineerName.trim() || null,
@@ -335,11 +424,17 @@ export default function NewJobPage() {
                   }
                   className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
                 >
-                  <option value="James McAteer">
-                    James McAteer
+                  <option value="">
+                    Unassigned
                   </option>
-                  <option value="Aiden Coady">Aiden Coady</option>
-                  <option value="">Unassigned</option>
+                  {engineers.map((engineer) => (
+                    <option
+                      key={engineer.userId}
+                      value={engineer.fullName}
+                    >
+                      {engineer.fullName}
+                    </option>
+                  ))}
                 </select>
               </div>
 

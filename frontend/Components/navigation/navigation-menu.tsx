@@ -27,24 +27,39 @@ export default function NavigationMenu({
   loading,
   onNavigate,
 }: NavigationMenuProps) {
+  const isAdministrationRoute =
+    pathname.startsWith("/administration") ||
+    pathname.startsWith("/settings/");
+
   const [administrationOpen, setAdministrationOpen] =
-    useState(pathname.startsWith("/administration"));
+    useState(isAdministrationRoute);
 
   useEffect(() => {
-    if (pathname.startsWith("/administration")) {
+    if (isAdministrationRoute) {
       setAdministrationOpen(true);
     }
-  }, [pathname]);
+  }, [isAdministrationRoute]);
 
-  const visibleAdministrationItems = useMemo(
-    () =>
-      administrationItems.filter((item) =>
-        item.permissions.some((permission) =>
-          userState.permissions.includes(permission),
-        ),
+  const visibleAdministrationItems = useMemo(() => {
+    const hasFullAdministrationAccess =
+      userState.platformRole === "super_admin" ||
+      userState.platformRole === "platform_admin" ||
+      userState.role === "company_admin";
+
+    if (hasFullAdministrationAccess) {
+      return administrationItems;
+    }
+
+    return administrationItems.filter((item) =>
+      item.permissions.some((permission) =>
+        userState.permissions.includes(permission),
       ),
-    [userState.permissions],
-  );
+    );
+  }, [
+    userState.permissions,
+    userState.platformRole,
+    userState.role,
+  ]);
 
   const canSeeAdministration =
     visibleAdministrationItems.length > 0;
@@ -68,7 +83,7 @@ export default function NavigationMenu({
             type="button"
             onClick={() => setAdministrationOpen((current) => !current)}
             className={`flex min-h-12 w-full items-center justify-between rounded-xl px-4 py-3 text-left text-sm font-semibold transition ${
-              pathname.startsWith("/administration")
+              isAdministrationRoute
                 ? "agricore-nav-item-active"
                 : "agricore-nav-item"
             }`}

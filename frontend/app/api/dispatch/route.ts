@@ -9,6 +9,7 @@ import {
 import {
   createSupabaseServerClient,
 } from "@/lib/supabase-server";
+import { loadFieldOperationsSettings } from "@/lib/field-operations-settings";
 function canManageDispatch(
   permissions: string[],
 ) {
@@ -49,6 +50,8 @@ export async function GET(
 
     const supabase =
       await createSupabaseServerClient();
+
+    const features = await loadFieldOperationsSettings(supabase, auth.companyId);
 
     const selectedDate =
       request.nextUrl.searchParams.get(
@@ -221,7 +224,7 @@ export async function GET(
       phase: "travel_start" | "arrival";
     }>();
 
-    if (activeUserIds.length > 0) {
+    if (features.dispatchLocationEnabled && activeUserIds.length > 0) {
       const { data: travelRows, error: travelError } = await supabase
         .from("job_travel_sessions")
         .select(`
@@ -277,6 +280,7 @@ export async function GET(
         jobs: jobsResult.data ?? [],
         assignments:
           assignmentsWithLocation,
+        fieldOperations: features,
       },
       {
         headers: {

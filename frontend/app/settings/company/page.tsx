@@ -1,4 +1,5 @@
 import CompanyBrandingForm from "@/Components/settings/company-branding-form";
+import FieldOperationsSettingsForm from "@/Components/settings/field-operations-settings";
 
 export default function CompanySettingsPage() {
   return (
@@ -21,6 +22,7 @@ export default function CompanySettingsPage() {
         </header>
 
         <CompanyBrandingForm />
+        <FieldOperationsSettingsForm />
       </div>
     </main>
   );

@@ -6,6 +6,7 @@ import {
 import {
   createSupabaseServerClient,
 } from "@/lib/supabase-server";
+import { loadFieldOperationsSettings } from "@/lib/field-operations-settings";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -156,6 +157,13 @@ export async function GET(
     );
   }
 
+  const supabaseForSettings = await createSupabaseServerClient();
+  const features = await loadFieldOperationsSettings(supabaseForSettings, auth.companyId);
+
+  if (!features.travelTimeEnabled) {
+    return NextResponse.json({ sessions: [], activeSession: null, disabled: true }, { headers: { "Cache-Control": "no-store" } });
+  }
+
   const { id: jobId } =
     await context.params;
 
@@ -268,6 +276,13 @@ export async function POST(
     );
   }
 
+  const supabaseForSettings = await createSupabaseServerClient();
+  const features = await loadFieldOperationsSettings(supabaseForSettings, auth.companyId);
+
+  if (!features.travelTimeEnabled) {
+    return NextResponse.json({ error: "Travel recording is disabled for this company." }, { status: 403 });
+  }
+
   const { id: jobId } =
     await context.params;
 
@@ -298,6 +313,12 @@ export async function POST(
     );
   }
 
+  const direction = asDirection(body.direction);
+
+  if (direction === "return" && !features.returnJourneyEnabled) {
+    return NextResponse.json({ error: "Return journeys are disabled for this company." }, { status: 403 });
+  }
+
   const startOdometerMiles =
     cleanNumber(
       body.startOdometerMiles,
@@ -313,17 +334,21 @@ export async function POST(
       body.confirmedDistanceMiles,
     );
 
-  const startLatitude =
-    cleanNumber(body.startLatitude);
+  const startLatitude = features.gpsEnabled
+    ? cleanNumber(body.startLatitude)
+    : null;
 
-  const startLongitude =
-    cleanNumber(body.startLongitude);
+  const startLongitude = features.gpsEnabled
+    ? cleanNumber(body.startLongitude)
+    : null;
 
-  const endLatitude =
-    cleanNumber(body.endLatitude);
+  const endLatitude = features.gpsEnabled
+    ? cleanNumber(body.endLatitude)
+    : null;
 
-  const endLongitude =
-    cleanNumber(body.endLongitude);
+  const endLongitude = features.gpsEnabled
+    ? cleanNumber(body.endLongitude)
+    : null;
 
   const numericValues = [
     startOdometerMiles,
@@ -487,10 +512,7 @@ export async function POST(
         technician_user_id:
           auth.userId,
 
-        direction:
-          asDirection(
-            body.direction,
-          ),
+        direction,
 
         status: "in_progress",
         started_at:
@@ -519,7 +541,7 @@ export async function POST(
       );
     }
 
-    if (asDirection(body.direction) === "return") {
+    if (direction === "return" && features.automaticStatusEnabled) {
       await supabase
         .from("job_assignments")
         .update({
@@ -539,7 +561,7 @@ export async function POST(
         >,
       ),
       message:
-        asDirection(body.direction) === "return"
+        direction === "return"
           ? "Return journey started."
           : "Travel started.",
     });

@@ -132,7 +132,7 @@ const administrationItems: AdministrationItem[] = [
   },
   {
     name: "Company Settings",
-    href: "/administration/settings",
+    href: "/settings/company",
     icon: "settings",
     permissions: ["settings.manage"],
   },
@@ -168,8 +168,13 @@ export default function Sidebar() {
     useState(false);
   const [companyError, setCompanyError] =
     useState("");
+  const isAdministrationRoute =
+    pathname.startsWith("/administration") ||
+    pathname === "/settings" ||
+    pathname.startsWith("/settings/");
+
   const [administrationOpen, setAdministrationOpen] =
-    useState(pathname.startsWith("/administration"));
+    useState(isAdministrationRoute);
 
   const loadCurrentUser = useCallback(async () => {
     setLoading(true);
@@ -234,10 +239,10 @@ export default function Sidebar() {
   }, [loadCurrentUser]);
 
   useEffect(() => {
-    if (pathname.startsWith("/administration")) {
+    if (isAdministrationRoute) {
       setAdministrationOpen(true);
     }
-  }, [pathname]);
+  }, [isAdministrationRoute]);
 
   const visibleAdministrationItems = useMemo(
     () =>
@@ -401,7 +406,7 @@ export default function Sidebar() {
                 )
               }
               className={`flex w-full items-center justify-between rounded-lg px-4 py-3 text-left text-sm font-semibold transition ${
-                pathname.startsWith("/administration")
+                isAdministrationRoute
                   ? "bg-white/15 text-white"
                   : "text-emerald-50 hover:bg-white/10 hover:text-white"
               }`}

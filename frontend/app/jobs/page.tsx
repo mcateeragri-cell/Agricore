@@ -7,6 +7,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { loadActiveCompany } from "@/lib/company-context-client";
 import { supabase } from "@/lib/supabase";
 
 type Job = {
@@ -150,84 +151,101 @@ export default function JobsPage() {
     setLoading(true);
     setErrorMessage("");
 
-    const { data, error } = await supabase
-      .from("jobs")
-      .select(`
-        id,
-        job_number,
-        status,
-        priority,
-        fault_reported,
-        opened_date,
-        engineer_name,
-        customers (
-          contact_name,
-          business_name
-        ),
-        machines (
-          make,
-          model,
-          registration
+    try {
+      const activeCompany =
+        await loadActiveCompany();
+
+      const { data, error } = await supabase
+        .from("jobs")
+        .select(`
+          id,
+          job_number,
+          status,
+          priority,
+          fault_reported,
+          opened_date,
+          engineer_name,
+          customers (
+            contact_name,
+            business_name
+          ),
+          machines (
+            make,
+            model,
+            registration
+          )
+        `)
+        .eq(
+          "company_id",
+          activeCompany.id,
         )
-      `)
-      .order("created_at", {
-        ascending: false,
+        .order("created_at", {
+          ascending: false,
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      const formattedJobs = (
+        (data ?? []) as SupabaseJob[]
+      ).map((job) => {
+        const customer = getRelatedRecord(
+          job.customers,
+        );
+
+        const machine = getRelatedRecord(
+          job.machines,
+        );
+
+        const customerName =
+          customer?.business_name ||
+          customer?.contact_name ||
+          "Unknown customer";
+
+        const machineName =
+          [machine?.make, machine?.model]
+            .filter(Boolean)
+            .join(" ") || "No machine";
+
+        return {
+          id: job.id,
+          jobNumber:
+            job.job_number ?? "No job number",
+          status: job.status ?? "open",
+          priority:
+            job.priority ?? "normal",
+          faultReported:
+            job.fault_reported ??
+            "No fault description entered.",
+          openedDate:
+            job.opened_date ?? "",
+          engineerName:
+            job.engineer_name ??
+            "Engineer not assigned",
+          customerName,
+          machineName,
+          registration:
+            machine?.registration ?? "",
+        };
       });
 
-    if (error) {
+      setJobs(formattedJobs);
+    } catch (error) {
       console.error(
         "Failed to load jobs:",
         error,
       );
 
-      setErrorMessage(error.message);
+      setJobs([]);
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to load jobs.",
+      );
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const formattedJobs = (
-      (data ?? []) as SupabaseJob[]
-    ).map((job) => {
-      const customer = getRelatedRecord(
-        job.customers,
-      );
-
-      const machine = getRelatedRecord(
-        job.machines,
-      );
-
-      const customerName =
-        customer?.business_name ||
-        customer?.contact_name ||
-        "Unknown customer";
-
-      const machineName =
-        [machine?.make, machine?.model]
-          .filter(Boolean)
-          .join(" ") || "No machine";
-
-      return {
-        id: job.id,
-        jobNumber:
-          job.job_number ?? "No job number",
-        status: job.status ?? "open",
-        priority: job.priority ?? "normal",
-        faultReported:
-          job.fault_reported ??
-          "No fault description entered.",
-        openedDate: job.opened_date ?? "",
-        engineerName:
-          job.engineer_name ??
-          "Engineer not assigned",
-        customerName,
-        machineName,
-        registration:
-          machine?.registration ?? "",
-      };
-    });
-
-    setJobs(formattedJobs);
-    setLoading(false);
   }, []);
 
   useEffect(() => {

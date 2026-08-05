@@ -14,6 +14,7 @@ import CompletionWizard, {
   type CompletionForm,
   type JobCompletion,
 } from "@/Components/technician/CompletionWizard";
+
 import CustomerCard from "@/Components/technician/CustomerCard";
 import JobHeader from "@/Components/technician/JobHeader";
 import JobWorkflow from "@/Components/technician/JobWorkFlow";
@@ -34,6 +35,28 @@ import type {
   TechnicianJobDetailResponse,
   TechnicianServiceChecklistItem,
 } from "@/types/technician";
+
+type FieldOperationsFeatures = {
+  gpsEnabled: boolean;
+  returnJourneyEnabled: boolean;
+  dispatchLocationEnabled: boolean;
+  automaticStatusEnabled: boolean;
+  travelTimeEnabled: boolean;
+  travelCostingEnabled: boolean;
+  jobTimelineEnabled: boolean;
+  technicianSummaryEnabled: boolean;
+};
+
+const DEFAULT_FIELD_FEATURES: FieldOperationsFeatures = {
+  gpsEnabled: true,
+  returnJourneyEnabled: true,
+  dispatchLocationEnabled: false,
+  automaticStatusEnabled: true,
+  travelTimeEnabled: true,
+  travelCostingEnabled: false,
+  jobTimelineEnabled: true,
+  technicianSummaryEnabled: false,
+};
 
 type TechnicianStockItem = {
   id: string;
@@ -162,6 +185,9 @@ export default function TechnicianJobPage() {
   const [travelRefreshToken, setTravelRefreshToken] =
     useState(0);
 
+  const [fieldFeatures, setFieldFeatures] =
+    useState<FieldOperationsFeatures>(DEFAULT_FIELD_FEATURES);
+
   const [completionOpen, setCompletionOpen] =
     useState(false);
 
@@ -202,6 +228,15 @@ export default function TechnicianJobPage() {
     setServiceChecklist(
       loadedJob.job.serviceChecklist ?? [],
     );
+
+    const featuresResponse = await authenticatedFetch(
+      "/api/settings/field-operations",
+      { cache: "no-store" },
+    );
+    if (featuresResponse.ok) {
+      const featuresBody = await readJson(featuresResponse) as { settings?: FieldOperationsFeatures };
+      if (featuresBody.settings) setFieldFeatures(featuresBody.settings);
+    }
   }, [jobId]);
 
   const loadParts = useCallback(async () => {
@@ -378,7 +413,8 @@ export default function TechnicianJobPage() {
 
     try {
       const location =
-        action === "start_travel" || action === "arrive_on_site"
+        fieldFeatures.gpsEnabled &&
+        (action === "start_travel" || action === "arrive_on_site")
           ? await getCurrentLocation()
           : null;
 
@@ -510,7 +546,9 @@ export default function TechnicianJobPage() {
 
     try {
       const completionLocation =
-        action === "submit" ? await getCurrentLocation() : null;
+        action === "submit" && fieldFeatures.gpsEnabled
+          ? await getCurrentLocation()
+          : null;
 
       const response = await authenticatedFetch(
         `/api/technician/jobs/${jobId}/complete`,
@@ -557,13 +595,18 @@ export default function TechnicianJobPage() {
         setCompletionOpen(false);
         setCompletionStep(1);
 
-        const recordReturnJourney = window.confirm(
-          "Job submitted. Do you want to start a return journey now?",
-        );
+        const recordReturnJourney =
+          fieldFeatures.travelTimeEnabled &&
+          fieldFeatures.returnJourneyEnabled
+            ? window.confirm(
+                "Job submitted. Do you want to start a return journey now?",
+              )
+            : false;
 
         if (recordReturnJourney) {
-          const returnLocation =
-            await getCurrentLocation();
+          const returnLocation = fieldFeatures.gpsEnabled
+            ? await getCurrentLocation()
+            : null;
 
           const travelResponse =
             await authenticatedFetch(
@@ -1123,6 +1166,7 @@ export default function TechnicianJobPage() {
           />
         ) : null}
 
+        {fieldFeatures.travelTimeEnabled ? (
         <TravelCard
           jobId={jobId}
           disabled={readOnly}
@@ -1130,8 +1174,10 @@ export default function TechnicianJobPage() {
           refreshToken={travelRefreshToken}
           onChanged={() => void loadJob()}
         />
+        ) : null}
 
         <QuickActions
+          showTravelControls={fieldFeatures.travelTimeEnabled}
           travelling={travelling}
           arrived={arrived}
           working={working}

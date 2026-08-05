@@ -1,4 +1,5 @@
 type QuickActionsProps = {
+  showTravelControls: boolean;
   travelling: boolean;
   arrived: boolean;
   working: boolean;
@@ -14,6 +15,7 @@ type QuickActionsProps = {
 };
 
 export default function QuickActions({
+  showTravelControls,
   travelling,
   arrived,
   working,
@@ -29,13 +31,13 @@ export default function QuickActions({
 }: QuickActionsProps) {
   const primary = completed
     ? null
-    : travelling
+    : showTravelControls && travelling
       ? {
           label: "Arrived on site",
           detail: "Record arrival and move to on-site status",
           onClick: onArrive,
         }
-      : arrived || working
+      : !showTravelControls || arrived || working
         ? {
             label: hasRunningLabour ? "Stop labour" : "Start labour",
             detail: hasRunningLabour ? elapsedTime : "Start the work timer",
