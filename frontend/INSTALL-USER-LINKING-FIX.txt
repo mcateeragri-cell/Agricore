@@ -1,0 +1,26 @@
+AgriCore User Company Linking Fix
+
+Extract this ZIP over:
+C:\projects\Agricore\frontend
+
+Allow Windows to replace the two existing files.
+
+Then run:
+npm run build
+npm run dev
+
+What this update changes:
+- New staff created through Administration > Users are linked to the selected company.
+- Existing Supabase Authentication users can be linked by entering the same email.
+- The temporary password field is optional for an existing login.
+- Company Administrators and AgriCore platform administrators can manage users.
+- Company Administrator is available as an assignable role.
+- The user's full name is synchronised into Supabase Auth metadata.
+
+For an account already created directly in Supabase:
+1. Open Administration > Users.
+2. Click Add staff member.
+3. Enter the exact existing email address.
+4. Leave Temporary password blank.
+5. Choose the company and role.
+6. Save.

@@ -1,5 +1,6 @@
 "use client";
 
+import FieldRolePageGate from "@/Components/auth/field-role-page-gate";
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -28,7 +29,7 @@ type Engineer = {
   fullName: string;
 };
 
-export default function NewJobPage() {
+function NewJobPageContent() {
   const router = useRouter();
 
   const [activeCompanyId, setActiveCompanyId] = useState("");
@@ -565,5 +566,13 @@ export default function NewJobPage() {
         )}
       </Card>
     </div>
+  );
+}
+
+export default function NewJobPage() {
+  return (
+    <FieldRolePageGate>
+      <NewJobPageContent />
+    </FieldRolePageGate>
   );
 }

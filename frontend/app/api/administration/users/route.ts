@@ -567,6 +567,28 @@ export async function POST(
         data.user.id;
     }
 
+    if (targetUser) {
+      const existingMetadata =
+        targetUser.user_metadata ?? {};
+
+      const { error: metadataError } =
+        await adminClient.auth.admin.updateUserById(
+          targetUser.id,
+          {
+            user_metadata: {
+              ...existingMetadata,
+              full_name: fullName,
+            },
+          },
+        );
+
+      if (metadataError) {
+        throw new Error(
+          `Unable to update the user profile: ${metadataError.message}`,
+        );
+      }
+    }
+
     const {
       data: existingMembership,
       error:

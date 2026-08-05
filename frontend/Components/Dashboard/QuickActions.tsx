@@ -1,6 +1,10 @@
 import Link from "next/link";
 
-export default function QuickActions() {
+export default function QuickActions({
+  showFinancialActions = true,
+}: {
+  showFinancialActions?: boolean;
+}) {
   return (
     <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-800 via-emerald-900 to-slate-950 shadow-lg">
       <div className="p-6">
@@ -39,12 +43,14 @@ export default function QuickActions() {
             🚜 Add Machine
           </Link>
 
-          <Link
-            href="/quotes/new"
-            className="inline-flex w-full items-center justify-center rounded-xl border border-emerald-600 px-4 py-3 text-sm font-semibold text-emerald-100 transition hover:border-emerald-400 hover:bg-white/10"
-          >
-            💷 Create Quote
-          </Link>
+          {showFinancialActions && (
+            <Link
+              href="/quotes/new"
+              className="inline-flex w-full items-center justify-center rounded-xl border border-emerald-600 px-4 py-3 text-sm font-semibold text-emerald-100 transition hover:border-emerald-400 hover:bg-white/10"
+            >
+              💷 Create Quote
+            </Link>
+          )}
         </div>
       </div>
     </section>

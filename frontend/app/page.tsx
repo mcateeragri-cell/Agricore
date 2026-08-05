@@ -1,11 +1,34 @@
+"use client";
+
 import DashboardHeader from "../Components/Dashboard/DashboardHeader";
 import QuickActions from "../Components/Dashboard/QuickActions";
 import RecentJobs from "../Components/Dashboard/RecentJobs";
 import Schedule from "../Components/Dashboard/Schedule";
 import SummaryCards from "../Components/Dashboard/SummaryCards";
 import ServiceDueSummary from "../Components/Dashboard/ServiceDueSummary";
+import { useNavigationUser } from "../Components/navigation/use-navigation-user";
+import {
+  canViewFinancialInformation,
+  isFieldRole,
+} from "../Components/navigation/navigation-types";
+import TechnicianDashboardPage from "./technician/page";
+
+function greetingForCurrentTime() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
 
 export default function Home() {
+  const { userState, loading } = useNavigationUser();
+  const firstName = userState.fullName.trim().split(/\s+/)[0] || "there";
+  const canViewMoney = canViewFinancialInformation(userState);
+
+  if (!loading && isFieldRole(userState.role)) {
+    return <TechnicianDashboardPage />;
+  }
+
   return (
     <div className="min-h-dvh w-full min-w-0">
       <DashboardHeader />
@@ -13,19 +36,23 @@ export default function Home() {
       <main className="w-full min-w-0 p-4 sm:p-6 lg:p-8">
         <section className="mb-6 sm:mb-8">
           <p className="text-sm font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-            Business overview
+            {canViewMoney ? "Business overview" : "My work overview"}
           </p>
 
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-slate-100">
-            Good evening, James
+            {loading
+              ? "Welcome back"
+              : `${greetingForCurrentTime()}, ${firstName}`}
           </h1>
 
           <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-slate-700 sm:text-base dark:text-slate-400">
-            Here is what is happening across the business.
+            {canViewMoney
+              ? "Here is what is happening across the business."
+              : "Here are your current jobs and upcoming schedule."}
           </p>
         </section>
 
-        <SummaryCards />
+        <SummaryCards showFinancialCards={canViewMoney} />
         <ServiceDueSummary />
 
         <section className="mt-6 grid min-w-0 gap-6 xl:mt-8 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
@@ -35,7 +62,7 @@ export default function Home() {
 
           <div className="min-w-0 space-y-6">
             <Schedule />
-            <QuickActions />
+            <QuickActions showFinancialActions={canViewMoney} />
           </div>
         </section>
       </main>

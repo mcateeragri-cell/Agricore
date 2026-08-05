@@ -1,5 +1,6 @@
 "use client";
 
+import FieldRolePageGate from "@/Components/auth/field-role-page-gate";
 import Link from "next/link";
 import {
   useCallback,
@@ -132,7 +133,7 @@ function getPriorityClasses(priority: string) {
   }
 }
 
-export default function JobsPage() {
+function JobsPageContent() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] =
@@ -841,5 +842,13 @@ function CheckIcon() {
       <circle cx="12" cy="12" r="9" />
       <path d="m8 12 2.5 2.5L16 9" />
     </svg>
+  );
+}
+
+export default function JobsPage() {
+  return (
+    <FieldRolePageGate>
+      <JobsPageContent />
+    </FieldRolePageGate>
   );
 }

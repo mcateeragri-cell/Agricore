@@ -1,0 +1,38 @@
+AgriCore v1.1 Offline Technician Update
+=======================================
+
+What this update adds
+- Technician job lists and job details are cached in IndexedDB after they are opened online.
+- Cached technician pages remain available if the connection drops.
+- JSON-based technician changes are queued on the device when offline or when the server is temporarily unavailable.
+- Queued changes automatically replay in order when the connection returns.
+- A visible offline/sync banner shows pending changes and provides a Sync now button.
+- A service worker caches the technician application shell for Safari/PWA use.
+- Completion submissions saved offline no longer crash the page; they close safely and queue for sync.
+
+Covered queued changes
+- Travel/arrival/labour workflow actions
+- Service checklist saves
+- Completion drafts and submissions
+- Parts add/edit/delete requests that have already been selected in the UI
+
+Important limits in this first offline release
+- A stock search cannot retrieve new stock records while fully offline unless that exact API response has previously been cached.
+- Image uploads still require a connection. Existing photo behaviour is unchanged.
+- GPS capture still depends on the browser/device permission and is not background GPS.
+- Keep the app installed to the iPhone home screen for the best Safari/PWA offline behaviour.
+
+Install
+1. Stop the dev server.
+2. Extract this ZIP over C:\projects\Agricore\frontend and replace existing files.
+3. Run: npm run build
+4. Run: npm run dev
+5. Open /technician while online and open the jobs you need available offline at least once.
+
+Test offline
+1. Open /technician online.
+2. Open a technician job online so its data is cached.
+3. Disable Wi-Fi/mobile data or use browser DevTools Offline mode.
+4. Refresh the technician page and open the cached job.
+5. Save a checklist or workflow action. The amber banner should show it is saved on device.
+6. Re-enable the connection. The queue should sync automatically.

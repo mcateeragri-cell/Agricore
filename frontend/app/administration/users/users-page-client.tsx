@@ -5,6 +5,7 @@ import { useNavigationUser } from "@/Components/navigation/use-navigation-user";
 import { supabase } from "@/lib/supabase";
 
 type AppRole =
+  | "company_admin"
   | "administrator"
   | "service_manager"
   | "office"
@@ -90,6 +91,7 @@ const ROLE_OPTIONS: Array<{
   value: AppRole;
   label: string;
 }> = [
+  { value: "company_admin", label: "Company Administrator" },
   { value: "administrator", label: "Administrator" },
   { value: "service_manager", label: "Service Manager" },
   { value: "office", label: "Office" },
@@ -311,42 +313,30 @@ export default function UsersPageClient() {
 
     setCurrentUserId(user.id);
 
-    const { data: roleRecord, error: roleError } = await supabase
-      .from("app_user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    const isPlatformAdministrator =
+      userState.platformRole === "super_admin" ||
+      userState.platformRole === "platform_admin";
 
-    if (roleError) throw roleError;
-    if (!roleRecord?.role) {
-      throw new Error("Your account does not have an application role.");
-    }
+    const isCompanyAdministrator =
+      userState.role === "company_admin" ||
+      userState.role === "administrator";
 
-    const { data: permissionRecords, error: permissionError } =
-      await supabase
-        .from("app_role_permissions")
-        .select("permission_key, allowed")
-        .eq("role", roleRecord.role)
-        .in("permission_key", [
-          "users.view",
-          "users.manage_technicians",
-          "users.manage_all",
-        ]);
-
-    if (permissionError) throw permissionError;
-
-    const allowed = new Set(
-      (permissionRecords ?? [])
-        .filter((record) => record.allowed)
-        .map((record) => record.permission_key),
-    );
+    const allowed = new Set(userState.permissions);
 
     const nextPermissions = {
-      canView: allowed.has("users.view"),
-      canManageTechnicians: allowed.has(
-        "users.manage_technicians",
-      ),
-      canManageAll: allowed.has("users.manage_all"),
+      canView:
+        isPlatformAdministrator ||
+        isCompanyAdministrator ||
+        allowed.has("users.view"),
+      canManageTechnicians:
+        isPlatformAdministrator ||
+        isCompanyAdministrator ||
+        allowed.has("users.manage_all") ||
+        allowed.has("users.manage_technicians"),
+      canManageAll:
+        isPlatformAdministrator ||
+        isCompanyAdministrator ||
+        allowed.has("users.manage_all"),
     };
 
     setPermissions(nextPermissions);
@@ -356,7 +346,11 @@ export default function UsersPageClient() {
         "You do not have permission to view User Administration.",
       );
     }
-  }, []);
+  }, [
+    userState.permissions,
+    userState.platformRole,
+    userState.role,
+  ]);
 
   const loadUsers = useCallback(async () => {
     const { data, error: listError } = await supabase.rpc(
@@ -1111,9 +1105,8 @@ export default function UsersPageClient() {
                 </FormField>
               )}
 
-              <FormField label="Temporary password" required>
+              <FormField label="Temporary password">
                 <input
-                  required
                   type="password"
                   minLength={8}
                   value={createForm.temporary_password}
@@ -1125,7 +1118,12 @@ export default function UsersPageClient() {
                     }))
                   }
                   className={inputClassName}
+                  placeholder="Required only for a brand-new login"
                 />
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  Leave this blank when linking an account that already exists
+                  in Supabase Authentication.
+                </p>
               </FormField>
 
               <FormField label="Role" required>

@@ -1,0 +1,29 @@
+AgriCore v1.1 — Technician Permission Tools
+
+Extract this ZIP over:
+C:\projects\Agricore\frontend
+
+Allow Windows to replace existing files.
+
+Then run:
+npm.cmd run build
+npm.cmd run dev
+
+What this update adds:
+- A new Technician tools subdivision in Roles & Permissions.
+- Separate permissions for:
+  * View service programmes
+  * Create and manage service programmes
+  * Use AI diagnostics
+- Technician and apprentice navigation only shows these tools when permission is enabled.
+- Service Programmes is read-only unless the manage permission is enabled.
+- Direct URLs are protected by server-side permission checks.
+- A permission-controlled AI Diagnostics workspace is included as a safe placeholder for the future diagnostic feature.
+- Administrators, Company Administrators and platform administrators retain full access.
+
+No Supabase migration is required because company_role_permissions already stores permission keys dynamically.
+
+Suggested Technician defaults:
+- service_programmes.view: ON
+- service_programmes.manage: OFF
+- ai_diagnostics.use: ON

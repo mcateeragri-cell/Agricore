@@ -29,6 +29,7 @@ export type IconName =
   | "manufacturers"
   | "templates"
   | "service"
+  | "diagnostics"
   | "settings"
   | "chevron"
   | "logout"
@@ -126,5 +127,41 @@ export function isUserRole(value: unknown): value is UserRole {
     value === "technician" ||
     value === "apprentice" ||
     value === "read_only"
+  );
+}
+export function isFieldRole(
+  role: UserRole | null,
+) {
+  return role === "technician" || role === "apprentice";
+}
+
+export function isFinanciallyRestrictedRole(
+  role: UserRole | null,
+) {
+  return isFieldRole(role);
+}
+
+export function canViewFinancialInformation(
+  userState: Pick<
+    UserNavigationState,
+    "platformRole" | "role" | "permissions"
+  >,
+) {
+  if (
+    userState.platformRole === "super_admin" ||
+    userState.platformRole === "platform_admin" ||
+    userState.role === "company_admin" ||
+    userState.role === "administrator"
+  ) {
+    return true;
+  }
+
+  if (isFinanciallyRestrictedRole(userState.role)) {
+    return false;
+  }
+
+  return (
+    userState.permissions.includes("invoices.view") ||
+    userState.permissions.includes("invoices.manage")
   );
 }

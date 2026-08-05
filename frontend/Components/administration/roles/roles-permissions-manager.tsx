@@ -52,6 +52,14 @@ const GROUPS = [
     ],
   },
   {
+    label: "Technician tools",
+    permissions: [
+      ["service_programmes.view", "View service programmes"],
+      ["service_programmes.manage", "Create and manage service programmes"],
+      ["ai_diagnostics.use", "Use AI diagnostics"],
+    ],
+  },
+  {
     label: "Customers, machines and jobs",
     permissions: [
       ["customers.edit", "Edit customers"],

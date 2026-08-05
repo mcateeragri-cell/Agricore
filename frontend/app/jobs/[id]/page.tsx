@@ -1,5 +1,6 @@
 "use client";
 
+import FieldRolePageGate from "@/Components/auth/field-role-page-gate";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -366,7 +367,7 @@ function getPriorityClasses(priority: string) {
   }
 }
 
-export default function JobDetailPage() {
+function JobDetailPageContent() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const jobId = params.id;
@@ -2970,5 +2971,13 @@ async function handleCreateInvoice() {
   </div>
 )}
     </>
+  );
+}
+
+export default function JobDetailPage() {
+  return (
+    <FieldRolePageGate>
+      <JobDetailPageContent />
+    </FieldRolePageGate>
   );
 }

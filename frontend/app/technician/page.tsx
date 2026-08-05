@@ -8,6 +8,9 @@ import {
   useState,
 } from "react";
 
+import OfflineStatus from "@/Components/offline/offline-status";
+import { offlineFetch } from "@/lib/offline/technician-offline";
+
 import type {
   TechnicianDashboardJob,
   TechnicianDashboardResponse,
@@ -25,7 +28,7 @@ export default function TechnicianDashboardPage() {
     setError("");
 
     try {
-      const response = await fetch(
+      const response = await offlineFetch(
         `/api/technician/jobs?date=${encodeURIComponent(selectedDate)}`,
         { cache: "no-store" },
       );
@@ -83,6 +86,7 @@ export default function TechnicianDashboardPage() {
 
   return (
     <main className="min-h-screen bg-transparent">
+      <OfflineStatus />
       <div className="mx-auto max-w-3xl px-4 py-4 sm:px-6 sm:py-6">
         <header className="overflow-hidden rounded-[2rem] border border-emerald-900/20 bg-gradient-to-br from-[#0b4b38] via-[#0d5a43] to-[#103d2e] p-5 text-white shadow-xl sm:p-7">
           <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-200">

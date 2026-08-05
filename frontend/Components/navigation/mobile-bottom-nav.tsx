@@ -5,23 +5,45 @@ import Link from "next/link";
 import { mobilePrimaryItems } from "./navigation-data";
 import { isLinkActive } from "./navigation-menu";
 import SidebarIcon from "./sidebar-icon";
+import {
+  canViewFinancialInformation,
+  isFieldRole,
+} from "./navigation-types";
+import type { UserNavigationState } from "./navigation-types";
 
 type MobileBottomNavProps = {
   pathname: string;
+  userState: UserNavigationState;
   onOpenMore: () => void;
 };
 
 export default function MobileBottomNav({
   pathname,
+  userState,
   onOpenMore,
 }: MobileBottomNavProps) {
+  const canViewMoney = canViewFinancialInformation(userState);
+  const fieldRole = isFieldRole(userState.role);
+  const visibleItems = fieldRole
+    ? [
+        { name: "Home", href: "/", icon: "dashboard" as const },
+        { name: "My Jobs", href: "/technician", icon: "jobs" as const },
+      ]
+    : mobilePrimaryItems.filter(
+        (item) => canViewMoney || item.href !== "/invoices",
+      );
   return (
     <nav
       className="agricore-glass fixed inset-x-2 bottom-2 z-40 overflow-hidden rounded-2xl border pb-[env(safe-area-inset-bottom)] shadow-2xl lg:hidden"
       aria-label="Primary navigation"
     >
-      <div className="grid h-16 grid-cols-5">
-        {mobilePrimaryItems.map((item) => {
+      <div
+        className="grid h-16"
+        style={{
+          gridTemplateColumns: `repeat(${visibleItems.length + 1}, minmax(0, 1fr))`,
+        }}
+      >
+        {visibleItems.map((item) => {
           const active = isLinkActive(pathname, item.href);
 
           return (

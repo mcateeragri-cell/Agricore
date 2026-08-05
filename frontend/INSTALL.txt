@@ -1,0 +1,17 @@
+AgriCore Technician Name and Financial Visibility Fix
+
+Extract over:
+C:\projects\Agricore\frontend
+
+Then run:
+npm.cmd run build
+npm.cmd run dev
+
+Changes:
+- Dashboard greeting uses the signed-in user's first name.
+- Greeting changes between morning, afternoon and evening.
+- Technicians and apprentices no longer see Quotes, Invoices, Stock or Reports in desktop/drawer navigation.
+- Invoices are removed from the technician mobile bottom navigation.
+- Technician dashboard does not query or display invoice totals or revenue.
+- Create Quote is hidden from technician/apprentice quick actions.
+- Company administrators, administrators and platform administrators retain full financial visibility.

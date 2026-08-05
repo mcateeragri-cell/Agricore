@@ -10,6 +10,7 @@ export default async function RolesPage() {
     context.platformRole === "super_admin" ||
     context.platformRole === "platform_admin" ||
     context.role === "company_admin" ||
+    context.role === "administrator" ||
     context.permissions.includes("roles.manage");
 
   if (!canManage) redirect("/unauthorised");

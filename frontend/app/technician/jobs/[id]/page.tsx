@@ -10,6 +10,9 @@ import {
   useState,
 } from "react";
 
+import OfflineStatus from "@/Components/offline/offline-status";
+import { offlineFetch } from "@/lib/offline/technician-offline";
+
 import CompletionWizard, {
   type CompletionForm,
   type JobCompletion,
@@ -576,6 +579,26 @@ export default function TechnicianJobPage() {
         );
       }
 
+      const queued =
+        typeof result === "object" &&
+        result !== null &&
+        "queued" in result &&
+        result.queued === true;
+
+      if (queued) {
+        setSuccess(
+          getApiMessage(
+            result,
+            "Completion saved on this device and queued for sync.",
+          ),
+        );
+        if (action === "submit") {
+          setCompletionOpen(false);
+          setCompletionStep(1);
+        }
+        return;
+      }
+
       const completionResult =
         result as SaveCompletionResponse;
 
@@ -1097,6 +1120,7 @@ export default function TechnicianJobPage() {
 
   return (
     <main className="min-h-screen bg-transparent">
+      <OfflineStatus />
       <div className="mx-auto max-w-2xl px-4 py-5 sm:px-6">
         <Link
           href="/technician"
@@ -1618,10 +1642,17 @@ async function authenticatedFetch(
     `Bearer ${session.access_token}`,
   );
 
-  return fetch(input, {
-    ...init,
-    headers,
-  });
+  return offlineFetch(
+    input,
+    {
+      ...init,
+      headers,
+    },
+    async () => {
+      const { data } = await supabase.auth.getSession();
+      return data.session?.access_token ?? null;
+    },
+  );
 }
 
 async function readJson(

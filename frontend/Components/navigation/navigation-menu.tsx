@@ -13,6 +13,10 @@ import type {
   NavigationItem,
   UserNavigationState,
 } from "./navigation-types";
+import {
+  canViewFinancialInformation,
+  isFieldRole,
+} from "./navigation-types";
 
 type NavigationMenuProps = {
   pathname: string;
@@ -34,6 +38,74 @@ export default function NavigationMenu({
   const [administrationOpen, setAdministrationOpen] =
     useState(isAdministrationRoute);
 
+  const canViewMoney = canViewFinancialInformation(userState);
+  const fieldRole = isFieldRole(userState.role);
+
+  const visibleMainNavigationItems = useMemo(() => {
+    const hasFullAccess =
+      userState.platformRole === "super_admin" ||
+      userState.platformRole === "platform_admin" ||
+      userState.role === "company_admin" ||
+      userState.role === "administrator";
+
+    const canViewServiceProgrammes =
+      hasFullAccess ||
+      userState.permissions.includes("service_programmes.view") ||
+      userState.permissions.includes("service_programmes.manage");
+
+    const canUseAiDiagnostics =
+      hasFullAccess ||
+      userState.permissions.includes("ai_diagnostics.use");
+
+    if (fieldRole) {
+      const items: NavigationItem[] = [
+        { name: "Dashboard", href: "/", icon: "dashboard" },
+        { name: "My Jobs", href: "/technician", icon: "jobs" },
+      ];
+
+      if (canViewServiceProgrammes) {
+        items.push({
+          name: "Service Programmes",
+          href: "/service-programmes",
+          icon: "service",
+        });
+      }
+
+      if (canUseAiDiagnostics) {
+        items.push({
+          name: "AI Diagnostics",
+          href: "/ai-diagnostics",
+          icon: "diagnostics",
+        });
+      }
+
+      return items;
+    }
+
+    return mainNavigationItems.filter((item) => {
+      if (item.href === "/ai-diagnostics") {
+        return canUseAiDiagnostics;
+      }
+
+      if (!canViewMoney && [
+        "/quotes",
+        "/invoices",
+        "/stock",
+        "/reports",
+      ].includes(item.href)) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [
+    canViewMoney,
+    fieldRole,
+    userState.permissions,
+    userState.platformRole,
+    userState.role,
+  ]);
+
   useEffect(() => {
     if (isAdministrationRoute) {
       setAdministrationOpen(true);
@@ -44,7 +116,8 @@ export default function NavigationMenu({
     const hasFullAdministrationAccess =
       userState.platformRole === "super_admin" ||
       userState.platformRole === "platform_admin" ||
-      userState.role === "company_admin";
+      userState.role === "company_admin" ||
+      userState.role === "administrator";
 
     if (hasFullAdministrationAccess) {
       return administrationItems;
@@ -62,12 +135,12 @@ export default function NavigationMenu({
   ]);
 
   const canSeeAdministration =
-    visibleAdministrationItems.length > 0;
+    !fieldRole && visibleAdministrationItems.length > 0;
 
   return (
     <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-5">
       <div className="space-y-1">
-        {mainNavigationItems.map((item) => (
+        {visibleMainNavigationItems.map((item) => (
           <NavigationLink
             key={item.name}
             item={item}

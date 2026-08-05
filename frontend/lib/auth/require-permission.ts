@@ -342,13 +342,15 @@ export async function requirePermission(
     requiredPermissions,
   );
 
-  if (
-    userContext.platformRole === "super_admin" ||
-    userContext.platformRole === "platform_admin" ||
-    userContext.role === "company_admin"
-  ) {
-    return userContext;
-  }
+  const hasAdministrativeAccess =
+  userContext.platformRole === "super_admin" ||
+  userContext.platformRole === "platform_admin" ||
+  userContext.role === "company_admin" ||
+  userContext.role === "administrator";
+
+if (hasAdministrativeAccess) {
+  return userContext;
+}
 
   if (required.length === 0) {
     return userContext;

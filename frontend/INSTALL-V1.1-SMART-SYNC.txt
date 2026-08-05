@@ -1,0 +1,26 @@
+AgriCore v1.1 - Smart Offline Sync
+==================================
+
+This update builds on the first offline technician release.
+
+Added:
+- Automatic queue replay when the connection returns.
+- Automatic retry every 30 seconds while the app is open.
+- Retry when the app regains focus or becomes visible.
+- Exponential retry delays after failed requests.
+- Cross-tab sync lock to reduce duplicate submissions.
+- Background Sync registration where supported.
+- Clear failed/retry status in the technician banner.
+- Manual Retry now button.
+
+Notes:
+- iPhone Safari does not reliably support Background Sync while the app is
+  completely closed. Queued changes remain stored in IndexedDB and sync when
+  AgriCore is reopened or returns to the foreground.
+- No Supabase migration is required.
+
+Install:
+1. Extract this ZIP over C:\projects\Agricore\frontend.
+2. Allow Windows to replace existing files.
+3. Run npm run build.
+4. Run npm run dev.

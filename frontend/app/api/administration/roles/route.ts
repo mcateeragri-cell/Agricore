@@ -28,6 +28,9 @@ const PERMISSIONS = [
   "service_templates.view",
   "service_templates.manage",
   "service_templates.approve",
+  "service_programmes.view",
+  "service_programmes.manage",
+  "ai_diagnostics.use",
   "customers.edit",
   "machines.edit",
   "jobs.view_all",
@@ -77,6 +80,7 @@ function canManageRoles(context: Awaited<ReturnType<typeof getAuthenticatedUserC
     context.platformRole === "super_admin" ||
     context.platformRole === "platform_admin" ||
     context.role === "company_admin" ||
+    context.role === "administrator" ||
     context.permissions.includes("roles.manage")
   );
 }

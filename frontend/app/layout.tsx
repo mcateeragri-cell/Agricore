@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import AppShell from "../Components/AppShell";
+import OfflineBootstrap from "../Components/offline/offline-bootstrap";
 import ThemeProvider from "../Components/theme/theme-provider";
 import ThemeInitialiser from "../Components/theme/theme-initialiser";
 
@@ -80,6 +81,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ThemeProvider>
+          <OfflineBootstrap />
           <AppShell>{children}</AppShell>
         </ThemeProvider>
       </body>

@@ -115,6 +115,7 @@ export default function AppShell({
 
       <MobileBottomNav
         pathname={pathname}
+        userState={userState}
         onOpenMore={() =>
           setMobileMenuOpen(true)
         }

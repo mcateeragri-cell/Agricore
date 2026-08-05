@@ -177,7 +177,11 @@ function isDateWithinNextDays(
   return date >= now && date <= end;
 }
 
-export default function SummaryCards() {
+export default function SummaryCards({
+  showFinancialCards = true,
+}: {
+  showFinancialCards?: boolean;
+}) {
   const { userState, loading: companyLoading } = useNavigationUser();
   const companyId = userState.activeCompany?.id ?? "";
   const [jobs, setJobs] = useState<DatabaseRow[]>([]);
@@ -197,11 +201,17 @@ export default function SummaryCards() {
       return;
     }
 
-    const [jobsResult, invoicesResult] =
-      await Promise.all([
-        supabase.from("jobs").select("*").eq("company_id", companyId),
-        supabase.from("invoices").select("*").eq("company_id", companyId),
-      ]);
+    const jobsResult = await supabase
+      .from("jobs")
+      .select("*")
+      .eq("company_id", companyId);
+
+    const invoicesResult = showFinancialCards
+      ? await supabase
+          .from("invoices")
+          .select("*")
+          .eq("company_id", companyId)
+      : { data: [], error: null };
 
     if (jobsResult.error || invoicesResult.error) {
       const message =
@@ -227,7 +237,7 @@ export default function SummaryCards() {
       (invoicesResult.data ?? []) as DatabaseRow[],
     );
     setLoading(false);
-  }, [companyId, companyLoading]);
+  }, [companyId, companyLoading, showFinancialCards]);
 
   useEffect(() => {
     void loadSummaryData();
@@ -248,9 +258,10 @@ export default function SummaryCards() {
       )
       .subscribe();
 
-    const invoicesChannel = supabase
-      .channel("dashboard-summary-invoices")
-      .on(
+    const invoicesChannel = showFinancialCards
+      ? supabase
+          .channel("dashboard-summary-invoices")
+          .on(
         "postgres_changes",
         {
           event: "*",
@@ -261,8 +272,9 @@ export default function SummaryCards() {
         () => {
           void loadSummaryData();
         },
-      )
-      .subscribe();
+          )
+          .subscribe()
+      : null;
 
     const fallbackRefresh = window.setInterval(
       () => {
@@ -274,9 +286,9 @@ export default function SummaryCards() {
     return () => {
       window.clearInterval(fallbackRefresh);
       void supabase.removeChannel(jobsChannel);
-      void supabase.removeChannel(
-        invoicesChannel,
-      );
+      if (invoicesChannel) {
+        void supabase.removeChannel(invoicesChannel);
+      }
     };
   }, [loadSummaryData]);
 
@@ -365,7 +377,7 @@ export default function SummaryCards() {
       );
     });
 
-    return [
+    const operationalCards: SummaryCard[] = [
       {
         title: "Jobs in progress",
         value: String(activeJobs.length),
@@ -405,11 +417,19 @@ export default function SummaryCards() {
         icon: "🔧",
       },
     ];
-  }, [jobs, invoices]);
+
+    if (!showFinancialCards) {
+      return [operationalCards[0], operationalCards[3]];
+    }
+
+    return operationalCards;
+  }, [jobs, invoices, showFinancialCards]);
 
   if (loading) {
     return (
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className={`grid gap-4 sm:grid-cols-2 ${
+        showFinancialCards ? "xl:grid-cols-4" : "xl:grid-cols-2"
+      }`}>
         {Array.from({ length: 4 }).map(
           (_, index) => (
             <Card
@@ -451,7 +471,9 @@ export default function SummaryCards() {
   }
 
   return (
-    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <section className={`grid gap-4 sm:grid-cols-2 ${
+      showFinancialCards ? "xl:grid-cols-4" : "xl:grid-cols-2"
+    }`}>
       {summaryCards.map((card) => (
         <Card
           key={card.title}

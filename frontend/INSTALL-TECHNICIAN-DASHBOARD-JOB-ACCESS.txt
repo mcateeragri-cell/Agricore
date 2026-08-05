@@ -1,0 +1,17 @@
+AgriCore v1.1 Technician Dashboard and Job Access
+
+Extract this ZIP over C:\projects\Agricore\frontend and replace existing files.
+
+Then run:
+  npm.cmd run build
+  npm.cmd run dev
+
+Changes:
+- Technician and apprentice accounts see the dedicated technician dashboard at /.
+- Their navigation contains only Dashboard and My Jobs.
+- My Jobs uses job_assignments, so a technician sees jobs assigned to their user account.
+- A job can have been started by another engineer; it still appears when the technician has a job_assignments row for it.
+- General office job pages redirect technicians to /technician.
+- Company/office/manager roles keep the full business dashboard and navigation.
+
+No Supabase migration is required.
