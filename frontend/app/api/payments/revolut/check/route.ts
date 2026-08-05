@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getOfficeAuth } from "../../../office/_shared";
 import { createSupabaseAdmin } from "@/lib/payments/supabase-admin";
 import { retrieveRevolutOrder } from "@/lib/payments/revolut";
+import { loadCompanyRevolutCredentials } from "@/lib/payments/company-settings";
 
 type CheckPaymentBody = {
   invoiceId?: string;
@@ -101,7 +102,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const order = await retrieveRevolutOrder(invoice.revolut_order_id);
+    const revolut = await loadCompanyRevolutCredentials(
+  supabase,
+  auth.companyId,
+);
+
+const order = await retrieveRevolutOrder(
+  revolut,
+  invoice.revolut_order_id,
+);
 
     const state = String(order.state ?? "").toUpperCase();
     const isPaid = state === "COMPLETED";

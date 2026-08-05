@@ -1,5 +1,6 @@
 import CompanyBrandingForm from "@/Components/settings/company-branding-form";
 import FieldOperationsSettingsForm from "@/Components/settings/field-operations-settings";
+import PaymentSettingsForm from "@/Components/settings/payment-settings-form";
 
 export default function CompanySettingsPage() {
   return (
@@ -22,6 +23,7 @@ export default function CompanySettingsPage() {
         </header>
 
         <CompanyBrandingForm />
+        <PaymentSettingsForm />
         <FieldOperationsSettingsForm />
       </div>
     </main>

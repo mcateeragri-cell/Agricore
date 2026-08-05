@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getOfficeAuth } from "../../../office/_shared";
 import { getAppUrl } from "@/lib/payments/config";
 import { createRevolutOrder } from "@/lib/payments/revolut";
+import { loadCompanyRevolutCredentials } from "@/lib/payments/company-settings";
 import { createSupabaseAdmin } from "@/lib/payments/supabase-admin";
 import type { CreatePaymentLinkRequest, CreatePaymentLinkResponse, PaymentInvoiceRow } from "@/lib/payments/types";
 import { asNumber, buildInvoiceReference, safeErrorMessage, toMinorUnits } from "@/lib/payments/utils";
@@ -46,7 +47,8 @@ export async function POST(request: NextRequest) {
 }
 
     const outstanding = Math.max(0, asNumber(invoice.total) - asNumber(invoice.amount_paid));
-    const order = await createRevolutOrder({ amountMinor: toMinorUnits(outstanding), currency: "GBP", merchantOrderReference: buildInvoiceReference(invoice.invoice_number, invoice.id), description: `Invoice ${invoice.invoice_number}`, customerEmail: invoice.customer_email, redirectUrl: `${getAppUrl()}/invoices/${invoice.id}?payment=return` });
+    const revolut = await loadCompanyRevolutCredentials(supabase, auth.companyId);
+    const order = await createRevolutOrder(revolut, { amountMinor: toMinorUnits(outstanding), currency: "GBP", merchantOrderReference: buildInvoiceReference(invoice.invoice_number, invoice.id), description: `Invoice ${invoice.invoice_number}`, customerEmail: invoice.customer_email, redirectUrl: `${getAppUrl()}/invoices/${invoice.id}?payment=return` });
     if (!order.checkout_url) throw new Error("Revolut created the order but did not return a checkout URL.");
 if (outstanding <= 0) {
   return NextResponse.json<CreatePaymentLinkResponse>(

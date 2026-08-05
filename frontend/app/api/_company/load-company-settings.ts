@@ -3,7 +3,7 @@ import type { CompanySettings } from "./types";
 
 const FALLBACK_SETTINGS: CompanySettings = {
   id: 1,
-  company_name: "McAteer Agricultural Services Ltd",
+  company_name: "AgriCore Company",
   contact_line: "Agricultural Engineering & Field Service",
   address_line_1: null,
   address_line_2: null,
@@ -28,12 +28,13 @@ const FALLBACK_SETTINGS: CompanySettings = {
 };
 
 export async function loadCompanySettings(
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  companyId: string,
 ): Promise<CompanySettings> {
   const { data, error } = await supabase
     .from("company_settings")
     .select("*")
-    .eq("id", 1)
+    .eq("company_id", companyId)
     .maybeSingle();
 
   if (error) {

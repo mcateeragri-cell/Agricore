@@ -21,7 +21,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       includePhotos: true,
     });
 
-    const pdfBytes = await renderCombinedPdf(data, auth.supabase);
+    const pdfBytes = await renderCombinedPdf(data, auth.supabase, auth.companyId);
     return pdfResponse(pdfBytes, `${safe(data.invoice.invoice_number)}-service-report-and-invoice.pdf`);
   } catch (error) {
     return errorResponse(error, "Unable to generate service report and invoice PDF.");

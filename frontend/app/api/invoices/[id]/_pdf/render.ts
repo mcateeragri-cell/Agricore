@@ -39,8 +39,9 @@ type Ctx = {
 export async function renderInvoiceOnlyPdf(
   data: InvoicePdfData,
   supabase: SupabaseClient,
+  companyId: string,
 ) {
-  const ctx = await createContext(supabase);
+  const ctx = await createContext(supabase, companyId);
   await addInvoice(ctx, data);
   addPageNumbers(ctx);
   return ctx.pdf.save();
@@ -49,19 +50,20 @@ export async function renderInvoiceOnlyPdf(
 export async function renderCombinedPdf(
   data: InvoicePdfData,
   supabase: SupabaseClient,
+  companyId: string,
 ) {
-  const ctx = await createContext(supabase);
+  const ctx = await createContext(supabase, companyId);
   await addServiceReport(ctx, data, supabase);
   await addInvoice(ctx, data);
   addPageNumbers(ctx);
   return ctx.pdf.save();
 }
 
-async function createContext(supabase: SupabaseClient): Promise<Ctx> {
+async function createContext(supabase: SupabaseClient, companyId: string): Promise<Ctx> {
   const pdf = await PDFDocument.create();
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
-  const company = await loadCompanySettings(supabase);
+  const company = await loadCompanySettings(supabase, companyId);
   const logoBytes = await loadCompanyLogoBytes(supabase, company.logo_path);
 
   let companyLogo: PDFImage | null = null;
@@ -203,7 +205,7 @@ async function addServiceReport(
 
 function header(page: PDFPage, ctx: Ctx, title: string) {
   const companyName =
-    clean(ctx.company.company_name) || "McAteer Agricultural Services";
+    clean(ctx.company.company_name) || "AgriCore Company";
   const contactLine =
     clean(ctx.company.contact_line) ||
     "Agricultural Engineering & Field Service";
@@ -428,7 +430,7 @@ function footer(page: PDFPage, ctx: Ctx, reference: string) {
   });
 
   const companyName =
-    clean(ctx.company.company_name) || "McAteer Agricultural Services";
+    clean(ctx.company.company_name) || "AgriCore Company";
   const companyRegistration = clean(ctx.company.company_registration);
   const vatNumber = clean(ctx.company.vat_number);
 

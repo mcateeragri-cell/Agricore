@@ -1,0 +1,9 @@
+AgriCore Payment Test + Invoice Preview
+
+Extract over C:\projects\Agricore\frontend and replace files.
+
+Then run:
+npm.cmd run build
+npm.cmd run dev
+
+No Supabase migration is required.

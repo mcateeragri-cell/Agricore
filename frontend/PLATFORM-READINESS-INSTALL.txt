@@ -1,0 +1,35 @@
+AgriCore Platform Readiness — Per-Company Payments
+
+1. Extract this ZIP over:
+   C:\projects\Agricore\frontend
+
+2. Run this migration in Supabase SQL Editor:
+   supabase/migrations/20260805_company_payment_settings.sql
+
+3. Add a strong server-only environment variable locally and in Vercel:
+   PAYMENT_SETTINGS_ENCRYPTION_KEY=<a long random secret>
+
+   PowerShell can generate one with:
+   [Convert]::ToBase64String((1..48 | ForEach-Object { Get-Random -Maximum 256 }))
+
+   Do not prefix this variable with NEXT_PUBLIC_.
+
+4. Build and run:
+   npm.cmd run build
+   npm.cmd run dev
+
+5. Open Company Settings and configure Invoice Payment Settings for each company.
+
+What changed
+- Payment choice is stored per company: none, bank transfer, or Revolut Business.
+- Each company has its own bank details and payment instructions.
+- Revolut credentials are stored encrypted using AES-256-GCM.
+- Revolut order creation loads credentials for the invoice's company.
+- Revolut webhooks are company-specific and company-scoped.
+- Invoice PDF company settings are loaded by active company instead of record id 1.
+- McAteer-specific PDF fallback branding was removed.
+
+Important
+- Existing global REVOLUT_SECRET_KEY and REVOLUT_WEBHOOK_SECRET variables are no longer used by the updated Revolut order and webhook routes.
+- Configure McAteer Agricultural's Revolut details once in Company Settings after migration.
+- Other companies can choose bank transfer or no online payments and do not need Revolut credentials.

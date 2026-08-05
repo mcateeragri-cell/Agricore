@@ -60,6 +60,7 @@ export async function GET(
       await renderInvoiceOnlyPdf(
         data,
         supabase,
+        auth.companyId,
       );
 
     const filename = `${safe(
