@@ -1,0 +1,19 @@
+AgriCore v1.2 - Guided Company Onboarding
+
+1. Extract this ZIP over C:\projects\Agricore\frontend and replace existing files.
+2. Run this migration in Supabase SQL Editor:
+   supabase/migrations/20260805_002_company_onboarding.sql
+3. Build locally:
+   npm.cmd run build
+4. Start locally (Webpack is recommended on the current Windows setup):
+   npm.cmd run dev -- --webpack
+5. Test a fresh signup at http://localhost:3000/signup
+
+The guided onboarding now saves:
+- company contact/address details
+- invoice payment terms and footer
+- bank/payment-provider choice
+- team setup progress
+- completion state
+
+Existing companies can visit /onboarding; the progress row is created automatically.

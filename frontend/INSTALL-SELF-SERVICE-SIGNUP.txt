@@ -1,0 +1,48 @@
+AgriCore v1.2 — Self-Service Company Signup
+
+Extract this ZIP over:
+C:\projects\Agricore\frontend
+
+Allow Windows to replace existing files.
+
+Then run from the frontend folder:
+  npm.cmd run build
+  npm.cmd run dev -- --webpack
+
+Test:
+  http://localhost:3000/signup
+
+This update adds:
+- A working POST /api/platform/signup endpoint.
+- Supabase Auth account creation.
+- Automatic company creation and unique company slug.
+- Company Administrator membership, profile and role.
+- Company branding/settings, payment settings and field-operation defaults.
+- A Professional 14-day trial subscription.
+- Default company features.
+- Protected Company Administrator permissions.
+- Email-confirmation-aware signup behaviour.
+- A first-run /onboarding page.
+- Loading, success and error states on the signup form.
+- A hidden bot-trap field.
+
+Required environment variables:
+- NEXT_PUBLIC_SUPABASE_URL
+- NEXT_PUBLIC_SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+- SUPABASE_SERVICE_ROLE_KEY
+
+Supabase Authentication setup:
+- Add http://localhost:3000/login to allowed redirect URLs for local testing.
+- Add your production login URL (for example https://your-domain/login) before deployment.
+- When Confirm email is enabled, new users must confirm their email before signing in.
+- When Confirm email is disabled, signup signs the user in and opens /onboarding automatically.
+
+Database prerequisites already created in Platform Core:
+- subscription_plans
+- company_subscriptions
+- platform_features
+- company_features
+- company_invitations
+- platform_settings
+
+No new SQL migration is required for this package.

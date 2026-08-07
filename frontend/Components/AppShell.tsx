@@ -26,6 +26,8 @@ const shelllessRoutes = [
   "/forgot-password",
   "/reset-password",
   "/select-company",
+  "/signup",
+  "/onboarding",
 ];
 
 export default function AppShell({

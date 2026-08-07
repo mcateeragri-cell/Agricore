@@ -1,0 +1,21 @@
+AgriCore — Public Signup Layout Update
+
+Install
+1. Stop the local development server.
+2. Extract this ZIP over C:\projects\Agricore\frontend.
+3. Allow Windows to replace existing files.
+4. From C:\projects\Agricore\frontend run:
+   npm.cmd run build
+   npm.cmd run dev -- --webpack
+5. Open http://localhost:3000/signup
+
+Changes
+- /signup is now shellless and no longer shows the authenticated sidebar, company selector, or user card.
+- Rebuilt the signup page as a responsive public AgriCore experience.
+- Added proper AgriCore icon branding, trial benefits, form labels, accessibility attributes, terms acceptance, trust messages, and a sign-in link.
+- Added page metadata for search and browser titles.
+- Existing authenticated CRM pages are unchanged.
+
+Note
+- This sprint intentionally keeps the form UI-only. The self-service signup API will be connected in the next platform module.
+- A complete npm build could not be run in the packaging environment because its internal npm registry returned a 404 for zod-validation-error. Run the local build command above as the final verification.

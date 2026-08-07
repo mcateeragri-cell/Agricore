@@ -48,6 +48,19 @@ export async function GET(
       );
     }
 
+    if (
+      auth.role === "technician" ||
+      auth.role === "apprentice"
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Dispatch is restricted to office and management roles.",
+        },
+        { status: 403 },
+      );
+    }
+
     const supabase =
       await createSupabaseServerClient();
 

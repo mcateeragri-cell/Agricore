@@ -163,10 +163,10 @@ export default function NewPlatformCompanyPage() {
           </div>
 
           <Link
-            href="/administration/platform/companies"
+            href="/"
             className="rounded-xl border border-slate-300 bg-white/80 px-4 py-3 text-sm font-bold text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
           >
-            Back to companies
+            Back to dashboard
           </Link>
         </div>
 

@@ -30,17 +30,17 @@ export default function QuickActions({
           </Link>
 
           <Link
-            href="/customers/new"
+            href="/customers"
             className="inline-flex w-full items-center justify-center rounded-xl border border-emerald-600 px-4 py-3 text-sm font-semibold text-emerald-100 transition hover:border-emerald-400 hover:bg-white/10"
           >
-            👤 Add Customer
+            👤 Customers / Add Customer
           </Link>
 
           <Link
-            href="/machines/new"
+            href="/machines"
             className="inline-flex w-full items-center justify-center rounded-xl border border-emerald-600 px-4 py-3 text-sm font-semibold text-emerald-100 transition hover:border-emerald-400 hover:bg-white/10"
           >
-            🚜 Add Machine
+            🚜 Machine Register
           </Link>
 
           {showFinancialActions && (

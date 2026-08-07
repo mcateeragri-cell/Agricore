@@ -1,0 +1,32 @@
+AgriCore v1.2 — Complete Self-Service Onboarding
+
+Install
+1. Extract this ZIP over C:\projects\Agricore\frontend
+2. Allow Windows to replace existing files.
+3. Confirm the migration below has already been run:
+   supabase/migrations/20260805_002_company_onboarding.sql
+4. Run:
+   npm.cmd run build
+   npm.cmd run dev -- --webpack
+
+Test
+1. Open http://localhost:3000/signup in a private/incognito window.
+2. Register with a new email address.
+3. If email confirmation is enabled, confirm the email and sign in.
+4. AgriCore will direct the new company administrator to /onboarding.
+5. Complete the six onboarding steps and open the dashboard.
+
+Changes in this release
+- New-company signup creates the user, company, membership, company-admin role,
+  Professional trial, default features, default company settings and onboarding record.
+- Confirmed signup users are directed into onboarding after sign-in.
+- Incomplete company onboarding resumes automatically after sign-in.
+- Multi-company users preserve the intended destination after company selection.
+- Login and company selection remain public/shellless pages.
+
+Supabase configuration
+- Add local and deployed URLs to Authentication > URL Configuration > Redirect URLs.
+  Examples:
+  http://localhost:3000/login
+  https://YOUR-VERCEL-DOMAIN/login
+- Keep SUPABASE_SERVICE_ROLE_KEY server-side only.

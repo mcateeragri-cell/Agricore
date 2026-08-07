@@ -1,0 +1,35 @@
+AgriCore Platform Control Centre
+================================
+
+Extract this ZIP over:
+C:\projects\Agricore\frontend
+
+Allow Windows to replace existing files.
+
+Then run:
+npm.cmd run build
+npm.cmd run dev -- --webpack
+
+Open:
+http://localhost:3000/platform
+
+Access:
+- AgriCore super_admin
+- AgriCore platform_admin
+
+Company administrators and normal company users cannot open these pages.
+
+Included:
+- /platform overview dashboard
+- /platform/companies read-only company register
+- /platform/subscriptions subscription/MRR overview
+- /platform/health environment and platform health checks
+- Platform link in desktop/mobile navigation for platform admins only
+- Reports remains removed from launch navigation
+
+The launch version is deliberately read-only. Destructive controls such as suspend,
+impersonate, extend trial and force logout should be added only with audit logging and
+confirmation safeguards after the first live onboarding period.
+
+No SQL migration is required.
+No secret values are exposed by the System Health page.

@@ -8,8 +8,6 @@ import {
   useState,
 } from "react";
 
-import Sidebar from "../../../Components/Sidebar";
-
 import type {
   OfficeReviewApiError,
   OfficeReviewQueueItem,
@@ -100,9 +98,7 @@ export default function OfficeCompletionsPage() {
 
   return (
     <div className="min-h-screen bg-slate-100">
-      <Sidebar />
-
-      <main className="min-h-screen lg:pl-64">
+      <main className="min-h-screen">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>

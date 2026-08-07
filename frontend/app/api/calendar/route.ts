@@ -104,6 +104,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const calendarAccess = await loadCalendarAccess(
+      adminClient,
+      user.id,
+      companyId,
+    );
+
+    if (!calendarAccess.isActiveMember) {
+      return NextResponse.json(
+        { error: "You do not have access to the active company calendar." },
+        { status: 403 },
+      );
+    }
+
+    const canViewCompanyCalendar = calendarAccess.canManageCalendar;
+
     const requestUrl = new URL(request.url);
 
     const startValue =
@@ -148,49 +163,49 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    let profilesQuery = adminClient
+      .from("company_member_profiles")
+      .select("*")
+      .eq("company_id", companyId)
+      .eq("is_active", true);
+
+    let rolesQuery = adminClient
+      .from("company_member_roles")
+      .select("*")
+      .eq("company_id", companyId);
+
+    let assignmentsQuery = adminClient
+      .from("job_assignments")
+      .select("*")
+      .eq("company_id", companyId)
+      .lt("scheduled_start", rangeEnd.toISOString())
+      .gt("scheduled_end", rangeStart.toISOString())
+      .neq("assignment_status", "cancelled");
+
+    let eventsQuery = adminClient
+      .from("staff_calendar_events")
+      .select("*")
+      .eq("company_id", companyId)
+      .lt("starts_at", rangeEnd.toISOString())
+      .gt("ends_at", rangeStart.toISOString());
+
+    if (!canViewCompanyCalendar) {
+      profilesQuery = profilesQuery.eq("user_id", user.id);
+      rolesQuery = rolesQuery.eq("user_id", user.id);
+      assignmentsQuery = assignmentsQuery.eq("user_id", user.id);
+      eventsQuery = eventsQuery.eq("user_id", user.id);
+    }
+
     const [
       profilesResult,
       rolesResult,
       assignmentsResult,
       eventsResult,
     ] = await Promise.all([
-      adminClient
-        .from("app_user_profiles")
-        .select("*"),
-
-      adminClient
-        .from("app_user_roles")
-        .select("*"),
-
-      adminClient
-        .from("job_assignments")
-        .select("*")
-        .eq("company_id", companyId)
-        .lt(
-          "scheduled_start",
-          rangeEnd.toISOString(),
-        )
-        .gt(
-          "scheduled_end",
-          rangeStart.toISOString(),
-        )
-        .neq(
-          "assignment_status",
-          "cancelled",
-        )
-        .order("scheduled_start", {
-          ascending: true,
-        }),
-
-      adminClient
-        .from("staff_calendar_events")
-        .select("*")
-        .eq("company_id", companyId)
-        .lt("starts_at", rangeEnd.toISOString())
-        .gt("ends_at", rangeStart.toISOString())
-        .order("starts_at", {
-          ascending: true,
-        }),
+      profilesQuery.order("full_name", { ascending: true }),
+      rolesQuery,
+      assignmentsQuery.order("scheduled_start", { ascending: true }),
+      eventsQuery.order("starts_at", { ascending: true }),
     ]);
 
     if (profilesResult.error) {
@@ -242,15 +257,26 @@ export async function GET(request: NextRequest) {
         eventRows,
       );
 
+    const companyMemberUserIds = await loadCompanyMemberUserIds(
+      adminClient,
+      companyId,
+    );
+
+    const safeReferencedUserIds = new Set(
+      Array.from(referencedUserIds).filter((userId) =>
+        companyMemberUserIds.has(userId),
+      ),
+    );
+
     const technicians =
       buildTechnicians(
         profileRows,
         rolesByUserId,
-        referencedUserIds,
+        safeReferencedUserIds,
       );
 
     const missingUserIds = Array.from(
-      referencedUserIds,
+      safeReferencedUserIds,
     ).filter(
       (userId) =>
         !technicians.some(
@@ -436,6 +462,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const calendarAccess = await loadCalendarAccess(
+      adminClient,
+      user.id,
+      companyId,
+    );
+
+    if (!calendarAccess.isActiveMember || !calendarAccess.canManageCalendar) {
+      return NextResponse.json(
+        { error: "You do not have permission to manage the company calendar." },
+        { status: 403 },
+      );
+    }
+
     const body: unknown = await request.json();
 
     if (
@@ -550,10 +589,12 @@ export async function POST(request: NextRequest) {
           .eq("company_id", companyId)
           .maybeSingle(),
         adminClient
-  .from("app_user_profiles")
-  .select("*")
-  .eq("user_id", userId)
-  .maybeSingle(),
+          .from("company_member_profiles")
+          .select("*")
+          .eq("company_id", companyId)
+          .eq("user_id", userId)
+          .eq("is_active", true)
+          .maybeSingle(),
       ]);
 
     if (jobResult.error) {
@@ -872,9 +913,11 @@ export async function PATCH(request: NextRequest) {
         .eq("company_id", companyId)
         .maybeSingle(),
       adminClient
-        .from("app_user_profiles")
+        .from("company_member_profiles")
         .select("*")
+        .eq("company_id", companyId)
         .eq("user_id", userId)
+        .eq("is_active", true)
         .maybeSingle(),
     ]);
 
@@ -899,8 +942,30 @@ export async function PATCH(request: NextRequest) {
 
     if (!profileResult.data) {
       return NextResponse.json(
-        { error: "The selected technician could not be found." },
+        { error: "The selected technician could not be found in the active company." },
         { status: 404 },
+      );
+    }
+
+    const { data: technicianMembership, error: technicianMembershipError } =
+      await adminClient
+        .from("company_members")
+        .select("user_id")
+        .eq("company_id", companyId)
+        .eq("user_id", userId)
+        .eq("is_active", true)
+        .maybeSingle();
+
+    if (technicianMembershipError) {
+      throw new Error(
+        `Unable to verify the technician company membership: ${technicianMembershipError.message}`,
+      );
+    }
+
+    if (!technicianMembership) {
+      return NextResponse.json(
+        { error: "The selected technician does not belong to the active company." },
+        { status: 409 },
       );
     }
 
@@ -1132,6 +1197,7 @@ async function createAuthenticatedAdminClient(
       adminClient: AdminSupabaseClient;
       userId: string;
       companyId: string;
+      canManageCalendar: boolean;
     }
   | NextResponse
 > {
@@ -1196,10 +1262,94 @@ async function createAuthenticatedAdminClient(
     );
   }
 
+  const calendarAccess = await loadCalendarAccess(
+    adminClient,
+    user.id,
+    companyId,
+  );
+
+  if (!calendarAccess.isActiveMember || !calendarAccess.canManageCalendar) {
+    return NextResponse.json(
+      { error: "You do not have permission to manage the company calendar." },
+      { status: 403 },
+    );
+  }
+
   return {
     adminClient,
     userId: user.id,
     companyId,
+    canManageCalendar: true,
+  };
+}
+
+async function loadCalendarAccess(
+  adminClient: AdminSupabaseClient,
+  userId: string,
+  companyId: string,
+): Promise<{ isActiveMember: boolean; canManageCalendar: boolean }> {
+  const [membershipResult, roleResult] = await Promise.all([
+    adminClient
+      .from("company_members")
+      .select("is_active")
+      .eq("company_id", companyId)
+      .eq("user_id", userId)
+      .maybeSingle(),
+    adminClient
+      .from("company_member_roles")
+      .select("role")
+      .eq("company_id", companyId)
+      .eq("user_id", userId)
+      .maybeSingle(),
+  ]);
+
+  if (membershipResult.error) {
+    throw new Error(
+      `Unable to verify calendar company membership: ${membershipResult.error.message}`,
+    );
+  }
+
+  if (roleResult.error) {
+    throw new Error(
+      `Unable to verify calendar company role: ${roleResult.error.message}`,
+    );
+  }
+
+  if (membershipResult.data?.is_active !== true) {
+    return { isActiveMember: false, canManageCalendar: false };
+  }
+
+  const role =
+    typeof roleResult.data?.role === "string"
+      ? normaliseStatus(roleResult.data.role)
+      : "";
+
+  if (role === "company_admin" || role === "administrator") {
+    return { isActiveMember: true, canManageCalendar: true };
+  }
+
+  if (!role) {
+    return { isActiveMember: true, canManageCalendar: false };
+  }
+
+  const { data: permissionRow, error: permissionError } = await adminClient
+    .from("company_role_permissions")
+    .select("permission_key")
+    .eq("company_id", companyId)
+    .eq("role", role)
+    .eq("permission_key", "calendar.manage")
+    .eq("allowed", true)
+    .maybeSingle();
+
+  if (permissionError) {
+    throw new Error(
+      `Unable to verify calendar permission: ${permissionError.message}`,
+    );
+  }
+
+  return {
+    isActiveMember: true,
+    canManageCalendar: Boolean(permissionRow),
   };
 }
 
@@ -1505,6 +1655,7 @@ function buildTechnicians(
   referencedUserIds: Set<string>,
 ): CalendarTechnician[] {
   const schedulableRoles = new Set([
+    "company_admin",
     "administrator",
     "admin",
     "service_manager",
@@ -1596,13 +1747,8 @@ function buildTechnicians(
           null;
 
         return (
-          normalisedRole === null ||
-          schedulableRoles.has(
-            normalisedRole,
-          ) ||
-          referencedUserIds.has(
-            technician.id,
-          )
+          schedulableRoles.has(normalisedRole ?? "") ||
+          referencedUserIds.has(technician.id)
         );
       },
     )
@@ -1611,6 +1757,31 @@ function buildTechnicians(
         second.fullName,
       ),
     );
+}
+
+async function loadCompanyMemberUserIds(
+  adminClient: AdminSupabaseClient,
+  companyId: string,
+): Promise<Set<string>> {
+  const { data, error } = await adminClient
+    .from("company_members")
+    .select("user_id")
+    .eq("company_id", companyId)
+    .eq("is_active", true);
+
+  if (error) {
+    throw new Error(
+      `Unable to load active company members: ${error.message}`,
+    );
+  }
+
+  return new Set(
+    (data ?? [])
+      .map((row) =>
+        typeof row.user_id === "string" ? row.user_id : "",
+      )
+      .filter(Boolean),
+  );
 }
 
 async function loadAuthenticationUsers(

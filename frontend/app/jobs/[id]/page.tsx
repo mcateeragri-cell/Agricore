@@ -11,6 +11,7 @@ import {
   useState,
 } from "react";
 import { supabase } from "@/lib/supabase";
+import { loadActiveCompany } from "@/lib/company-context-client";
 import Card from "../../../Components/ui/Card";
 
 const isAdmin = true;
@@ -373,6 +374,7 @@ function JobDetailPageContent() {
   const jobId = params.id;
 
   const [job, setJob] = useState<JobRecord | null>(null);
+  const [activeCompanyId, setActiveCompanyId] = useState("");
   const [labourEntries, setLabourEntries] = useState<LabourEntry[]>(
     []
   );
@@ -484,6 +486,22 @@ const totalPartsProfit =
 
       setErrorMessage("");
 
+      let activeCompany;
+
+      try {
+        activeCompany = await loadActiveCompany();
+        setActiveCompanyId(activeCompany.id);
+      } catch (error) {
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Unable to load the active company.",
+        );
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
     const [
       jobResult,
       labourResult,
@@ -525,11 +543,13 @@ const totalPartsProfit =
           )
         `)
         .eq("id", jobId)
+        .eq("company_id", activeCompany.id)
         .single(),
 
       supabase
         .from("job_labour_entries")
         .select("*")
+        .eq("company_id", activeCompany.id)
         .eq("job_id", jobId)
         .order("labour_date", { ascending: false })
         .order("start_time", { ascending: false }),
@@ -537,6 +557,7 @@ const totalPartsProfit =
       supabase
         .from("job_parts_used")
         .select("*")
+        .eq("company_id", activeCompany.id)
         .eq("job_id", jobId)
         .order("created_at", { ascending: false }),
 
@@ -552,6 +573,7 @@ const totalPartsProfit =
           quantity_in_stock,
           active
         `)
+        .eq("company_id", activeCompany.id)
         .eq("active", true)
         .order("description", { ascending: true }),
 
@@ -566,6 +588,7 @@ const totalPartsProfit =
           stripe_payment_url
         `)
         .eq("job_id", jobId)
+        .eq("company_id", activeCompany.id)
         .neq("status", "void")
         .order("created_at", { ascending: false })
         .limit(1)
@@ -731,6 +754,20 @@ const totalPartsProfit =
           ? job?.invoice_status ?? "not_ready"
           : "not_ready";
 
+    let activeCompany;
+
+    try {
+      activeCompany = await loadActiveCompany();
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to load the active company.",
+      );
+      setSavingJob(false);
+      return;
+    }
+
     const { error } = await supabase
       .from("jobs")
       .update({
@@ -745,7 +782,8 @@ const totalPartsProfit =
         completed_date: completedDate,
         invoice_status: nextInvoiceStatus,
       })
-      .eq("id", jobId);
+      .eq("id", jobId)
+      .eq("company_id", activeCompany.id);
 
     if (error) {
       console.error("Unable to update job:", error);
@@ -776,6 +814,7 @@ const totalPartsProfit =
     const { error } = await supabase
       .from("job_labour_entries")
       .insert({
+        company_id: activeCompanyId,
         job_id: jobId,
         engineer_name: CURRENT_ENGINEER,
         labour_date: getTodayDate(),
@@ -833,7 +872,9 @@ const totalPartsProfit =
         hours,
         entry_status: "completed",
       })
-      .eq("id", runningEntry.id);
+      .eq("id", runningEntry.id)
+      .eq("company_id", activeCompanyId)
+      .eq("job_id", jobId);
 
     if (error) {
       console.error("Unable to stop timer:", error);
@@ -989,6 +1030,7 @@ const totalPartsProfit =
     setSuccessMessage("");
 
     const labourData = {
+      company_id: activeCompanyId,
       job_id: jobId,
       engineer_name: labourForm.engineerName.trim(),
       labour_date: labourForm.labourDate,
@@ -1015,7 +1057,9 @@ const totalPartsProfit =
           adjusted_by: CURRENT_ENGINEER,
           adjusted_at: new Date().toISOString(),
         })
-        .eq("id", labourForm.id);
+        .eq("id", labourForm.id)
+        .eq("company_id", activeCompanyId)
+        .eq("job_id", jobId);
 
       if (error) {
         console.error("Unable to update labour:", error);
@@ -1066,7 +1110,9 @@ const totalPartsProfit =
     const { error } = await supabase
       .from("job_labour_entries")
       .delete()
-      .eq("id", entry.id);
+      .eq("id", entry.id)
+      .eq("company_id", activeCompanyId)
+      .eq("job_id", jobId);
 
     if (error) {
       console.error("Unable to delete labour:", error);
@@ -1145,6 +1191,7 @@ async function handleSavePart(
   setSuccessMessage("");
 
   const partData = {
+    company_id: activeCompanyId,
     job_id: jobId,
     stock_item_id: partForm.stock_item_id || null,
     quantity,
@@ -1162,7 +1209,9 @@ async function handleSavePart(
     const { error } = await supabase
       .from("job_parts_used")
       .update(partData)
-      .eq("id", partForm.id);
+      .eq("id", partForm.id)
+      .eq("company_id", activeCompanyId)
+      .eq("job_id", jobId);
 
     if (error) {
       console.error("Unable to update part:", error);
@@ -1210,7 +1259,9 @@ async function handleDeletePart(part: JobPart) {
   const { error } = await supabase
     .from("job_parts_used")
     .delete()
-    .eq("id", part.id);
+    .eq("id", part.id)
+    .eq("company_id", activeCompanyId)
+    .eq("job_id", jobId);
 
   if (error) {
     console.error("Unable to delete part:", error);
@@ -1258,6 +1309,8 @@ async function handleCreateInvoice() {
   setSuccessMessage("");
 
   try {
+    const activeCompany = await loadActiveCompany();
+
     if (job.invoice_status !== "ready") {
       const { error: readyError } = await supabase
         .from("jobs")
@@ -1267,7 +1320,8 @@ async function handleCreateInvoice() {
           completed_date:
             job.completed_date ?? new Date().toISOString(),
         })
-        .eq("id", jobId);
+        .eq("id", jobId)
+        .eq("company_id", activeCompany.id);
 
       if (readyError) {
         throw new Error(readyError.message);

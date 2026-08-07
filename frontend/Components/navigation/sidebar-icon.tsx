@@ -154,6 +154,22 @@ export default function SidebarIcon({
         </svg>
       );
 
+    case "billing":
+      return (
+        <svg {...commonProps}>
+          <rect x="3" y="5" width="18" height="14" rx="2" />
+          <path d="M3 10h18M7 15h4" />
+        </svg>
+      );
+
+    case "platform":
+      return (
+        <svg {...commonProps}>
+          <path d="M4 20V10M10 20V4M16 20v-7M22 20V7" />
+          <path d="M3 20h20" />
+        </svg>
+      );
+
     case "chevron":
       return (
         <svg {...commonProps}>

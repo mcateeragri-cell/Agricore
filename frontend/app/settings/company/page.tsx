@@ -1,8 +1,10 @@
+import { requirePermission } from "@/lib/auth/require-permission";
 import CompanyBrandingForm from "@/Components/settings/company-branding-form";
 import FieldOperationsSettingsForm from "@/Components/settings/field-operations-settings";
 import PaymentSettingsForm from "@/Components/settings/payment-settings-form";
 
-export default function CompanySettingsPage() {
+export default async function CompanySettingsPage() {
+  await requirePermission(["settings.manage"]);
   return (
     <main className="min-h-dvh w-full min-w-0">
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">

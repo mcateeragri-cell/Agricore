@@ -35,6 +35,8 @@ export default function NavigationMenu({
     pathname.startsWith("/administration") ||
     pathname.startsWith("/settings/");
 
+  const isPlatformRoute = pathname.startsWith("/platform");
+
   const [administrationOpen, setAdministrationOpen] =
     useState(isAdministrationRoute);
 
@@ -91,7 +93,6 @@ export default function NavigationMenu({
         "/quotes",
         "/invoices",
         "/stock",
-        "/reports",
       ].includes(item.href)) {
         return false;
       }
@@ -149,6 +150,22 @@ export default function NavigationMenu({
           />
         ))}
       </div>
+
+      {!loading &&
+        (userState.platformRole === "super_admin" ||
+          userState.platformRole === "platform_admin") && (
+          <div className="mt-6 border-t border-white/10 pt-5">
+            <NavigationLink
+              item={{
+                name: "Platform",
+                href: "/platform",
+                icon: "platform",
+              }}
+              isActive={isPlatformRoute}
+              onNavigate={onNavigate}
+            />
+          </div>
+        )}
 
       {!loading && canSeeAdministration && (
         <div className="mt-6 border-t border-white/10 pt-5">

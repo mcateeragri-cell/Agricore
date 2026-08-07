@@ -1,0 +1,71 @@
+AgriCore v1.2 - Stripe Subscription Billing Setup
+=================================================
+
+Purpose
+-------
+Stripe in this module is ONLY for companies paying AgriCore for their software subscription.
+It is separate from bank transfer / Revolut / future payment methods that an engineering company may use to collect its own customer invoices.
+
+1. Run this Supabase migration
+--------------------------------
+supabase/migrations/20260807_003_stripe_subscription_billing.sql
+
+2. Stripe product
+-----------------
+Use the Stripe product already created:
+AgriCore Professional - £89.00 GBP per month.
+
+Copy its recurring monthly PRICE ID (price_...).
+The PRODUCT ID (prod_...) is not the value required by AgriCore.
+
+3. Local environment variables (.env.local)
+---------------------------------------------
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PRICE_PROFESSIONAL_MONTHLY=price_...
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+Never prefix the Stripe secret key or webhook secret with NEXT_PUBLIC_.
+Do not commit .env.local to Git.
+
+4. Vercel environment variables
+--------------------------------
+Add the same variables in Vercel for Preview/Production as appropriate.
+For production use your real HTTPS app URL for NEXT_PUBLIC_APP_URL.
+Use Stripe live-mode keys and a live-mode price only when you are ready to take real subscriptions.
+
+5. Stripe webhook
+-----------------
+Production endpoint:
+https://YOUR-DOMAIN/api/billing/webhook
+
+Subscribe to:
+checkout.session.completed
+customer.subscription.created
+customer.subscription.updated
+customer.subscription.deleted
+invoice.paid
+invoice.payment_failed
+invoice.payment_action_required
+
+The webhook route must remain public in utils/supabase/middleware.ts.
+
+For local webhook testing, Stripe cannot call localhost directly. Use Stripe CLI forwarding if you want live local webhook delivery, or test the deployed Vercel preview endpoint with test-mode Stripe.
+
+6. Customer Portal
+------------------
+In Stripe Dashboard, configure the Billing customer portal so customers can:
+- update their payment method
+- view/download Stripe invoices
+- cancel their AgriCore subscription
+
+7. Trial behaviour
+------------------
+The account is created first, then the company administrator opens /settings/billing.
+Stripe Checkout collects a card/payment method while charging £0 today.
+The remaining part of the 14-day trial is passed to Stripe.
+At the end of the trial Stripe automatically attempts the £89 monthly payment unless the subscription is cancelled.
+
+8. Apple Pay / Google Pay
+-------------------------
+Stripe Checkout decides which eligible wallet/payment methods to display based on Stripe settings, device, browser and domain eligibility.
