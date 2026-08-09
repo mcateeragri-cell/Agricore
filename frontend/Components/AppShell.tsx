@@ -22,6 +22,12 @@ type AppShellProps = Readonly<{
 }>;
 
 const shelllessRoutes = [
+  "/",
+  "/features",
+  "/pricing",
+  "/contact",
+  "/privacy",
+  "/terms",
   "/login",
   "/forgot-password",
   "/reset-password",

@@ -38,7 +38,7 @@ function safeRedirectPath(
       "/select-company",
     )
     ? value
-    : "/";
+    : "/dashboard";
 }
 
 function SelectCompanyContent() {

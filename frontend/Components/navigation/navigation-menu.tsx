@@ -61,7 +61,7 @@ export default function NavigationMenu({
 
     if (fieldRole) {
       const items: NavigationItem[] = [
-        { name: "Dashboard", href: "/", icon: "dashboard" },
+        { name: "Dashboard", href: "/dashboard", icon: "dashboard" },
         { name: "My Jobs", href: "/technician", icon: "jobs" },
       ];
 

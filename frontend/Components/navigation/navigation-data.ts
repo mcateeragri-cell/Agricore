@@ -4,7 +4,7 @@ import type {
 } from "./navigation-types";
 
 export const mainNavigationItems: NavigationItem[] = [
-  { name: "Dashboard", href: "/", icon: "dashboard" },
+  { name: "Dashboard", href: "/dashboard", icon: "dashboard" },
   { name: "Customers", href: "/customers", icon: "customers" },
   { name: "Machines", href: "/machines", icon: "machines" },
   { name: "Service Programmes", href: "/service-programmes", icon: "service" },
@@ -68,7 +68,7 @@ export const administrationItems: AdministrationItem[] = [
 ];
 
 export const mobilePrimaryItems: NavigationItem[] = [
-  { name: "Home", href: "/", icon: "dashboard" },
+  { name: "Home", href: "/dashboard", icon: "dashboard" },
   { name: "Jobs", href: "/jobs", icon: "jobs" },
   { name: "Invoices", href: "/invoices", icon: "invoices" },
   { name: "Customers", href: "/customers", icon: "customers" },

@@ -208,7 +208,7 @@ export default function OnboardingWizard({ firstName, companyName }: Props) {
     setError("");
     try {
       await updateProgress({ completed: true, currentStep: 6 });
-      router.replace("/");
+      router.replace("/dashboard");
       router.refresh();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Unable to finish onboarding.");

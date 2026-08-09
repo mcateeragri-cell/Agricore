@@ -16,7 +16,7 @@ type CompanyContextResponse = {
 };
 
 function safeRedirectPath(value: string | null) {
-  return value?.startsWith("/") && !value.startsWith("//") ? value : "/";
+  return value?.startsWith("/") && !value.startsWith("//") ? value : "/dashboard";
 }
 
 function SelectCompanyForm() {

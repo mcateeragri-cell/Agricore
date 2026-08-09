@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     description:
       "Agricultural engineering CRM for customers, machines, jobs, quotes and invoices.",
 
-    start_url: "/",
+    start_url: "/dashboard",
     scope: "/",
     display: "standalone",
     orientation: "portrait-primary",

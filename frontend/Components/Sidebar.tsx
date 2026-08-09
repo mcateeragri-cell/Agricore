@@ -82,7 +82,7 @@ type UserNavigationState = {
 };
 
 const mainNavigationItems: NavigationItem[] = [
-  { name: "Dashboard", href: "/", icon: "dashboard" },
+  { name: "Dashboard", href: "/dashboard", icon: "dashboard" },
   { name: "Customers", href: "/customers", icon: "customers" },
   { name: "Machines", href: "/machines", icon: "machines" },
   { name: "Jobs", href: "/jobs", icon: "jobs" },

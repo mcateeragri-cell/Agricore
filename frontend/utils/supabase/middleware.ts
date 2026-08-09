@@ -2,19 +2,23 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 const PUBLIC_ROUTE_PREFIXES = [
+  "/features",
+  "/pricing",
+  "/contact",
+  "/privacy",
+  "/terms",
   "/login",
   "/signup",
   "/forgot-password",
   "/reset-password",
   "/auth",
-  "/pricing",
-  "/contact",
   "/api/platform/signup",
   "/api/billing/webhook",
   "/api/payments/revolut/webhook",
 ];
 
 const PUBLIC_EXACT_ROUTES = new Set([
+  "/",
   "/favicon.ico",
   "/manifest.webmanifest",
 ]);
@@ -64,7 +68,7 @@ function getSafeRedirect(value: string | null) {
     return value;
   }
 
-  return "/";
+  return "/dashboard";
 }
 
 export async function updateSession(

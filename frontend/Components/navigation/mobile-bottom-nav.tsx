@@ -26,7 +26,7 @@ export default function MobileBottomNav({
   const fieldRole = isFieldRole(userState.role);
   const visibleItems = fieldRole
     ? [
-        { name: "Home", href: "/", icon: "dashboard" as const },
+        { name: "Home", href: "/dashboard", icon: "dashboard" as const },
         { name: "My Jobs", href: "/technician", icon: "jobs" as const },
       ]
     : mobilePrimaryItems.filter(
