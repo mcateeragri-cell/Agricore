@@ -6,14 +6,11 @@ import RecentJobs from "../../Components/Dashboard/RecentJobs";
 import Schedule from "../../Components/Dashboard/Schedule";
 import ServiceDueSummary from "../../Components/Dashboard/ServiceDueSummary";
 import SummaryCards from "../../Components/Dashboard/SummaryCards";
-
 import {
   canViewFinancialInformation,
   isFieldRole,
 } from "../../Components/navigation/navigation-types";
-
 import { useNavigationUser } from "../../Components/navigation/use-navigation-user";
-
 import TechnicianDashboardPage from "../technician/page";
 
 function greetingForCurrentTime() {
@@ -30,7 +27,7 @@ function greetingForCurrentTime() {
   return "Good evening";
 }
 
-export default function DashboardPage() {
+export default function Home() {
   const { userState, loading } = useNavigationUser();
 
   const firstName =

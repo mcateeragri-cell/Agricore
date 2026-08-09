@@ -29,6 +29,8 @@ export type PlatformDashboardData = {
     jobs: number;
     mrr: number;
     arr: number;
+    trialConversionRate: number;
+    newCompaniesThisMonth: number;
   };
   companies: PlatformCompanySummary[];
   recentCompanies: PlatformCompanySummary[];
@@ -160,6 +162,18 @@ export async function loadPlatformDashboardData(): Promise<PlatformDashboardData
   const totalDistinctUsers = new Set(memberships.map((row) => row.user_id)).size;
   const now = Date.now();
   const sevenDays = 7 * 24 * 60 * 60 * 1000;
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+  const convertedOrTrial = summaries.filter((company) =>
+    company.subscriptionStatus === "trial" || company.subscriptionStatus === "active",
+  ).length;
+  const trialConversionRate = convertedOrTrial > 0
+    ? Math.round((paying.length / convertedOrTrial) * 100)
+    : 0;
+  const newCompaniesThisMonth = summaries.filter((company) =>
+    company.createdAt && new Date(company.createdAt).getTime() >= monthStart.getTime(),
+  ).length;
 
   return {
     totals: {
@@ -177,6 +191,8 @@ export async function loadPlatformDashboardData(): Promise<PlatformDashboardData
       jobs: jobsResult.count ?? 0,
       mrr,
       arr: mrr * 12,
+      trialConversionRate,
+      newCompaniesThisMonth,
     },
     companies: summaries,
     recentCompanies: summaries.slice(0, 6),

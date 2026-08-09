@@ -61,6 +61,7 @@ export default async function PlatformDashboardPage() {
     ["Paying companies", data.totals.payingCompanies.toLocaleString("en-GB"), `${data.totals.suspendedCompanies} payment/suspended`],
     ["MRR", money(data.totals.mrr), `${money(data.totals.arr)} ARR`],
     ["Platform users", data.totals.users.toLocaleString("en-GB"), "Across all companies"],
+    ["New this month", data.totals.newCompaniesThisMonth.toLocaleString("en-GB"), `${data.totals.trialConversionRate}% trial-to-paid snapshot`],
     ["Jobs recorded", data.totals.jobs.toLocaleString("en-GB"), "Across the platform"],
   ];
 

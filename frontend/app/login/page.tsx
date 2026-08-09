@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { FormEvent, Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -180,6 +182,21 @@ function LoginForm() {
             {isSubmitting ? "Signing in..." : "Sign in"}
           </button>
         </form>
+
+        <div className="mt-5 flex items-center justify-between gap-4 text-sm">
+          <Link
+            href="/forgot-password"
+            className="font-semibold text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300"
+          >
+            Forgot password?
+          </Link>
+          <Link
+            href="/signup"
+            className="font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+          >
+            Start free trial
+          </Link>
+        </div>
       </div>
     </main>
   );

@@ -3,34 +3,37 @@ import Link from "next/link";
 
 export default function MarketingFooter() {
   return (
-    <footer className="border-t border-emerald-950/10 bg-white/70 dark:border-white/10 dark:bg-slate-950/80">
-      <div className="mx-auto grid max-w-7xl gap-10 px-5 py-12 sm:px-8 md:grid-cols-[1.4fr_1fr_1fr] lg:px-10">
+    <footer className="border-t border-emerald-950/10 bg-emerald-950 text-white dark:border-white/10">
+      <div className="mx-auto grid max-w-7xl gap-10 px-5 py-14 sm:px-8 md:grid-cols-[1.5fr_1fr_1fr] lg:px-10">
         <div className="max-w-md">
           <div className="flex items-center gap-3">
-            <Image src="/icons/icon-192.png" alt="" width={42} height={42} className="rounded-xl" />
-            <div className="text-xl font-black text-slate-950 dark:text-white">AgriCore</div>
+            <Image src="/icons/icon-192.png" alt="" width={44} height={44} className="rounded-xl shadow-lg" />
+            <div>
+              <div className="text-xl font-black">AgriCore</div>
+              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-300">Built for agricultural engineers</div>
+            </div>
           </div>
-          <p className="mt-4 text-sm font-medium leading-6 text-slate-600 dark:text-slate-300">Built around the real workflow of agricultural engineers, workshops and field-service teams.</p>
+          <p className="mt-5 text-sm font-medium leading-6 text-emerald-50/75">Run customers, machines, workshop jobs and field engineers from one platform designed around agricultural service work.</p>
         </div>
         <div>
-          <p className="text-sm font-black uppercase tracking-[0.14em] text-slate-900 dark:text-white">Product</p>
-          <div className="mt-4 grid gap-3 text-sm font-semibold text-slate-600 dark:text-slate-300">
-            <Link href="/features" className="hover:text-emerald-700">Features</Link>
-            <Link href="/pricing" className="hover:text-emerald-700">Pricing</Link>
-            <Link href="/signup" className="hover:text-emerald-700">Start free trial</Link>
-            <Link href="/login" className="hover:text-emerald-700">Sign in</Link>
+          <p className="text-sm font-black uppercase tracking-[0.14em] text-emerald-300">Product</p>
+          <div className="mt-4 grid gap-3 text-sm font-semibold text-emerald-50/75">
+            <Link href="/features" className="hover:text-white">Features</Link>
+            <Link href="/pricing" className="hover:text-white">Pricing</Link>
+            <Link href="/signup" className="hover:text-white">Start free trial</Link>
+            <Link href="/login" className="hover:text-white">Sign in</Link>
           </div>
         </div>
         <div>
-          <p className="text-sm font-black uppercase tracking-[0.14em] text-slate-900 dark:text-white">Company</p>
-          <div className="mt-4 grid gap-3 text-sm font-semibold text-slate-600 dark:text-slate-300">
-            <Link href="/contact" className="hover:text-emerald-700">Contact</Link>
-            <Link href="/privacy" className="hover:text-emerald-700">Privacy</Link>
-            <Link href="/terms" className="hover:text-emerald-700">Terms</Link>
+          <p className="text-sm font-black uppercase tracking-[0.14em] text-emerald-300">Company</p>
+          <div className="mt-4 grid gap-3 text-sm font-semibold text-emerald-50/75">
+            <Link href="/contact" className="hover:text-white">Contact</Link>
+            <Link href="/privacy" className="hover:text-white">Privacy</Link>
+            <Link href="/terms" className="hover:text-white">Terms</Link>
           </div>
         </div>
       </div>
-      <div className="border-t border-emerald-950/10 px-5 py-5 text-center text-xs font-semibold text-slate-500 dark:border-white/10 dark:text-slate-400">© {new Date().getFullYear()} AgriCore. Agricultural service management software.</div>
+      <div className="border-t border-white/10 px-5 py-5 text-center text-xs font-semibold text-emerald-50/60">© {new Date().getFullYear()} AgriCore. Agricultural service management software.</div>
     </footer>
   );
 }

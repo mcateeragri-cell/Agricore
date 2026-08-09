@@ -93,6 +93,7 @@ export default function NavigationMenu({
         "/quotes",
         "/invoices",
         "/stock",
+        "/reports",
       ].includes(item.href)) {
         return false;
       }

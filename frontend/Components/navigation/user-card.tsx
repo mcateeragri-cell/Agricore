@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { supabase } from "@/lib/supabase";
 
 import SidebarIcon from "./sidebar-icon";
@@ -71,10 +73,25 @@ export default function UserCard({
         </div>
       </div>
 
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <Link
+          href="/account"
+          className="flex min-h-10 items-center justify-center rounded-xl border border-white/15 px-2 py-2 text-center text-xs font-semibold text-emerald-50 transition hover:bg-white/10 hover:text-white"
+        >
+          My account
+        </Link>
+        <Link
+          href="/help"
+          className="flex min-h-10 items-center justify-center rounded-xl border border-white/15 px-2 py-2 text-center text-xs font-semibold text-emerald-50 transition hover:bg-white/10 hover:text-white"
+        >
+          Help
+        </Link>
+      </div>
+
       <button
         type="button"
         onClick={handleSignOut}
-        className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/15 px-3 py-2 text-xs font-semibold text-emerald-50 transition hover:bg-white/10 hover:text-white"
+        className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/15 px-3 py-2 text-xs font-semibold text-emerald-50 transition hover:bg-white/10 hover:text-white"
       >
         <SidebarIcon name="logout" className="h-4 w-4" />
         Sign out

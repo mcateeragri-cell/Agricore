@@ -15,6 +15,7 @@ export const mainNavigationItems: NavigationItem[] = [
   { name: "Quotes", href: "/quotes", icon: "quotes" },
   { name: "Invoices", href: "/invoices", icon: "invoices" },
   { name: "Stock", href: "/stock", icon: "stock" },
+  { name: "Reports", href: "/reports", icon: "reports" },
 ];
 
 export const administrationItems: AdministrationItem[] = [
