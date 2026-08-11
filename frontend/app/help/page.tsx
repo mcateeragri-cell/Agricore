@@ -37,6 +37,12 @@ export default async function HelpPage() {
           <Link href="/contact" className="mt-4 inline-flex rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800">Contact AgriCore</Link>
         </section>
       </div>
-    </main>
+    
+      <section className="mx-auto mt-6 max-w-5xl rounded-3xl border border-emerald-200 bg-emerald-50 p-6 dark:border-emerald-900 dark:bg-emerald-950/30">
+        <h2 className="text-xl font-black text-emerald-950 dark:text-emerald-100">New to AgriCore?</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">Replay the short product tour at any time. It introduces the main areas without changing any of your data.</p>
+        <a href="/dashboard?tour=1" className="mt-4 inline-flex rounded-xl bg-emerald-700 px-5 py-3 text-sm font-black text-white hover:bg-emerald-800">Replay guided tour</a>
+      </section>
+</main>
   );
 }

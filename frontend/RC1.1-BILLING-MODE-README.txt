@@ -1,0 +1,54 @@
+AgriCore RC-1.1 — Billing Mode / Internal Company Fix
+
+PURPOSE
+This patch fixes the Billing & Subscription error and introduces explicit billing modes so AgriCore-owned businesses do not need paid subscriptions.
+
+BILLING MODES
+- subscription: normal customer company; 14-day trial + Stripe enforcement
+- internal: platform-owned operating company; permanent full access, no Stripe/trial lockout
+- demo: synthetic demo workspace; full demo access, no Stripe/trial lockout
+
+WHAT IS FIXED
+1. Billing status queries no longer use the fragile nested .single() subscription/plan query.
+2. Billing page renders safely for internal/demo companies.
+3. Internal companies show Lifetime access and £0 subscription charge.
+4. Demo workspaces show Billing exempt.
+5. Stripe checkout/portal/subscription actions are blocked for internal/demo companies.
+6. Billing access enforcement now uses companies.billing_mode.
+7. Newly generated demo workspaces are created with billing_mode='demo'.
+
+REQUIRED SUPABASE MIGRATION
+Run:
+supabase/migrations/20260810_006_billing_modes_internal_demo.sql
+
+VERIFY AFTER MIGRATION
+select id, company_name, slug, billing_mode
+from public.companies
+order by company_name;
+
+Expected:
+- McAteer Agricultural Services... -> internal
+- Glenagri Dairy Services... -> internal
+- demo-* companies -> demo
+- real customer companies -> subscription
+
+INSTALL
+Extract over:
+C:\projects\Agricore\frontend
+
+Then:
+taskkill /F /IM node.exe
+Remove-Item ".next" -Recurse -Force -ErrorAction SilentlyContinue
+npm.cmd run build
+npm.cmd run dev -- --webpack
+
+TEST
+1. McAteer Agricultural Services -> Settings -> Billing & Subscription.
+2. Glenagri Dairy Services -> Settings -> Billing & Subscription.
+3. A demo workspace -> Billing & Subscription.
+4. A normal customer test company -> normal trial/subscription flow.
+5. Confirm internal/demo companies are never locked by billing access.
+6. Confirm Stripe checkout cannot be opened for internal/demo companies.
+
+NOTE
+Existing company_subscriptions rows for internal companies are left in place for history but are ignored by billing enforcement.

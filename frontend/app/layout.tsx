@@ -19,13 +19,31 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://getagricore.com"),
+
   title: {
     default: "AgriCore",
     template: "%s | AgriCore",
   },
 
   description:
-    "Agricultural engineering CRM for customers, machines, jobs, quotes and invoices.",
+    "Agricultural engineering management software for customers, machines, jobs, technicians, stock, service programmes, quotes and invoices.",
+
+  openGraph: {
+    type: "website",
+    siteName: "AgriCore",
+    title: "AgriCore | Agricultural engineering management software",
+    description: "Run customers, machines, jobs, technicians, stock, service programmes, quotes and invoices from one agricultural engineering platform.",
+    url: "https://getagricore.com",
+    images: [{ url: "/icons/icon-512.png", width: 512, height: 512, alt: "AgriCore" }],
+  },
+
+  twitter: {
+    card: "summary",
+    title: "AgriCore",
+    description: "Agricultural engineering management software built for service businesses around machinery.",
+    images: ["/icons/icon-512.png"],
+  },
 
   applicationName: "AgriCore",
   manifest: "/manifest.webmanifest",

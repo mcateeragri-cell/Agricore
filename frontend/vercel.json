@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/communications/trial-reminders",
+      "schedule": "0 8 * * *"
+    }
+  ]
+}

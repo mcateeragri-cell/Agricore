@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { loadActiveCompany } from "@/lib/company-context-client";
 import Card from "../../Components/ui/Card";
+import StockProNav from "../../Components/stock/StockProNav";
 
 type StockItem = {
   id: string;
@@ -263,14 +264,8 @@ export default function StockPage() {
           </p>
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Link
-            href="/stock/movements"
-            className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-          >
-            Stock Movements
-          </Link>
-
+        <div className="flex flex-col items-start gap-3 sm:items-end">
+          <StockProNav />
           <Link
             href="/stock/new"
             className="inline-flex items-center justify-center rounded-xl bg-[#103d2e] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0c3024]"

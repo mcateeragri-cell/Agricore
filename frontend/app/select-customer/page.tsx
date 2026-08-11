@@ -120,11 +120,11 @@ function SelectCompanyContent() {
             "",
         );
 
+        const demoIdentity = getDemoPresentationIdentity(result.activeCompany ?? null);
         setFullName(
-          result.user?.fullName ||
-            result.user?.email?.split(
-              "@",
-            )[0] ||
+          demoIdentity?.name ||
+            result.user?.fullName ||
+            result.user?.email?.split("@")[0] ||
             "AgriCore User",
         );
 

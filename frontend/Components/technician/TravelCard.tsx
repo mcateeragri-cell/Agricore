@@ -1,5 +1,7 @@
 "use client";
 
+import { offlineFetch } from "@/lib/offline/technician-offline";
+
 import {
   useEffect,
   useMemo,
@@ -63,7 +65,7 @@ export default function TravelCard({
   const [message, setMessage] = useState("");
 
   async function load() {
-    const response = await fetch(
+    const response = await offlineFetch(
       `/api/technician/jobs/${jobId}/travel`,
       { cache: "no-store" },
     );
@@ -213,7 +215,7 @@ export default function TravelCard({
     setMessage("");
 
     try {
-      const response = await fetch(
+      const response = await offlineFetch(
         `/api/technician/jobs/${jobId}/travel`,
         {
           method: "POST",

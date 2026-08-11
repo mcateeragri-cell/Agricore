@@ -2,6 +2,7 @@ import { requirePermission } from "@/lib/auth/require-permission";
 import CompanyBrandingForm from "@/Components/settings/company-branding-form";
 import FieldOperationsSettingsForm from "@/Components/settings/field-operations-settings";
 import PaymentSettingsForm from "@/Components/settings/payment-settings-form";
+import RegionalSettingsForm from "@/Components/settings/regional-settings-form";
 
 export default async function CompanySettingsPage() {
   await requirePermission(["settings.manage"]);
@@ -25,6 +26,7 @@ export default async function CompanySettingsPage() {
         </header>
 
         <CompanyBrandingForm />
+        <RegionalSettingsForm />
         <PaymentSettingsForm />
         <FieldOperationsSettingsForm />
       </div>

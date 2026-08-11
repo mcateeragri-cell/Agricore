@@ -11,6 +11,7 @@ import {
 } from "react";
 
 import OfflineStatus from "@/Components/offline/offline-status";
+import SyncCentre from "@/Components/offline/sync-centre";
 import { offlineFetch } from "@/lib/offline/technician-offline";
 
 import CompletionWizard, {
@@ -21,6 +22,8 @@ import CompletionWizard, {
 import CustomerCard from "@/Components/technician/CustomerCard";
 import JobHeader from "@/Components/technician/JobHeader";
 import JobWorkflow from "@/Components/technician/JobWorkFlow";
+import MachineQuickView from "@/Components/technician/MachineQuickView";
+import RouteActions from "@/Components/technician/RouteActions";
 import LabourCard from "@/Components/technician/LabourCard";
 import PartsCard from "@/Components/technician/PartsCard";
 import PhotosCard from "@/Components/technician/PhotosCard";
@@ -1178,6 +1181,12 @@ export default function TechnicianJobPage() {
           </p>
         </section>
 
+
+        <MachineQuickView machine={jobData.machine} />
+
+        <RouteActions customer={jobData.customer} />
+
+        <SyncCentre />
 
         {jobData.job.isServiceJob ? (
           <ServiceChecklistCard

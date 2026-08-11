@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { getDemoPresentationIdentity } from "@/lib/demo-presentation";
 import {
   useCallback,
   useEffect,
@@ -329,6 +330,10 @@ export default function Sidebar() {
     window.location.href = "/login";
   }
 
+  const demoIdentity = getDemoPresentationIdentity(userState.activeCompany);
+  const displayName = demoIdentity?.name ?? userState.fullName;
+  const displayEmail = demoIdentity?.email ?? userState.email;
+
   return (
     <aside className="hidden min-h-screen w-64 shrink-0 flex-col bg-[#103d2e] text-white lg:flex">
       <div className="border-b border-white/10 px-4 py-4">
@@ -453,12 +458,12 @@ export default function Sidebar() {
             <>
               <div className="flex items-start gap-3">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white font-bold text-[#103d2e]">
-                  {getInitials(userState.fullName)}
+                  {getInitials(displayName)}
                 </div>
 
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold">
-                    {userState.fullName ||
+                    {displayName ||
                       "AgriCore User"}
                   </p>
 
@@ -468,9 +473,9 @@ export default function Sidebar() {
                       : "No role assigned"}
                   </p>
 
-                  {userState.email && (
+                  {displayEmail && (
                     <p className="mt-1 truncate text-[11px] text-emerald-100/70">
-                      {userState.email}
+                      {displayEmail}
                     </p>
                   )}
                 </div>

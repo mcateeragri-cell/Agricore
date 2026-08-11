@@ -5,6 +5,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 import SidebarIcon from "./sidebar-icon";
+import { getDemoPresentationIdentity } from "@/lib/demo-presentation";
 import {
   platformRoleLabels,
   roleLabels,
@@ -35,24 +36,29 @@ export default function UserCard({
     return <UserCardSkeleton />;
   }
 
-  const companyRoleLabel = userState.role
-    ? roleLabels[userState.role]
-    : "No company role assigned";
+  const demoIdentity = getDemoPresentationIdentity(userState.activeCompany);
 
-  const platformRoleLabel = userState.platformRole
+  const companyRoleLabel = demoIdentity?.title ?? (userState.role
+    ? roleLabels[userState.role]
+    : "No company role assigned");
+
+  const displayName = demoIdentity?.name ?? userState.fullName;
+  const displayEmail = demoIdentity?.email ?? userState.email;
+
+  const platformRoleLabel = demoIdentity ? null : (userState.platformRole
     ? platformRoleLabels[userState.platformRole]
-    : null;
+    : null);
 
   return (
     <>
       <div className="flex items-start gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white font-bold text-[#103d2e]">
-          {getInitials(userState.fullName)}
+          {getInitials(displayName)}
         </div>
 
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-bold">
-            {userState.fullName || "AgriCore User"}
+            {displayName || "AgriCore User"}
           </p>
 
           <p className="mt-0.5 truncate text-xs text-emerald-100">
@@ -65,21 +71,27 @@ export default function UserCard({
             </p>
           )}
 
-          {userState.email && (
+          {displayEmail && (
             <p className="mt-1 truncate text-[11px] text-emerald-100/70">
-              {userState.email}
+              {displayEmail}
             </p>
           )}
         </div>
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2">
-        <Link
-          href="/account"
-          className="flex min-h-10 items-center justify-center rounded-xl border border-white/15 px-2 py-2 text-center text-xs font-semibold text-emerald-50 transition hover:bg-white/10 hover:text-white"
-        >
-          My account
-        </Link>
+        {demoIdentity ? (
+          <div className="flex min-h-10 items-center justify-center rounded-xl border border-white/15 px-2 py-2 text-center text-xs font-semibold text-emerald-50">
+            Demo workspace
+          </div>
+        ) : (
+          <Link
+            href="/account"
+            className="flex min-h-10 items-center justify-center rounded-xl border border-white/15 px-2 py-2 text-center text-xs font-semibold text-emerald-50 transition hover:bg-white/10 hover:text-white"
+          >
+            My account
+          </Link>
+        )}
         <Link
           href="/help"
           className="flex min-h-10 items-center justify-center rounded-xl border border-white/15 px-2 py-2 text-center text-xs font-semibold text-emerald-50 transition hover:bg-white/10 hover:text-white"

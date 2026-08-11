@@ -1,0 +1,15 @@
+AgriCore Reports Centre 2.1
+
+Changes
+- Every KPI card is now clickable.
+- Clicking a KPI opens an expanded modal with a large figure and supporting breakdown.
+- CSV export now opens a selector where the active company can choose Jobs, Invoices, Labour, Stock, any combination, or Select all.
+- Export API accepts the selected report sections while retaining company_id scoping and the chosen date range.
+- No database migration required.
+
+Test
+1. Open /reports.
+2. Click each of the eight KPI cards and confirm its expanded detail opens and closes.
+3. Click Export CSV and test one section, multiple sections, and Select all.
+4. Confirm exports contain only the active company's data.
+5. Test 30 days, 90 days, 12 months and All time filters.

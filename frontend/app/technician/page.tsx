@@ -9,6 +9,8 @@ import {
 } from "react";
 
 import OfflineStatus from "@/Components/offline/offline-status";
+import SyncCentre from "@/Components/offline/sync-centre";
+import TechnicianAlerts from "@/Components/technician/TechnicianAlerts";
 import { offlineFetch } from "@/lib/offline/technician-offline";
 
 import type {
@@ -143,6 +145,15 @@ export default function TechnicianDashboardPage() {
           </div>
         ) : null}
 
+        {!loading && jobs.length > 0 ? (
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <TechnicianStatusCard activeJob={activeJob ?? null} jobs={jobs} />
+            <SyncCentre />
+          </div>
+        ) : null}
+
+        {!loading ? <TechnicianAlerts jobs={jobs} /> : null}
+
         {!loading && jobs.length === 0 ? (
           <div className="mt-4 rounded-3xl border border-dashed border-slate-300 bg-white/80 p-10 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
             <h2 className="text-xl font-black text-slate-950 dark:text-white">
@@ -180,6 +191,35 @@ export default function TechnicianDashboardPage() {
         ) : null}
       </div>
     </main>
+  );
+}
+
+function TechnicianStatusCard({
+  activeJob,
+  jobs,
+}: {
+  activeJob: TechnicianDashboardJob | null;
+  jobs: TechnicianDashboardJob[];
+}) {
+  const status = activeJob
+    ? normalise(activeJob.assignmentStatus) === "travelling"
+      ? "Travelling"
+      : normalise(activeJob.assignmentStatus) === "in_progress"
+        ? "On site · working"
+        : "On site"
+    : jobs.some((job) => !["completed", "closed", "cancelled"].includes(normalise(job.assignmentStatus || job.status)))
+      ? "Available · jobs scheduled"
+      : "Available";
+
+  return (
+    <section className="rounded-3xl border border-white/50 bg-white/90 p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
+      <p className="text-xs font-black uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300">Technician status</p>
+      <div className="mt-2 flex items-center gap-3">
+        <span className={`h-3 w-3 rounded-full ${activeJob ? "bg-emerald-500" : "bg-blue-500"}`} />
+        <p className="text-lg font-black text-slate-950 dark:text-white">{status}</p>
+      </div>
+      <p className="mt-2 text-xs font-semibold text-slate-500 dark:text-slate-400">Status follows your live job workflow automatically.</p>
+    </section>
   );
 }
 

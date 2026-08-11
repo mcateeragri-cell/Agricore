@@ -1,0 +1,43 @@
+AgriCore RC-2.1 — Premium Setup Assistant
+
+This is a small overlay for the current RC-2 build.
+
+WHAT CHANGED
+- Renamed the onboarding experience in the UI to AgriCore Setup Assistant
+- Removed the personal first-name greeting from the welcome screen
+- Added a clear 3–5 minute setup expectation
+- Added Step X of 6 plus percentage progress
+- Improved autosave/resume reassurance
+- Reworked welcome cards into Business Setup / Import or Explore / Start Working
+- Added a stronger "Let's Get Started →" CTA
+- Improved hover/transition polish
+- Renamed steps to more natural customer-facing labels
+- Refined dashboard setup card wording to match Setup Assistant
+- "Hide for now" is now "Remind me later"
+- No Launch Readiness feature was added
+
+NO SQL MIGRATION REQUIRED.
+
+INSTALL
+Extract over:
+C:\projects\Agricore\frontend
+
+Then run:
+taskkill /F /IM node.exe
+Remove-Item ".next" -Recurse -Force -ErrorAction SilentlyContinue
+npm.cmd run build
+npm.cmd run dev -- --webpack
+
+TEST
+1. Open a subscription test company at /onboarding.
+2. Confirm welcome says "Welcome to AgriCore" rather than a personal name.
+3. Confirm company name is still shown.
+4. Confirm Step 1 of 6 and progress percentage are visible.
+5. Click Let's Get Started and complete the flow.
+6. Confirm autosave/resume still works.
+7. Check dashboard Setup Assistant card on an incomplete company.
+8. Complete onboarding and confirm the setup card disappears as before.
+
+VALIDATION
+The two modified TSX files were syntax-checked successfully.
+Run your normal local production build for final project-level validation.

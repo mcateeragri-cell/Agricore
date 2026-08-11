@@ -39,8 +39,8 @@ export default function QuickActions({
         }
       : !showTravelControls || arrived || working
         ? {
-            label: hasRunningLabour ? "Stop labour" : "Start labour",
-            detail: hasRunningLabour ? elapsedTime : "Start the work timer",
+            label: hasRunningLabour ? "Pause labour" : working ? "Resume labour" : "Start labour",
+            detail: hasRunningLabour ? elapsedTime : working ? "Continue recording labour" : "Start the work timer",
             onClick: onToggleLabour,
           }
         : {
@@ -50,7 +50,7 @@ export default function QuickActions({
           };
 
   return (
-    <section className="mt-4 rounded-3xl border border-white/50 bg-white/90 p-5 shadow-lg backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/85">
+    <section className="sticky bottom-3 z-30 mt-4 rounded-3xl border border-white/60 bg-white/95 p-4 shadow-2xl backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/95">
       <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">
         Next action
       </p>
@@ -76,7 +76,7 @@ export default function QuickActions({
 
       <div className="mt-3 grid grid-cols-2 gap-3">
         <SecondaryAction
-          label={hasRunningLabour ? "Labour running" : "Labour"}
+          label={hasRunningLabour ? "Pause labour" : working ? "Resume labour" : "Labour"}
           detail={hasRunningLabour ? elapsedTime : "Timer controls"}
           disabled={completed || busy}
           onClick={onToggleLabour}

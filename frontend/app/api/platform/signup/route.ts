@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { sendCompanyEmail } from "@/lib/communications/email";
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -359,6 +360,16 @@ export async function POST(
           primary_colour: "#103D2E",
           secondary_colour: "#E8EFEA",
           payment_terms_days: 7,
+          country_code: "GB",
+          currency_code: "GBP",
+          locale: "en-GB",
+          timezone: "Europe/London",
+          tax_name: "VAT",
+          default_tax_rate: 20,
+          date_format: "DD/MM/YYYY",
+          time_format: "24",
+          week_start: "monday",
+          measurement_system: "metric",
           updated_at: now,
         }),
 
@@ -497,6 +508,24 @@ export async function POST(
       throw new Error(
         permissionsError.message,
       );
+    }
+
+    try {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || new URL(request.url).origin;
+      await sendCompanyEmail({
+        companyId: company.id,
+        to: email,
+        recipientName: fullName,
+        templateKey: "welcome",
+        variables: {
+          first_name: fullName.split(/\s+/)[0] || "there",
+          company_name: companyName,
+          action_url: `${appUrl}/login`,
+        },
+        idempotencyKey: `welcome:${company.id}:${createdUserId}`,
+      });
+    } catch (emailError) {
+      console.error("Unable to send signup welcome email:", emailError);
     }
 
     return NextResponse.json(

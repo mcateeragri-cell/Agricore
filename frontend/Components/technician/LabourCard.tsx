@@ -98,7 +98,7 @@ export default function LabourCard({
               </div>
             ) : (
               <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                Start the timer when beginning work on the machine.
+                Start or resume the timer when working on the machine. Pausing closes the current labour entry so the recorded time stays accurate.
               </p>
             )}
           </div>
@@ -113,7 +113,7 @@ export default function LabourCard({
                 : "bg-[#103d2e] hover:bg-[#0b2f23]"
             }`}
           >
-            {runningLabour ? "Stop labour" : "Start labour"}
+            {runningLabour ? "Pause labour" : completedEntries.length > 0 ? "Resume labour" : "Start labour"}
           </button>
         </div>
       </div>

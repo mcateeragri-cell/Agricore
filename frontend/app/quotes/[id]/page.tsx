@@ -184,6 +184,7 @@ export default function QuoteDetailPage() {
   const [machine, setMachine] = useState<Machine | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingStatus, setSavingStatus] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -297,6 +298,29 @@ export default function QuoteDetailPage() {
 
     return groups;
   }, [items]);
+
+  const sendQuoteEmail = async () => {
+    if (!quote) return;
+    const defaultEmail = customer?.email ?? "";
+    const recipient = window.prompt("Send quotation to:", defaultEmail);
+    if (!recipient) return;
+    setSendingEmail(true);
+    setErrorMessage("");
+    try {
+      const response = await fetch(`/api/quotes/${quote.id}/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recipient }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Unable to email quotation.");
+      await loadQuote();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Unable to email quotation.");
+    } finally {
+      setSendingEmail(false);
+    }
+  };
 
   const updateStatus = async (status: QuoteStatus) => {
     if (!quote) return;
@@ -421,6 +445,14 @@ export default function QuoteDetailPage() {
         </div>
 
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={sendingEmail}
+            onClick={() => void sendQuoteEmail()}
+            className="rounded-xl bg-[#103d2e] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0c3024] disabled:opacity-50"
+          >
+            {sendingEmail ? "Sending…" : "Email Quote"}
+          </button>
           {quote.status === "draft" && (
             <button
               type="button"

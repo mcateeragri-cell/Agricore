@@ -24,6 +24,16 @@ const FALLBACK_SETTINGS: CompanySettings = {
   account_name: null,
   sort_code: null,
   account_number: null,
+  country_code: "GB",
+  currency_code: "GBP",
+  locale: "en-GB",
+  timezone: "Europe/London",
+  tax_name: "VAT",
+  default_tax_rate: 20,
+  date_format: "DD/MM/YYYY",
+  time_format: "24",
+  week_start: "monday",
+  measurement_system: "metric",
   updated_at: new Date(0).toISOString(),
 };
 

@@ -530,3 +530,16 @@ export function initialiseOfflineSync(
     }
   };
 }
+
+export async function getOfflineQueueItems(): Promise<OfflineQueueItem[]> {
+  if (!isBrowser()) return [];
+  return (await storeGetAll<OfflineQueueItem>(QUEUE_STORE)).sort((a, b) =>
+    a.createdAt.localeCompare(b.createdAt),
+  );
+}
+
+export async function discardOfflineQueueItem(id: string) {
+  if (!isBrowser()) return;
+  await storeDelete(QUEUE_STORE, id);
+  await emitSnapshot();
+}

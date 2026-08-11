@@ -12,11 +12,13 @@ import {
 } from "react";
 import { supabase } from "@/lib/supabase";
 import { loadActiveCompany } from "@/lib/company-context-client";
+import { useNavigationUser } from "@/Components/navigation/use-navigation-user";
+import { getDemoPresentationIdentity, getDemoTeam, isDemoCompany } from "@/lib/demo-presentation";
 import Card from "../../../Components/ui/Card";
 
 const isAdmin = true;
 
-const CURRENT_ENGINEER = "James McAteer";
+const DEFAULT_ENGINEER = "James McAteer";
 const DEFAULT_HOURLY_RATE = 65;
 
 type RelatedCustomer = {
@@ -147,7 +149,7 @@ const emptyPartForm: PartFormState = {
 
 const emptyLabourForm: LabourFormState = {
   id: null,
-  engineerName: CURRENT_ENGINEER,
+  engineerName: DEFAULT_ENGINEER,
   labourDate: getTodayDate(),
   startTime: "",
   finishTime: "",
@@ -371,6 +373,13 @@ function getPriorityClasses(priority: string) {
 function JobDetailPageContent() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const { userState } = useNavigationUser();
+  const demoMode = isDemoCompany(userState.activeCompany);
+  const demoIdentity = getDemoPresentationIdentity(userState.activeCompany);
+  const currentEngineer = demoIdentity?.name ?? DEFAULT_ENGINEER;
+  const engineerOptions = demoMode
+    ? getDemoTeam(userState.activeCompany).map((member) => member.name)
+    : ["James McAteer", "Aiden Coady"];
   const jobId = params.id;
 
   const [job, setJob] = useState<JobRecord | null>(null);
@@ -420,7 +429,7 @@ function JobDetailPageContent() {
     labourEntries.find(
       (entry) =>
         entry.entry_status === "running" &&
-        entry.engineer_name === CURRENT_ENGINEER
+        entry.engineer_name === currentEngineer
     ) ?? null;
 
   const totalLabourHours = useMemo(
@@ -816,7 +825,7 @@ const totalPartsProfit =
       .insert({
         company_id: activeCompanyId,
         job_id: jobId,
-        engineer_name: CURRENT_ENGINEER,
+        engineer_name: currentEngineer,
         labour_date: getTodayDate(),
         start_time: now.toISOString(),
         finish_time: null,
@@ -928,7 +937,7 @@ const totalPartsProfit =
     if (savingLabour) return;
 
     setLabourModalOpen(false);
-    setLabourForm(emptyLabourForm);
+    setLabourForm({ ...emptyLabourForm, engineerName: currentEngineer });
   }
 
   async function handleSaveLabour(
@@ -1054,7 +1063,7 @@ const totalPartsProfit =
           manually_adjusted: true,
           adjustment_reason:
             labourForm.adjustmentReason.trim(),
-          adjusted_by: CURRENT_ENGINEER,
+          adjusted_by: currentEngineer,
           adjusted_at: new Date().toISOString(),
         })
         .eq("id", labourForm.id)
@@ -1089,7 +1098,7 @@ const totalPartsProfit =
 
     setSavingLabour(false);
     setLabourModalOpen(false);
-    setLabourForm(emptyLabourForm);
+    setLabourForm({ ...emptyLabourForm, engineerName: currentEngineer });
 
     await loadPageData(false);
   }
@@ -1627,12 +1636,11 @@ async function handleCreateInvoice() {
                       className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-slate-900 dark:text-slate-100 outline-none transition focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15"
                     >
                       <option value="">Unassigned</option>
-                      <option value="James McAteer">
-                        James McAteer
-                      </option>
-                      <option value="Aiden Coady">
-                        Aiden Coady
-                      </option>
+                      {engineerOptions.map((name) => (
+                        <option key={name} value={name}>
+                          {name}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
@@ -2548,12 +2556,11 @@ async function handleCreateInvoice() {
                       disabled={!isAdmin}
                       className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15 disabled:bg-gray-100"
                     >
-                      <option value="James McAteer">
-                        James McAteer
-                      </option>
-                      <option value="Aiden Coady">
-                        Aiden Coady
-                      </option>
+                      {engineerOptions.map((name) => (
+                        <option key={name} value={name}>
+                          {name}
+                        </option>
+                      ))}
                     </select>
                   </div>
 

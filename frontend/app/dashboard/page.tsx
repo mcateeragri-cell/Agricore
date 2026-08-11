@@ -1,88 +1,97 @@
 "use client";
 
 import DashboardHeader from "../../Components/Dashboard/DashboardHeader";
+import ExecutiveSummary from "../../Components/Dashboard/ExecutiveSummary";
 import QuickActions from "../../Components/Dashboard/QuickActions";
+import RecentActivity from "../../Components/Dashboard/RecentActivity";
 import RecentJobs from "../../Components/Dashboard/RecentJobs";
+import RevenueTrend from "../../Components/Dashboard/RevenueTrend";
 import Schedule from "../../Components/Dashboard/Schedule";
 import ServiceDueSummary from "../../Components/Dashboard/ServiceDueSummary";
-import SummaryCards from "../../Components/Dashboard/SummaryCards";
+import TeamStatus from "../../Components/Dashboard/TeamStatus";
+import SubscriptionBanner from "../../Components/Dashboard/SubscriptionBanner";
+import SetupProgressCard from "@/Components/onboarding/SetupProgressCard";
+import GuidedTour from "@/Components/onboarding/GuidedTour";
 import {
   canViewFinancialInformation,
   isFieldRole,
 } from "../../Components/navigation/navigation-types";
 import { useNavigationUser } from "../../Components/navigation/use-navigation-user";
 import TechnicianDashboardPage from "../technician/page";
+import { getDemoPresentationIdentity } from "@/lib/demo-presentation";
 
 function greetingForCurrentTime() {
   const hour = new Date().getHours();
-
-  if (hour < 12) {
-    return "Good morning";
-  }
-
-  if (hour < 18) {
-    return "Good afternoon";
-  }
-
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
   return "Good evening";
 }
 
 export default function Home() {
   const { userState, loading } = useNavigationUser();
-
-  const firstName =
-    userState.fullName.trim().split(/\s+/)[0] || "there";
-
-  const canViewMoney =
-    canViewFinancialInformation(userState);
+  const demoIdentity = getDemoPresentationIdentity(userState.activeCompany);
+  const displayName = demoIdentity?.name ?? userState.fullName;
+  const firstName = displayName.trim().split(/\s+/)[0] || "there";
+  const canViewMoney = canViewFinancialInformation(userState);
 
   if (!loading && isFieldRole(userState.role)) {
     return <TechnicianDashboardPage />;
   }
 
   return (
-    <div className="min-h-dvh w-full min-w-0">
+    <div className="min-h-dvh w-full min-w-0 bg-slate-50/60 dark:bg-slate-950">
       <DashboardHeader />
+      <GuidedTour />
 
-      <main className="w-full min-w-0 p-4 sm:p-6 lg:p-8">
-        <section className="mb-6 sm:mb-8">
-          <p className="text-sm font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-            {canViewMoney
-              ? "Business overview"
-              : "My work overview"}
-          </p>
+      <main className="mx-auto w-full max-w-[1600px] min-w-0 p-4 sm:p-6 lg:p-8">
+        <section className="mb-6 flex flex-col justify-between gap-4 sm:mb-8 lg:flex-row lg:items-end">
+          <div>
+            <p className="text-sm font-black uppercase tracking-[0.12em] text-emerald-700 dark:text-emerald-400">
+              {canViewMoney ? "Executive overview" : "My work overview"}
+            </p>
+            <h1 className="mt-1 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl dark:text-white">
+              {loading ? "Welcome back" : `${greetingForCurrentTime()}, ${firstName}`}
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-slate-600 sm:text-base dark:text-slate-400">
+              {canViewMoney
+                ? "Live company performance, today’s workload and the items that need your attention."
+                : "Your current jobs, schedule and service workload in one place."}
+            </p>
+          </div>
 
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-slate-100">
-            {loading
-              ? "Welcome back"
-              : `${greetingForCurrentTime()}, ${firstName}`}
-          </h1>
-
-          <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-slate-700 sm:text-base dark:text-slate-400">
-            {canViewMoney
-              ? "Here is what is happening across the business."
-              : "Here are your current jobs and upcoming schedule."}
-          </p>
+          {userState.activeCompany?.name ? (
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+              <p className="text-xs font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">Active company</p>
+              <p className="mt-0.5 text-sm font-black text-emerald-950 dark:text-emerald-100">{userState.activeCompany.name}</p>
+            </div>
+          ) : null}
         </section>
 
-        <SummaryCards
-          showFinancialCards={canViewMoney}
-        />
+        {userState.permissions.includes("settings.manage") || userState.role === "company_admin" || userState.role === "administrator" ? <SubscriptionBanner /> : null}
+
+        <SetupProgressCard />
+
+        <ExecutiveSummary showFinancialCards={canViewMoney} />
+
+        {canViewMoney ? (
+          <section className="mt-6 grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.75fr)]">
+            <RevenueTrend />
+            <TeamStatus />
+          </section>
+        ) : (
+          <section className="mt-6"><TeamStatus /></section>
+        )}
+
+        <section className="mt-6 grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(340px,0.85fr)]">
+          <RecentJobs />
+          <RecentActivity />
+        </section>
 
         <ServiceDueSummary />
 
-        <section className="mt-6 grid min-w-0 gap-6 xl:mt-8 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
-          <div className="min-w-0">
-            <RecentJobs />
-          </div>
-
-          <div className="min-w-0 space-y-6">
-            <Schedule />
-
-            <QuickActions
-              showFinancialActions={canViewMoney}
-            />
-          </div>
+        <section className="mt-6 grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(340px,0.85fr)]">
+          <Schedule />
+          <QuickActions showFinancialActions={canViewMoney} />
         </section>
       </main>
     </div>

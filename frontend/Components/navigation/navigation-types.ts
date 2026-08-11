@@ -32,6 +32,7 @@ export type IconName =
   | "diagnostics"
   | "settings"
   | "billing"
+  | "communications"
   | "platform"
   | "chevron"
   | "logout"

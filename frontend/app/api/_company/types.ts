@@ -21,6 +21,16 @@ export type CompanySettings = {
   account_name: string | null;
   sort_code: string | null;
   account_number: string | null;
+  country_code: string;
+  currency_code: string;
+  locale: string;
+  timezone: string;
+  tax_name: string;
+  default_tax_rate: number;
+  date_format: string;
+  time_format: "12" | "24";
+  week_start: "monday" | "sunday" | "saturday";
+  measurement_system: "metric" | "imperial";
   updated_at: string;
 };
 

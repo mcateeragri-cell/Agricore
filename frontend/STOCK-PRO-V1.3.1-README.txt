@@ -1,0 +1,39 @@
+AgriCore Stock Pro / Purchasing & Suppliers
+===========================================
+
+Added in this release:
+- Stock Pro sub-navigation (Inventory, Movements, Purchase Orders, Suppliers)
+- Stock movement audit page at /stock/movements
+- Manual stock adjustments with audit entries
+- Supplier directory at /stock/suppliers
+- Purchase order register at /stock/purchase-orders
+- New purchase order workflow at /stock/purchase-orders/new
+- Purchase order detail/receiving workflow
+- Receiving linked PO lines increases stock quantity and records stock movements
+- Existing technician job parts now have the stock_movements table expected by the API
+- All new records are company-scoped and protected by company-membership RLS policies
+
+IMPORTANT: SQL migration required
+---------------------------------
+Run this migration in Supabase before testing the new Stock Pro pages:
+  supabase/migrations/20260809_stock_pro_purchasing.sql
+
+Local test sequence
+-------------------
+1. Run the migration in Supabase.
+2. npm.cmd run build
+3. npm.cmd run dev -- --webpack
+4. Open /stock
+5. Create a supplier.
+6. Create a purchase order linked to stock items.
+7. Open the PO and receive a partial or full delivery.
+8. Confirm inventory quantity increases.
+9. Open /stock/movements and confirm the receipt is logged.
+10. Add/remove a manual adjustment and confirm quantity/movement history changes.
+11. Switch companies and verify suppliers, POs and movements are isolated.
+
+Notes
+-----
+- Purchase-order receiving requires each received line to be linked to a stock item.
+- A received unit cost updates the linked stock item's current unit cost.
+- No external packages were added.

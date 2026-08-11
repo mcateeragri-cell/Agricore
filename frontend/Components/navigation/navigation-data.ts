@@ -66,6 +66,12 @@ export const administrationItems: AdministrationItem[] = [
     icon: "billing",
     permissions: ["settings.manage"],
   },
+  {
+    name: "Communications",
+    href: "/administration/communications",
+    icon: "communications",
+    permissions: ["settings.manage"],
+  },
 ];
 
 export const mobilePrimaryItems: NavigationItem[] = [

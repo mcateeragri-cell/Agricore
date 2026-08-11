@@ -12,6 +12,8 @@ import { supabase } from "@/lib/supabase";
 import Button from "../../../Components/ui/Button";
 import Card from "../../../Components/ui/Card";
 import { useNavigationUser } from "../../../Components/navigation/use-navigation-user";
+import { canViewFinancialInformation } from "../../../Components/navigation/navigation-types";
+import CustomerIntelligencePanel from "./CustomerIntelligencePanel";
 
 type Customer = {
   id: string;
@@ -77,6 +79,9 @@ export default function CustomerProfilePage() {
 
   const canEditCustomer =
     userState.permissions.includes("customers.edit");
+
+  const canViewFinancials =
+    canViewFinancialInformation(userState);
 
   const [customer, setCustomer] =
     useState<Customer | null>(null);
@@ -581,43 +586,32 @@ export default function CustomerProfilePage() {
         </Card>
 
         <Card className="p-6">
-          <h2 className="text-lg font-bold">
-            Customer summary
-          </h2>
+          <h2 className="text-lg font-bold">Relationship</h2>
 
           <div className="mt-5 space-y-4">
-            <div className="rounded-xl bg-slate-50 p-4">
-              <p className="text-sm text-slate-500">
-                Machines
-              </p>
-
-              <p className="mt-1 text-2xl font-bold">
-                {machines.length}
-              </p>
+            <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-900">
+              <p className="text-sm text-slate-500">Customer type</p>
+              <p className="mt-1 text-lg font-bold">{customer.customerType}</p>
             </div>
 
-            <div className="rounded-xl bg-slate-50 p-4">
-              <p className="text-sm text-slate-500">
-                Open jobs
-              </p>
-
-              <p className="mt-1 text-2xl font-bold">
-                0
-              </p>
+            <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-900">
+              <p className="text-sm text-slate-500">Registered machines</p>
+              <p className="mt-1 text-2xl font-bold">{machines.length}</p>
             </div>
 
-            <div className="rounded-xl bg-slate-50 p-4">
-              <p className="text-sm text-slate-500">
-                Outstanding balance
-              </p>
-
-              <p className="mt-1 text-2xl font-bold">
-                £0.00
-              </p>
+            <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-900">
+              <p className="text-sm text-slate-500">Location</p>
+              <p className="mt-1 font-bold">{customer.postcode || "Not provided"}</p>
             </div>
           </div>
         </Card>
       </section>
+
+      <CustomerIntelligencePanel
+        companyId={companyId}
+        customerId={customerId}
+        canViewFinancials={canViewFinancials}
+      />
 
       <Card className="overflow-hidden">
         <div className="flex flex-col justify-between gap-4 border-b border-slate-200 p-6 sm:flex-row sm:items-center">
@@ -742,44 +736,12 @@ export default function CustomerProfilePage() {
         )}
       </Card>
 
-      <section className="grid gap-6 lg:grid-cols-2">
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold">
-              Open jobs
-            </h2>
-
-            <button
-              type="button"
-              className="text-sm font-semibold text-[#176b4d] hover:underline"
-            >
-              + Create job
-            </button>
-          </div>
-
-          <div className="mt-6 rounded-xl border border-dashed border-slate-300 p-8 text-center">
-            <p className="font-semibold text-slate-700">
-              No open jobs
-            </p>
-
-            <p className="mt-1 text-sm text-slate-500">
-              New job cards for this customer will appear
-              here.
-            </p>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <h2 className="text-lg font-bold">
-            Notes
-          </h2>
-
-          <p className="mt-4 text-sm leading-6 text-slate-600">
-            {customer.notes ||
-              "No customer notes have been added."}
-          </p>
-        </Card>
-      </section>
+      <Card className="p-6">
+        <h2 className="text-lg font-bold">Customer notes</h2>
+        <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-600 dark:text-slate-400">
+          {customer.notes || "No customer notes have been added."}
+        </p>
+      </Card>
 
 
       {showCustomerForm && customer && (

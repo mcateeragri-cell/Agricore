@@ -9,6 +9,11 @@ const MARKETING_PATH_PREFIXES = [
   "/features",
   "/pricing",
   "/contact",
+  "/demo",
+  "/about",
+  "/security",
+  "/blog",
+  "/cookies",
   "/privacy",
   "/terms",
 ];

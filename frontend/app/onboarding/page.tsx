@@ -12,7 +12,7 @@ export default async function OnboardingPage() {
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-700 font-black text-white shadow-lg">AC</div>
           <div><p className="text-xl font-black text-slate-950 dark:text-white">AgriCore</p><p className="text-sm text-slate-600 dark:text-slate-300">Company setup</p></div>
         </div>
-        <OnboardingWizard firstName={firstName} companyName={user.companyName} />
+        <OnboardingWizard firstName={firstName} companyName={user.companyName} companyId={user.companyId} />
       </div>
     </main>
   );

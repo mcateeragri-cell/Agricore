@@ -4,7 +4,7 @@ import Link from "next/link";
 export default function MarketingFooter() {
   return (
     <footer className="border-t border-emerald-950/10 bg-emerald-950 text-white dark:border-white/10">
-      <div className="mx-auto grid max-w-7xl gap-10 px-5 py-14 sm:px-8 md:grid-cols-[1.5fr_1fr_1fr] lg:px-10">
+      <div className="mx-auto grid max-w-7xl gap-10 px-5 py-14 sm:px-8 md:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr] lg:px-10">
         <div className="max-w-md">
           <div className="flex items-center gap-3">
             <Image src="/icons/icon-192.png" alt="" width={44} height={44} className="rounded-xl shadow-lg" />
@@ -14,12 +14,14 @@ export default function MarketingFooter() {
             </div>
           </div>
           <p className="mt-5 text-sm font-medium leading-6 text-emerald-50/75">Run customers, machines, workshop jobs and field engineers from one platform designed around agricultural service work.</p>
+          <p className="mt-4 text-xs font-semibold text-emerald-50/55">AgriCore is currently operated by McAteer Agricultural Services Ltd.</p>
         </div>
         <div>
           <p className="text-sm font-black uppercase tracking-[0.14em] text-emerald-300">Product</p>
           <div className="mt-4 grid gap-3 text-sm font-semibold text-emerald-50/75">
             <Link href="/features" className="hover:text-white">Features</Link>
             <Link href="/pricing" className="hover:text-white">Pricing</Link>
+            <Link href="/demo" className="hover:text-white">Product demo</Link>
             <Link href="/signup" className="hover:text-white">Start free trial</Link>
             <Link href="/login" className="hover:text-white">Sign in</Link>
           </div>
@@ -27,9 +29,18 @@ export default function MarketingFooter() {
         <div>
           <p className="text-sm font-black uppercase tracking-[0.14em] text-emerald-300">Company</p>
           <div className="mt-4 grid gap-3 text-sm font-semibold text-emerald-50/75">
+            <Link href="/about" className="hover:text-white">About</Link>
+            <Link href="/security" className="hover:text-white">Security</Link>
+            <Link href="/blog" className="hover:text-white">Insights</Link>
             <Link href="/contact" className="hover:text-white">Contact</Link>
+          </div>
+        </div>
+        <div>
+          <p className="text-sm font-black uppercase tracking-[0.14em] text-emerald-300">Legal</p>
+          <div className="mt-4 grid gap-3 text-sm font-semibold text-emerald-50/75">
             <Link href="/privacy" className="hover:text-white">Privacy</Link>
             <Link href="/terms" className="hover:text-white">Terms</Link>
+            <Link href="/cookies" className="hover:text-white">Cookies</Link>
           </div>
         </div>
       </div>

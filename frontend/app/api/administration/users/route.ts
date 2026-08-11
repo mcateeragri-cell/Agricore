@@ -7,6 +7,7 @@ import {
   type SupabaseClient,
   type User,
 } from "@supabase/supabase-js";
+import { sendCompanyEmail } from "@/lib/communications/email";
 
 import {
   getAuthenticatedUserContext,
@@ -733,6 +734,26 @@ export async function POST(
       throw new Error(
         `Unable to assign the company role: ${roleResult.error.message}`,
       );
+    }
+
+    try {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "https://app.getagricore.com";
+      await sendCompanyEmail({
+        companyId: requestedCompanyId,
+        to: email,
+        recipientName: fullName,
+        templateKey: "staff_invitation",
+        variables: {
+          first_name: fullName.split(/\s+/)[0] || "there",
+          company_name: targetAccess.companyName,
+          role_name: requestedRole.replace(/_/g, " "),
+          action_url: `${appUrl}/login`,
+        },
+        createdBy: auth.userId,
+        idempotencyKey: `staff-invite:${requestedCompanyId}:${targetUser.id}:${now}`,
+      });
+    } catch (emailError) {
+      console.error("Unable to send staff invitation email:", emailError);
     }
 
     return NextResponse.json(

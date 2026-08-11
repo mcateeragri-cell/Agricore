@@ -1,0 +1,39 @@
+AgriCore v1.4 Technician Pro
+
+This package is based on the latest Technician Pro upload and includes:
+
+TECHNICIAN PRO
+- Mobile technician status card derived from live job workflow
+- Device job alerts using the browser/PWA Notification API while AgriCore is running
+- Priority-job alert summary
+- Sticky field-friendly next-action controls
+- Labour Start / Pause / Resume wording while preserving the existing accurate labour-entry model
+- Route shortcuts for Google Maps and Apple Maps
+- Machine quick-view card
+- Improved offline travel recording using the existing offline queue
+- Full Sync Centre showing pending/failed device changes
+- Manual retry and safe discard of failed queued changes
+- Existing GPS, return journeys, signatures, photos, parts and service checklists preserved
+
+PLATFORM ADMIN
+- New /platform/features page
+- Company-level feature flag controls using existing platform_features/company_features tables
+- No new SQL migration is required by this package
+
+NOT INCLUDED
+- Voice notes (deliberately excluded)
+- True server-origin push notifications when the app is fully closed. The notification work in this release is the browser/PWA-ready foundation and in-app/device alert layer.
+
+TEST
+1. npm.cmd run build
+2. npm.cmd run dev -- --webpack
+3. Technician: /technician
+4. Open an assigned job and test Start travel -> arrival -> labour start/pause/resume
+5. Disconnect network, perform a JSON-backed technician update, then confirm it appears in Sync Centre
+6. Reconnect and press Sync now
+7. Test route buttons
+8. Test photos, parts, service checklist and completion
+9. Platform admin: /platform/features and toggle a non-critical feature for a test company
+10. Switch company and confirm feature overrides remain company-specific
+
+No voice-note code or storage has been added.

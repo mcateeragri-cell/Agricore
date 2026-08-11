@@ -1,0 +1,22 @@
+AgriCore v1.2.2 - Reports KPI Drill-Down
+
+Changes
+- Expanded KPI modals now include real company-scoped records.
+- Revenue/VAT KPIs list contributing invoices and open the invoice record.
+- Payments lists invoices with recorded payments.
+- Outstanding lists open balances and due dates.
+- Jobs lists recent jobs and opens the job card.
+- Labour lists recent labour entries and opens the linked job when available.
+- Quotes lists quote records and opens the quote.
+- Stock alerts lists low/out-of-stock items and opens the stock record.
+- Drill-down lists show up to 12 records to keep the modal fast and readable.
+- Existing selectable CSV export remains unchanged.
+
+No SQL migration is required.
+
+Recommended test
+1. Build the project.
+2. Open /reports.
+3. Click every KPI.
+4. Click an invoice/job/quote/stock drill-down row and confirm the correct record opens.
+5. Switch active company and verify only that company's records appear.
