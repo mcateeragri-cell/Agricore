@@ -12,6 +12,7 @@ import {
 } from "next/navigation";
 
 import { supabase } from "@/lib/supabase";
+import { getDemoPresentationIdentity } from "../../lib/demo-presentation";
 
 type CompanyOption = {
   id: string;
