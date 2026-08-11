@@ -27,6 +27,7 @@ const shelllessRoutes = [
   "/features",
   "/pricing",
   "/contact",
+  "/demo",
   "/privacy",
   "/terms",
   "/login",
