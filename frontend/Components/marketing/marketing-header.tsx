@@ -1,5 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
+
+import AgriCoreMark from "@/Components/branding/agricore-mark";
 
 const links = [
   { href: "/features", label: "Features" },
@@ -15,7 +16,7 @@ export default function MarketingHeader() {
     <header className="sticky top-0 z-50 border-b border-emerald-950/10 bg-[#f7fbf8]/90 backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/90">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-5 px-5 py-3.5 sm:px-8 lg:px-10">
         <Link href="/" className="flex min-w-0 items-center gap-3" aria-label="AgriCore home">
-          <Image src="/icons/icon-192.png" alt="AgriCore" width={44} height={44} className="rounded-xl shadow-lg shadow-emerald-950/15" priority />
+          <AgriCoreMark size={46} priority />
           <div className="min-w-0">
             <div className="text-lg font-black tracking-tight text-slate-950 dark:text-white">AgriCore</div>
             <div className="hidden truncate text-[10px] font-black uppercase tracking-[0.17em] text-emerald-800 sm:block dark:text-emerald-300">Agricultural service management</div>

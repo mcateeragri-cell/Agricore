@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 
 import SignupForm from "@/Components/platform/signup-form";
+import AgriCoreMark from "@/Components/branding/agricore-mark";
 
 export const metadata: Metadata = {
   title: "Start free trial",
@@ -29,14 +29,7 @@ export default function SignupPage() {
               className="inline-flex items-center gap-3 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-4 dark:focus:ring-offset-slate-950"
               aria-label="AgriCore home"
             >
-              <Image
-                src="/icons/icon-192.png"
-                alt="AgriCore"
-                width={56}
-                height={56}
-                className="rounded-2xl shadow-lg shadow-emerald-950/15"
-                priority
-              />
+              <AgriCoreMark size={60} priority />
               <div>
                 <p className="text-xl font-black tracking-tight">AgriCore</p>
                 <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">

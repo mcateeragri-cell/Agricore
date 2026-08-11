@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 
+import AgriCoreMark from "@/Components/branding/agricore-mark";
+
 import { FormEvent, Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -117,12 +119,20 @@ function LoginForm() {
   return (
     <main className="flex min-h-dvh items-center justify-center bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.18),_transparent_34%),linear-gradient(135deg,#f0fdf4_0%,#ffffff_52%,#ecfdf5_100%)] px-4 py-10 dark:bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_34%),linear-gradient(135deg,#020617_0%,#0f172a_52%,#022c22_100%)]">
       <div className="w-full max-w-md rounded-3xl border border-emerald-950/10 bg-white/95 p-8 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/95">
-        <p className="text-sm font-black uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">
-          AgriCore
-        </p>
+        <div className="flex items-center gap-3">
+          <AgriCoreMark size={58} priority />
+          <div>
+            <p className="text-sm font-black uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">
+              AgriCore
+            </p>
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+              Agricultural service management
+            </p>
+          </div>
+        </div>
 
-        <h1 className="mt-2 text-3xl font-black text-slate-950 dark:text-white">
-          Sign in
+        <h1 className="mt-6 text-3xl font-black tracking-tight text-slate-950 dark:text-white">
+          Welcome back
         </h1>
 
         <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
@@ -177,7 +187,7 @@ function LoginForm() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full rounded-xl bg-emerald-700 px-4 py-3.5 font-black text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-xl bg-[linear-gradient(135deg,#116149,#0a402f)] px-4 py-3.5 font-black text-white shadow-lg shadow-emerald-950/15 transition duration-200 hover:-translate-y-0.5 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSubmitting ? "Signing in..." : "Sign in"}
           </button>
@@ -205,10 +215,14 @@ function LoginForm() {
 function LoginLoading() {
   return (
     <main className="flex min-h-dvh items-center justify-center bg-slate-100 px-4 dark:bg-slate-950">
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-sm dark:bg-slate-900">
-        <p className="text-sm font-medium text-slate-500 dark:text-slate-300">
-          Loading AgriCore…
-        </p>
+      <div className="w-full max-w-md rounded-3xl border border-emerald-950/10 bg-white/95 p-8 text-center shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/95">
+        <div className="mx-auto flex w-fit items-center gap-3">
+          <AgriCoreMark size={52} priority />
+          <div className="text-left">
+            <p className="text-base font-black text-slate-900 dark:text-white">AgriCore</p>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-300">Loading your workspace…</p>
+          </div>
+        </div>
       </div>
     </main>
   );

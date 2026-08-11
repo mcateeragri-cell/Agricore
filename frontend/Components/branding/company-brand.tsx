@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import AgriCoreMark from "./agricore-mark";
+
 type CompanyResponse = {
   settings?: {
     company_name?: string;
@@ -79,16 +81,7 @@ export default function CompanyBrand({
           }
         />
       ) : (
-        <div
-          className={
-            compact
-              ? "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-700 text-sm font-black text-white shadow-sm"
-              : "flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-emerald-700 text-xl font-black text-white shadow-sm"
-          }
-          aria-hidden="true"
-        >
-          MA
-        </div>
+        <AgriCoreMark size={compact ? 46 : 66} />
       )}
 
       <div className="min-w-0">

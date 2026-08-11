@@ -1,0 +1,59 @@
+AgriCore v1.0.1 — Commercial Polish Edition
+
+SOURCE
+Built directly from Agricore-Latest-Upload.zip supplied after the v1.0 production launch.
+
+WHAT CHANGED
+- Replaced white-background PWA/browser icons with the approved transparent AgriCore AC gear/leaf mark.
+- Added transparent favicon assets and a multi-size favicon.ico.
+- Updated Apple touch icon.
+- Updated Android launcher raster icons using the approved mark.
+- Added a dark-green maskable PWA icon (no white square) for platforms that require an opaque adaptive background.
+- Added a reusable AgriCoreMark component so core branding is consistent.
+- Replaced the sidebar AC text tile with the actual AgriCore icon.
+- Replaced fallback MA company-brand tile with the AgriCore mark.
+- Updated marketing header branding to the approved mark.
+- Upgraded login branding and loading state.
+- Updated signup branding.
+- Added explicit PWA manifest ID, modern display override, improved theme/background colours and any-orientation support.
+- Added light/dark browser theme metadata.
+- Refined shared button motion, card interaction, scrollbars and reduced-motion accessibility.
+
+NOT CHANGED
+- No database schema changes.
+- No Supabase migration.
+- No environment-variable changes.
+- No Stripe/Resend/authentication logic changes.
+- No customer/job/invoice/stock business logic changes.
+
+IMPORTANT PWA NOTE
+Installed PWAs can cache their old icon. After deploying v1.0.1, existing Windows installs may need to be uninstalled and reinstalled once to pick up the new transparent icon immediately. Browsers can also cache favicons for a while.
+
+INSTALL
+Extract the ZIP over:
+C:\projects\Agricore\frontend
+
+Then run:
+taskkill /F /IM node.exe
+Remove-Item ".next" -Recurse -Force -ErrorAction SilentlyContinue
+npm.cmd run build
+npm.cmd run dev -- --webpack
+
+SMOKE TEST
+- /login
+- /signup
+- /dashboard
+- desktop sidebar logo
+- mobile top bar
+- getagricore.com marketing header
+- app.getagricore.com manifest/install prompt
+- light mode and dark mode
+
+DEPLOY
+Once the local production build passes:
+
+git add .
+git commit -m "AgriCore v1.0.1 commercial polish and branding"
+git push origin main
+
+After Vercel is Ready, reinstall the AgriCore PWA on a test Windows PC to verify the new icon.

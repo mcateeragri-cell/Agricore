@@ -10,7 +10,7 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    "border border-transparent bg-[var(--brand)] text-white shadow-lg shadow-emerald-950/10 hover:bg-[var(--brand-hover)] focus:ring-[var(--brand)]/30",
+    "border border-transparent bg-[linear-gradient(135deg,var(--brand),var(--brand-strong))] text-white shadow-lg shadow-emerald-950/10 hover:-translate-y-0.5 hover:shadow-xl focus:ring-[var(--brand)]/30",
   secondary:
     "border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-secondary)] shadow-sm hover:bg-[var(--surface-strong)] hover:text-[var(--text-primary)] focus:ring-[var(--focus-ring)]/20",
   danger:
@@ -30,7 +30,7 @@ export default function Button({
       type={type}
       className={[
         "inline-flex min-h-11 items-center justify-center rounded-xl px-5 py-2.5",
-        "text-sm font-semibold transition duration-200 active:scale-[0.98]",
+        "text-sm font-semibold transition duration-200 ease-out active:translate-y-0 active:scale-[0.98]",
         "focus:outline-none focus:ring-4",
         "disabled:cursor-not-allowed disabled:opacity-50",
         variantStyles[variant],

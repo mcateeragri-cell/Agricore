@@ -1,5 +1,7 @@
 "use client";
 
+import AgriCoreMark from "@/Components/branding/agricore-mark";
+
 import CompanySwitcher from "./company-switcher";
 import NavigationMenu from "./navigation-menu";
 import UserCard from "./user-card";
@@ -30,9 +32,7 @@ export default function DesktopSidebar({
     <aside className="agricore-sidebar hidden h-dvh w-64 shrink-0 flex-col text-white lg:sticky lg:top-0 lg:flex">
       <div className="border-b border-white/10 px-4 py-4">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-sm font-black text-white shadow-sm">
-            AC
-          </div>
+          <AgriCoreMark size={46} priority />
 
           <div className="min-w-0">
             <p className="truncate text-base font-bold text-white">

@@ -1,0 +1,1 @@
+Raster brand pack. SVG master to be created later.
