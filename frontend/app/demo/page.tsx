@@ -1,18 +1,48 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, CalendarDays, CheckCircle2, FileText, PackageSearch, Smartphone, Tractor, Users, Wrench } from "lucide-react";
+import { ArrowRight, CheckCircle2, ShieldCheck } from "lucide-react";
 import MarketingShell from "@/Components/marketing/marketing-shell";
-import ProductPreview from "@/Components/marketing/product-preview";
+import PublicDemo from "@/Components/marketing/public-demo";
 
-export const metadata: Metadata = { title: "Product Demo", description: "See how AgriCore connects customers, machines, jobs, technicians, stock and invoicing." };
+export const metadata: Metadata = {
+  title: "Live Product Demo",
+  description: "Explore a safe, read-only AgriCore workspace with completely synthetic agricultural engineering data.",
+};
 
-const steps = [
-  [Users,"Customer","Store contacts, sites, notes, jobs, quotes, invoices and machine relationships."],
-  [Tractor,"Machine","Keep serial numbers, hours, service programmes and complete repair history."],
-  [CalendarDays,"Schedule","Plan workshop and field work, assign engineers and keep priorities visible."],
-  [Smartphone,"Technician","Capture travel, labour, parts, photos, checklists and signatures from a phone."],
-  [PackageSearch,"Stock","Manage inventory, suppliers, purchase orders and receipts."],
-  [FileText,"Invoice","Review the finished job and turn the same operational record into an invoice."],
-] as const;
+export default function DemoPage() {
+  return (
+    <MarketingShell>
+      <main>
+        <section className="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:px-10 lg:py-20">
+          <div className="mx-auto max-w-3xl text-center">
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-700">Interactive product demo</p>
+            <h1 className="mt-4 text-5xl font-black tracking-[-0.05em] text-slate-950 sm:text-6xl dark:text-white">Explore AgriCore without signing in.</h1>
+            <p className="mt-6 text-lg font-medium leading-8 text-slate-600 dark:text-slate-300">Click through a realistic agricultural service business using completely synthetic, read-only data. Nothing in this demo is connected to a real customer, machine or company.</p>
+            <div className="mt-6 flex flex-wrap justify-center gap-4 text-sm font-black text-slate-600 dark:text-slate-300">
+              <span className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-700"/>No account required</span>
+              <span className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-emerald-700"/>Read-only & isolated</span>
+            </div>
+          </div>
 
-export default function DemoPage(){return <MarketingShell><main><section className="mx-auto grid max-w-7xl gap-12 px-5 py-16 sm:px-8 lg:grid-cols-[.9fr_1.1fr] lg:px-10 lg:py-24"><div><p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-700">Product demo</p><h1 className="mt-4 text-5xl font-black tracking-[-0.05em] sm:text-6xl">See the whole workflow before you sign up.</h1><p className="mt-6 text-lg font-medium leading-8 text-slate-600 dark:text-slate-300">AgriCore is designed so the office and field team work from the same operational record. This preview shows how the key pieces fit together.</p><div className="mt-8 flex flex-col gap-3 sm:flex-row"><Link href="/signup" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-6 py-4 font-black text-white">Start free trial <ArrowRight className="h-5 w-5"/></Link><Link href="/contact" className="inline-flex items-center justify-center rounded-2xl border border-emerald-950/10 bg-white px-6 py-4 font-black dark:border-white/10 dark:bg-white/5">Talk to us</Link></div></div><ProductPreview/></section><section className="border-y border-emerald-950/10 bg-white/60 dark:border-white/10 dark:bg-white/[0.03]"><div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:px-10"><div className="mx-auto max-w-3xl text-center"><p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-700">A connected workflow</p><h2 className="mt-3 text-4xl font-black tracking-[-0.04em]">From customer call to completed invoice.</h2></div><div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-3">{steps.map(([Icon,title,copy],index)=><article key={title} className="rounded-3xl border border-emerald-950/10 bg-white p-6 dark:border-white/10 dark:bg-slate-900"><div className="flex items-center justify-between"><Icon className="h-7 w-7 text-emerald-700"/><span className="text-xs font-black text-slate-400">0{index+1}</span></div><h3 className="mt-6 text-xl font-black">{title}</h3><p className="mt-2 text-sm font-medium leading-6 text-slate-600 dark:text-slate-300">{copy}</p></article>)}</div></div></section><section className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:px-10"><div className="rounded-[2rem] bg-emerald-950 p-8 text-white sm:p-12"><CheckCircle2 className="h-8 w-8 text-emerald-300"/><h2 className="mt-5 text-4xl font-black">The best demo is your own workflow.</h2><p className="mt-4 max-w-2xl text-base font-medium leading-7 text-emerald-50/80">Start the 14-day Professional trial and use your own customers, machines and jobs. £0 is charged today.</p><Link href="/signup" className="mt-7 inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3.5 font-black text-emerald-950">Start free trial <ArrowRight className="h-5 w-5"/></Link></div></section></main></MarketingShell>}
+          <div className="mt-10">
+            <PublicDemo />
+          </div>
+
+          <div className="mt-10 rounded-[2rem] bg-emerald-950 p-8 text-white sm:p-10">
+            <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-300">Ready to use your own workflow?</p>
+                <h2 className="mt-3 text-3xl font-black tracking-tight">Start your 14-day Professional trial.</h2>
+                <p className="mt-3 max-w-2xl font-medium leading-7 text-emerald-50/80">Create your own company workspace and start adding customers, machines, jobs and invoices. £0 is charged today.</p>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
+                <Link href="/signup" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-4 font-black text-emerald-950">Start free trial <ArrowRight className="h-5 w-5"/></Link>
+                <Link href="/contact" className="inline-flex items-center justify-center rounded-2xl border border-white/15 px-6 py-4 font-black text-white">Book a demo</Link>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </MarketingShell>
+  );
+}

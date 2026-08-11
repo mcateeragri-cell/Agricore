@@ -5,6 +5,11 @@ const PUBLIC_ROUTE_PREFIXES = [
   "/features",
   "/pricing",
   "/contact",
+  "/demo",
+  "/about",
+  "/security",
+  "/blog",
+  "/cookies",
   "/privacy",
   "/terms",
   "/login",
@@ -15,6 +20,8 @@ const PUBLIC_ROUTE_PREFIXES = [
   "/api/platform/signup",
   "/api/billing/webhook",
   "/api/payments/revolut/webhook",
+  "/api/communications/resend-webhook",
+  "/api/communications/trial-reminders",
 ];
 
 const PUBLIC_EXACT_ROUTES = new Set([
@@ -36,16 +43,12 @@ function isPublicRoute(pathname: string) {
 }
 
 function isApiRoute(pathname: string) {
-  return (
-    pathname === "/api" ||
-    pathname.startsWith("/api/")
-  );
+  return pathname === "/api" || pathname.startsWith("/api/");
 }
 
 function getSupabaseEnvironment() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey =
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!url || !anonKey) {
     throw new Error(
@@ -53,132 +56,77 @@ function getSupabaseEnvironment() {
     );
   }
 
-  return {
-    url,
-    anonKey,
-  };
+  return { url, anonKey };
 }
 
 function getSafeRedirect(value: string | null) {
-  if (
-    value &&
-    value.startsWith("/") &&
-    !value.startsWith("//")
-  ) {
+  if (value && value.startsWith("/") && !value.startsWith("//")) {
     return value;
   }
-
   return "/dashboard";
 }
 
-export async function updateSession(
-  request: NextRequest,
-) {
+export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const publicRoute = isPublicRoute(pathname);
 
-  let response = NextResponse.next({
-    request,
-  });
+  let response = NextResponse.next({ request });
 
   try {
-    const { url, anonKey } =
-      getSupabaseEnvironment();
-
-    const supabase = createServerClient(
-      url,
-      anonKey,
-      {
-        cookies: {
-          getAll() {
-            return request.cookies.getAll();
-          },
-
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(
-              ({ name, value }) => {
-                request.cookies.set(name, value);
-              },
-            );
-
-            response = NextResponse.next({
-              request,
-            });
-
-            cookiesToSet.forEach(
-              ({ name, value, options }) => {
-                response.cookies.set(
-                  name,
-                  value,
-                  options,
-                );
-              },
-            );
-          },
+    const { url, anonKey } = getSupabaseEnvironment();
+    const supabase = createServerClient(url, anonKey, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => {
+            request.cookies.set(name, value);
+          });
+          response = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
+          });
         },
       },
-    );
+    });
 
     const {
       data: { user },
       error: userError,
     } = await supabase.auth.getUser();
 
-    if (
-      userError &&
-      userError.name !==
-        "AuthSessionMissingError"
-    ) {
-      console.error(
-        "Unable to refresh the current session:",
-        userError,
-      );
+    if (userError && userError.name !== "AuthSessionMissingError") {
+      console.error("Unable to refresh the current session:", userError);
     }
 
     if (!user && !publicRoute) {
       if (isApiRoute(pathname)) {
-        return NextResponse.json(
-          {
-            error:
-              "You must be signed in to use this endpoint.",
-          },
-          {
-            status: 401,
-          },
-        );
+        return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
       }
 
-      const loginUrl =
-        request.nextUrl.clone();
-
+      const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = "/login";
       loginUrl.search = "";
       loginUrl.searchParams.set(
         "redirectTo",
         `${pathname}${request.nextUrl.search}`,
       );
-
       return NextResponse.redirect(loginUrl);
     }
 
-    if (user && pathname === "/login") {
-      const safeRedirect = getSafeRedirect(
-        request.nextUrl.searchParams.get(
-          "redirectTo",
-        ),
+    if (user && (pathname === "/login" || pathname === "/signup")) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = getSafeRedirect(
+        request.nextUrl.searchParams.get("redirectTo"),
       );
-
-      return NextResponse.redirect(
-        new URL(safeRedirect, request.url),
-      );
+      redirectUrl.search = "";
+      return NextResponse.redirect(redirectUrl);
     }
 
     return response;
   } catch (error) {
-    console.error(
-      "AgriCore session middleware failed:",
-      error,
-    );
+    console.error("Session middleware failed:", error);
 
     if (publicRoute) {
       return response;
@@ -186,26 +134,15 @@ export async function updateSession(
 
     if (isApiRoute(pathname)) {
       return NextResponse.json(
-        {
-          error:
-            "Authentication is temporarily unavailable.",
-        },
-        {
-          status: 503,
-        },
+        { error: "Authentication service unavailable." },
+        { status: 503 },
       );
     }
 
-    const loginUrl =
-      request.nextUrl.clone();
-
+    const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     loginUrl.search = "";
-    loginUrl.searchParams.set(
-      "error",
-      "Authentication is temporarily unavailable.",
-    );
-
+    loginUrl.searchParams.set("redirectTo", pathname);
     return NextResponse.redirect(loginUrl);
   }
 }
