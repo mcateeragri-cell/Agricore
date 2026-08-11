@@ -14,6 +14,7 @@ import MobileBottomNav from "./navigation/mobile-bottom-nav";
 import MobileDrawer from "./navigation/mobile-drawer";
 import MobileTopBar from "./navigation/mobile-top-bar";
 import SubscriptionAccessGate from "./platform/subscription-access-gate";
+import CompanyThemeProvider from "./theme/company-theme-provider";
 import {
   useNavigationUser,
 } from "./navigation/use-navigation-user";
@@ -83,6 +84,10 @@ export default function AppShell({
 
   return (
     <div className="min-h-dvh w-full min-w-0 overflow-x-clip lg:flex">
+      <CompanyThemeProvider
+        companyId={userState.activeCompany?.id ?? null}
+      />
+
       <DesktopSidebar
         pathname={pathname}
         userState={userState}

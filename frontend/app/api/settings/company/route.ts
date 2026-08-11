@@ -38,6 +38,12 @@ function validHex(value: unknown, fallback: string): string {
     : fallback;
 }
 
+
+
+function validSidebarStyle(value: unknown): "solid" | "gradient" {
+  return value === "solid" ? "solid" : "gradient";
+}
+
 function hasSettingsAccess(permissions: string[]): boolean {
   return permissions.includes(SETTINGS_PERMISSION);
 }
@@ -196,6 +202,25 @@ export async function PUT(
     secondary_colour: validHex(
       body.secondary_colour,
       "#E8EFEA",
+    ),
+    sidebar_colour: validHex(
+      body.sidebar_colour,
+      "#0B4331",
+    ),
+    sidebar_colour_secondary: validHex(
+      body.sidebar_colour_secondary,
+      "#073023",
+    ),
+    sidebar_text_colour: validHex(
+      body.sidebar_text_colour,
+      "#F4FFF9",
+    ),
+    sidebar_accent_colour: validHex(
+      body.sidebar_accent_colour,
+      "#6EE7B7",
+    ),
+    sidebar_style: validSidebarStyle(
+      body.sidebar_style,
     ),
     invoice_footer: cleanText(body.invoice_footer),
     payment_terms_days:

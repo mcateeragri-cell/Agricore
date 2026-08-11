@@ -1,0 +1,59 @@
+AgriCore v1.1 — Company Theme Engine
+
+This is an overlay package for the current AgriCore frontend.
+Extract it over:
+C:\projects\Agricore\frontend
+
+WHAT IT ADDS
+- Per-company custom sidebar colours.
+- Desktop sidebar and mobile navigation drawer use the active company's theme.
+- Gradient or solid sidebar style.
+- Separate sidebar start colour, gradient end colour, text colour and active accent colour.
+- Six quick presets: AgriCore, Forest, Blue, Red, Amber and Charcoal.
+- Live sidebar preview inside Company Settings.
+- Theme follows the active company automatically when company switching/reloading.
+- Every user in the company sees the same company theme.
+- Existing document Primary/Secondary colours remain separate and unchanged.
+- UK/global regional settings, billing, demo mode and existing permissions are untouched.
+
+DEFAULT THEME
+Sidebar: #0B4331
+Gradient end: #073023
+Text: #F4FFF9
+Accent: #6EE7B7
+Style: gradient
+
+REQUIRED SUPABASE MIGRATION
+Run before testing:
+supabase/migrations/20260811_008_company_theme_engine.sql
+
+The migration is idempotent and gives all existing/new companies the current AgriCore green theme by default.
+
+WHERE TO CUSTOMISE
+Settings -> Company
+Under "Workspace theme" -> "Sidebar appearance"
+
+TEST
+1. Run the migration in Supabase.
+2. Extract this ZIP over C:\projects\Agricore\frontend.
+3. Run:
+   taskkill /F /IM node.exe
+   Remove-Item ".next" -Recurse -Force -ErrorAction SilentlyContinue
+   npm.cmd run build
+   npm.cmd run dev -- --webpack
+4. Open Settings -> Company.
+5. Choose the Blue preset and save.
+6. Refresh. Desktop sidebar should be blue.
+7. On mobile, open the navigation drawer; it should match.
+8. Switch to another company. Its own theme should load instead.
+9. Change back to AgriCore preset and save if required.
+
+DEPLOY
+After the local build passes:
+cd C:\projects\Agricore
+git add frontend
+git commit -m "Add per-company workspace themes"
+git push origin main
+
+VALIDATION
+Changed TypeScript/TSX files were syntax checked with TypeScript 5.8.3. A full Next.js build must be run locally because clean project uploads exclude node_modules.

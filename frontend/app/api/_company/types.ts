@@ -15,6 +15,11 @@ export type CompanySettings = {
   logo_path: string | null;
   primary_colour: string;
   secondary_colour: string;
+  sidebar_colour: string;
+  sidebar_colour_secondary: string;
+  sidebar_text_colour: string;
+  sidebar_accent_colour: string;
+  sidebar_style: "solid" | "gradient";
   invoice_footer: string | null;
   payment_terms_days: number;
   bank_name: string | null;
