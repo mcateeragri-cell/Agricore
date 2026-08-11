@@ -36,6 +36,11 @@ const EMPTY: CompanySettings = {
   logo_path: null,
   primary_colour: "#103D2E",
   secondary_colour: "#E8EFEA",
+  sidebar_colour: "#0B4331",
+  sidebar_colour_secondary: "#073023",
+  sidebar_text_colour: "#F4FFF9",
+  sidebar_accent_colour: "#6EE7B7",
+  sidebar_style: "gradient",
   invoice_footer: null,
   payment_terms_days: 7,
   bank_name: null,
@@ -136,6 +141,51 @@ const paymentFields: Array<{
     label: "Account number",
   },
 ];
+
+const SIDEBAR_PRESETS = [
+  {
+    name: "AgriCore",
+    sidebar_colour: "#0B4331",
+    sidebar_colour_secondary: "#073023",
+    sidebar_text_colour: "#F4FFF9",
+    sidebar_accent_colour: "#6EE7B7",
+  },
+  {
+    name: "Forest",
+    sidebar_colour: "#14532D",
+    sidebar_colour_secondary: "#052E16",
+    sidebar_text_colour: "#F0FDF4",
+    sidebar_accent_colour: "#86EFAC",
+  },
+  {
+    name: "Blue",
+    sidebar_colour: "#0A4B78",
+    sidebar_colour_secondary: "#062E4A",
+    sidebar_text_colour: "#F7FBFF",
+    sidebar_accent_colour: "#38BDF8",
+  },
+  {
+    name: "Red",
+    sidebar_colour: "#7F1D1D",
+    sidebar_colour_secondary: "#450A0A",
+    sidebar_text_colour: "#FFF7F7",
+    sidebar_accent_colour: "#FCA5A5",
+  },
+  {
+    name: "Amber",
+    sidebar_colour: "#7C4A03",
+    sidebar_colour_secondary: "#4A2C02",
+    sidebar_text_colour: "#FFFBEB",
+    sidebar_accent_colour: "#FCD34D",
+  },
+  {
+    name: "Charcoal",
+    sidebar_colour: "#1F2937",
+    sidebar_colour_secondary: "#111827",
+    sidebar_text_colour: "#F9FAFB",
+    sidebar_accent_colour: "#34D399",
+  },
+] as const;
 
 function normaliseNullableValue(value: string) {
   const trimmed = value.trim();
@@ -627,6 +677,171 @@ export default function CompanyBrandingForm() {
               />
             </div>
           </label>
+        </div>
+      </section>
+
+      <section className={sectionClass}>
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+            Workspace theme
+          </p>
+
+          <h2 className="mt-1 text-xl font-bold text-slate-900 dark:text-slate-100">
+            Sidebar appearance
+          </h2>
+
+          <p className="mt-2 text-sm font-medium leading-6 text-slate-600 dark:text-slate-400">
+            Brand each company workspace with its own navigation colours.
+            The theme is applied for every user in this company.
+          </p>
+        </div>
+
+        <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="space-y-5">
+            <div>
+              <p className={labelClass}>Quick presets</p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {SIDEBAR_PRESETS.map((preset) => (
+                  <button
+                    key={preset.name}
+                    type="button"
+                    onClick={() =>
+                      setSettings((current) => ({
+                        ...current,
+                        sidebar_colour: preset.sidebar_colour,
+                        sidebar_colour_secondary:
+                          preset.sidebar_colour_secondary,
+                        sidebar_text_colour:
+                          preset.sidebar_text_colour,
+                        sidebar_accent_colour:
+                          preset.sidebar_accent_colour,
+                      }))
+                    }
+                    className="flex min-h-12 items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm font-bold text-slate-800 transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  >
+                    <span
+                      className="h-7 w-7 shrink-0 rounded-lg border border-black/10 shadow-sm"
+                      style={{
+                        background: `linear-gradient(135deg, ${preset.sidebar_colour}, ${preset.sidebar_colour_secondary})`,
+                      }}
+                    />
+                    {preset.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              {[
+                ["sidebar_colour", "Sidebar colour"],
+                ["sidebar_colour_secondary", "Gradient end"],
+                ["sidebar_text_colour", "Text colour"],
+                ["sidebar_accent_colour", "Active accent"],
+              ].map(([key, label]) => (
+                <label key={key}>
+                  <span className={labelClass}>{label}</span>
+                  <div className="flex gap-2">
+                    <input
+                      type="color"
+                      value={String(
+                        settings[key as keyof CompanySettings],
+                      )}
+                      onChange={(event) =>
+                        update(
+                          key as keyof CompanySettings,
+                          event.target.value as never,
+                        )
+                      }
+                      className="h-11 w-14 shrink-0 cursor-pointer rounded-lg border border-slate-300 bg-white p-1 dark:border-slate-700 dark:bg-slate-900"
+                      aria-label={label}
+                    />
+                    <input
+                      className={inputClass}
+                      value={String(
+                        settings[key as keyof CompanySettings],
+                      )}
+                      onChange={(event) =>
+                        update(
+                          key as keyof CompanySettings,
+                          event.target.value as never,
+                        )
+                      }
+                      maxLength={7}
+                      spellCheck={false}
+                    />
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            <label>
+              <span className={labelClass}>Sidebar style</span>
+              <select
+                className={inputClass}
+                value={settings.sidebar_style}
+                onChange={(event) =>
+                  update(
+                    "sidebar_style",
+                    event.target.value === "solid"
+                      ? "solid"
+                      : "gradient",
+                  )
+                }
+              >
+                <option value="gradient">Gradient</option>
+                <option value="solid">Solid colour</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div
+              className="min-h-[360px] p-4 text-left"
+              style={{
+                color: settings.sidebar_text_colour,
+                background:
+                  settings.sidebar_style === "solid"
+                    ? settings.sidebar_colour
+                    : `linear-gradient(180deg, ${settings.sidebar_colour}, ${settings.sidebar_colour_secondary})`,
+              }}
+            >
+              <p className="text-xs font-black uppercase tracking-[0.16em] opacity-70">
+                Live preview
+              </p>
+              <p className="mt-2 truncate text-lg font-black">
+                {settings.company_name || "Your company"}
+              </p>
+
+              <div className="mt-6 space-y-2 text-sm font-bold">
+                {["Dashboard", "Customers", "Machines", "Jobs"].map(
+                  (item, index) => (
+                    <div
+                      key={item}
+                      className="rounded-xl border px-3 py-2.5"
+                      style={
+                        index === 0
+                          ? {
+                              backgroundColor: `${settings.sidebar_accent_colour}33`,
+                              borderColor: `${settings.sidebar_accent_colour}66`,
+                              boxShadow: `inset 3px 0 0 ${settings.sidebar_accent_colour}`,
+                            }
+                          : {
+                              borderColor: "transparent",
+                              opacity: 0.78,
+                            }
+                      }
+                    >
+                      {item}
+                    </div>
+                  ),
+                )}
+              </div>
+
+              <div className="mt-8 rounded-xl border border-white/10 bg-white/10 p-3 text-xs font-semibold opacity-90">
+                Theme changes apply to desktop and mobile navigation after saving.
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
