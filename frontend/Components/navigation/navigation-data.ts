@@ -105,6 +105,12 @@ export const administrationItems: AdministrationItem[] = [
     permissions: ["settings.manage"],
   },
   {
+    name: "Purchase Ledger",
+    href: "/administration/finance/purchases",
+    icon: "billing",
+    permissions: ["settings.manage"],
+  },
+  {
     name: "Accountant Workspace",
     href: "/administration/finance/accountant",
     icon: "reports",
