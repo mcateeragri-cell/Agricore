@@ -7,6 +7,8 @@ import {
 import {
   createSupabaseServerClient,
 } from "@/lib/supabase-server";
+import { createSupabaseAdmin } from "@/lib/payments/supabase-admin";
+import { loadEffectiveFeatures } from "@/lib/platform/effective-features";
 
 const ACTIVE_COMPANY_COOKIE =
   "agricore_company_id";
@@ -139,6 +141,11 @@ export async function GET() {
         context.userId,
       );
 
+    const featureState = await loadEffectiveFeatures(
+      createSupabaseAdmin(),
+      context.companyId,
+    );
+
     return NextResponse.json(
       {
         user: {
@@ -156,6 +163,8 @@ export async function GET() {
           name: context.companyName,
           slug: context.companySlug,
         },
+        enabledFeatures: featureState.enabledFeatures,
+        billingMode: featureState.billingMode,
         companies,
         requiresCompanySelection:
           companies.length > 1,

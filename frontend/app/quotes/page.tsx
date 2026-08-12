@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { getActiveCompany } from "@/lib/client/active-company";
 import Card from "../../Components/ui/Card";
+import { useRegionalFormatters } from "@/lib/client/use-regional-formatters";
 
 type QuoteStatus =
   | "draft"
@@ -149,6 +150,9 @@ export default function QuotesPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | QuoteStatus>("all");
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const { money, date } = useRegionalFormatters();
+  const formatCurrency = money;
+  const formatDate = (value: string | null) => value ? date(`${value.slice(0, 10)}T12:00:00`, { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
   const loadQuotes = useCallback(async () => {
     setLoading(true);

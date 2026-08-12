@@ -15,6 +15,7 @@ import MobileDrawer from "./navigation/mobile-drawer";
 import MobileTopBar from "./navigation/mobile-top-bar";
 import SubscriptionAccessGate from "./platform/subscription-access-gate";
 import CompanyThemeProvider from "./theme/company-theme-provider";
+import GlobalSearch from "./search/global-search";
 import {
   useNavigationUser,
 } from "./navigation/use-navigation-user";
@@ -102,6 +103,8 @@ export default function AppShell({
       />
 
       <div className="w-full min-w-0 flex-1">
+        <GlobalSearch />
+
         <MobileTopBar
           onOpenMenu={() =>
             setMobileMenuOpen(true)

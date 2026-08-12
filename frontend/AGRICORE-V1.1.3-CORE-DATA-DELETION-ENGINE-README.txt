@@ -1,0 +1,59 @@
+AgriCore v1.1.3 — Core Data Deletion Engine
+
+WHY THIS PATCH EXISTS
+The first Data Management implementation deleted job_parts_used directly. On the
+current production schema, a legacy database trigger attempted to write a
+stock_movements row during that delete without a company_id, causing:
+
+  null value in column "company_id" of relation "stock_movements"
+
+AgriCore's current technician parts APIs already manage stock quantities and
+stock_movements explicitly, so any old trigger on job_parts_used that also writes
+stock_movements is duplicate legacy behaviour.
+
+WHAT THIS RELEASE DOES
+- Adds one database-owned job deletion function: agricore_delete_job(...)
+- Job deletion is now transactional inside Postgres.
+- Protects jobs linked to invoices.
+- Restores stock quantities for parts used on a deleted test job.
+- Removes the job's stock movement history before removing job part rows.
+- Cleans known dependent job tables while tolerating optional tables.
+- Detaches optional machine service history from the deleted job.
+- Writes a permanent-delete audit record.
+- Removes only legacy job_parts_used triggers whose trigger-function definition
+  references stock_movements. Other triggers are left alone.
+- The Data Management API now calls the central deletion service rather than
+  having destructive job logic embedded in the route.
+- Job photo objects are removed from Storage on a best-effort basis before the
+  transactional relational deletion.
+
+REQUIRED SQL
+Run in Supabase SQL Editor before testing:
+  supabase/migrations/20260811_009_core_data_deletion_engine.sql
+
+INSTALL
+Extract over:
+  C:\projects\Agricore\frontend
+
+Then:
+  taskkill /F /IM node.exe
+  Remove-Item ".next" -Recurse -Force -ErrorAction SilentlyContinue
+  npm.cmd run build
+  npm.cmd run dev -- --webpack
+
+TEST
+1. Choose a clearly disposable, non-invoiced test job with no parts. Delete it.
+2. Choose a disposable job with stock parts used. Note stock quantity first.
+3. Delete it and confirm stock quantity is returned correctly.
+4. Confirm the job disappears from Jobs and Data Management.
+5. Confirm an invoiced job remains protected and cannot be deleted.
+6. Confirm no new stock_movements company_id error appears.
+7. In Supabase, optionally inspect public.data_management_audit to verify the
+   permanent-delete action was logged.
+
+IMPORTANT
+This release intentionally centralises JOB deletion first because that is the
+high-risk operation currently failing. Customer/machine/quote/invoice protections
+remain in the existing Data Management module. They can be moved into the same
+Core Data Engine incrementally after real-world validation of this job deletion
+path.

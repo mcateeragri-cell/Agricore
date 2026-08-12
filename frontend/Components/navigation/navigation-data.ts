@@ -9,12 +9,14 @@ export const mainNavigationItems: NavigationItem[] = [
   { name: "Machines", href: "/machines", icon: "machines" },
   { name: "Service Programmes", href: "/service-programmes", icon: "service" },
   { name: "AI Diagnostics", href: "/ai-diagnostics", icon: "diagnostics" },
+  { name: "Intelligence", href: "/intelligence", icon: "diagnostics" },
   { name: "Jobs", href: "/jobs", icon: "jobs" },
   { name: "Dispatch", href: "/dispatch", icon: "calendar" },
   { name: "Calendar", href: "/calendar", icon: "calendar" },
   { name: "Quotes", href: "/quotes", icon: "quotes" },
   { name: "Invoices", href: "/invoices", icon: "invoices" },
   { name: "Stock", href: "/stock", icon: "stock" },
+  { name: "Sales", href: "/sales", icon: "sales" },
   { name: "Reports", href: "/reports", icon: "reports" },
 ];
 
@@ -70,6 +72,42 @@ export const administrationItems: AdministrationItem[] = [
     name: "Communications",
     href: "/administration/communications",
     icon: "communications",
+    permissions: ["settings.manage"],
+  },
+  {
+    name: "Data Management",
+    href: "/administration/data-management",
+    icon: "settings",
+    permissions: ["settings.manage"],
+  },
+  {
+    name: "Audit Log",
+    href: "/administration/audit-log",
+    icon: "settings",
+    permissions: ["settings.manage"],
+  },
+  {
+    name: "Atlas Health",
+    href: "/administration/atlas",
+    icon: "settings",
+    permissions: ["settings.manage"],
+  },
+  {
+    name: "Finance Foundation",
+    href: "/administration/finance",
+    icon: "billing",
+    permissions: ["settings.manage"],
+  },
+  {
+    name: "Finance Dashboard",
+    href: "/administration/finance/dashboard",
+    icon: "reports",
+    permissions: ["settings.manage"],
+  },
+  {
+    name: "Accountant Workspace",
+    href: "/administration/finance/accountant",
+    icon: "reports",
     permissions: ["settings.manage"],
   },
 ];

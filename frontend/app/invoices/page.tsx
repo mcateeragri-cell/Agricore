@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useRegionalFormatters } from "@/lib/client/use-regional-formatters";
 
 type InvoiceRow = {
   id: string;
@@ -63,6 +64,9 @@ export default function InvoicesPage() {
   const [period, setPeriod] = useState<PeriodKey>("this_month");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
+  const { money, date } = useRegionalFormatters();
+  const formatMoney = money;
+  const formatDate = (value: string | null) => value ? date(`${value.slice(0, 10)}T12:00:00`, { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
   useEffect(() => {
     void loadInvoices();

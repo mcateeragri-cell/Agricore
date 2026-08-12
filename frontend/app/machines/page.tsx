@@ -33,6 +33,15 @@ type SortOption =
   | "year-newest"
   | "hours-highest";
 
+
+function getMissingMachineDetails(machine: Machine) {
+  const missing: string[] = [];
+  if (!machine.year.trim()) missing.push("year");
+  if (!machine.registration.trim() && !machine.serialNumber.trim()) missing.push("reg / serial");
+  if (!machine.hours.trim()) missing.push("hours");
+  return missing;
+}
+
 function formatHours(hours: string) {
   if (!hours) return "—";
 
@@ -429,6 +438,11 @@ export default function MachinesPage() {
                       >
                         {machine.customerName}
                       </Link>
+                      {getMissingMachineDetails(machine).length > 0 && (
+                        <span className="mt-2 inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-bold text-amber-800">
+                          Details incomplete · {getMissingMachineDetails(machine).join(", ")}
+                        </span>
+                      )}
                     </div>
 
                     <span className="shrink-0 rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-800">
@@ -511,6 +525,13 @@ export default function MachinesPage() {
                             .filter(Boolean)
                             .join(" ") || "Unnamed machine"}
                         </Link>
+                        {getMissingMachineDetails(machine).length > 0 && (
+                          <div className="mt-2">
+                            <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-bold text-amber-800">
+                              Details incomplete
+                            </span>
+                          </div>
+                        )}
                       </td>
 
                       <td className="px-6 py-4">

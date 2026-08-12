@@ -1,0 +1,39 @@
+AgriCore v1.1.2 — Data Management Schema Fix
+
+This replaces the first Data Management build with a version aligned to the current AgriCore schema.
+
+FIXED
+- Machines no longer query invoices.machine_id (that column does not exist).
+- Machine protection is derived from jobs.machine_id and quotes.machine_id. Any invoiced machine job is already protected because the job exists.
+- Users no longer assume company_members.id or company_member_profiles.membership_id.
+- Company membership is treated correctly as company_id + user_id.
+- User profile and role lookups use company_id + user_id.
+- User deactivation updates company_members and company_member_profiles instead of deleting authentication accounts.
+- Job cleanup supports current job tables and safely tolerates optional/legacy tables.
+- Job photo storage files are removed from the job-photos bucket where possible.
+- Quote items are removed before deleting allowed quote records.
+- Invoice items are removed before deleting draft invoices.
+- Customer and machine protection queries use only columns present in the current app schema.
+
+NO SQL MIGRATION REQUIRED.
+
+INSTALL
+Extract over:
+C:\projects\Agricore\frontend
+
+Then run:
+taskkill /F /IM node.exe
+Remove-Item ".next" -Recurse -Force -ErrorAction SilentlyContinue
+npm.cmd run build
+npm.cmd run dev -- --webpack
+
+TEST ORDER
+1. Administration -> Data Management -> Jobs
+2. Delete one clearly disposable test job with no invoice.
+3. Confirm an invoiced job remains protected.
+4. Machines should load without an invoices.machine_id error.
+5. Users should load without a company_members.id error.
+6. Try deactivating a spare test user; your own membership must remain protected.
+7. Customers with machines/jobs/quotes/invoices should be protected.
+8. Draft invoices/quotes may be deleted; sent/paid records remain protected.
+9. Stock items archive rather than delete.

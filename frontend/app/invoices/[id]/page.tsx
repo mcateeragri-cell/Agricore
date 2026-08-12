@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useParams } from "next/navigation";
 import RevolutPayButton from "@/Components/invoices/revolut-pay-button";
+import { useRegionalFormatters } from "@/lib/client/use-regional-formatters";
 
 
 
@@ -155,6 +156,9 @@ type CheckPaymentResponse =
     };
 
 export default function InvoiceDetailPage() {
+  const { money, date, taxName } = useRegionalFormatters();
+  const formatMoney = money;
+  const formatDateDisplay = (value: string | null | undefined) => value ? date(`${String(value).slice(0, 10)}T12:00:00`, { day: "2-digit", month: "short", year: "numeric" }) : "—";
   const params = useParams<{ id: string }>();
 
   const invoiceId = Array.isArray(params.id)
@@ -1309,6 +1313,15 @@ export default function InvoiceDetailPage() {
                 Preview service report
               </button>
 
+              {["sent", "part_paid", "paid", "overdue"].includes(invoice.status) ? (
+                <Link
+                  href={`/invoices/${invoice.id}/credit-note`}
+                  className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-900 shadow-sm hover:bg-amber-100"
+                >
+                  Create credit note
+                </Link>
+              ) : null}
+
               <RevolutPayButton
                 invoiceId={invoice.id}
                 existingPaymentUrl={invoice.payment_url}
@@ -1398,6 +1411,7 @@ export default function InvoiceDetailPage() {
             issueDate={issueDate}
             dueDate={dueDate}
             vatRate={vatRate}
+            taxName={taxName}
             notes={notes}
             paymentTerms={paymentTerms}
             customerEditing={
@@ -1565,6 +1579,7 @@ function InvoiceTab({
   issueDate,
   dueDate,
   vatRate,
+  taxName,
   notes,
   paymentTerms,
   customerEditing,
@@ -1601,6 +1616,7 @@ function InvoiceTab({
   issueDate: string;
   dueDate: string;
   vatRate: string;
+  taxName: string;
   notes: string;
   paymentTerms: string;
   customerEditing: boolean;
@@ -2105,7 +2121,7 @@ function InvoiceTab({
 
           <label className="mt-5 block">
             <span className="text-sm font-medium text-slate-700">
-              VAT rate
+              {taxName} rate
             </span>
 
             <div className="mt-1 flex overflow-hidden rounded-lg border border-slate-300">
@@ -2139,7 +2155,7 @@ function InvoiceTab({
             />
 
             <TotalRow
-              label={`VAT (${asNumber(
+              label={`${taxName} (${asNumber(
                 vatRate,
               )}%)`}
               value={calculatedTotals.vat}

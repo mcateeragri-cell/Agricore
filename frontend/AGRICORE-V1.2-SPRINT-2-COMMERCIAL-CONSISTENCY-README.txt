@@ -1,0 +1,87 @@
+AgriCore v1.2 — Sprint 2: Commercial Consistency & Admin Finish
+
+AUDIT-FIRST SCOPE
+This package was built from AgriCore-v1.2-Sprint2-Upload.zip and extends existing features rather than rebuilding Calendar, Dispatch, Billing, Communications, Service Programmes, Offline mode, or Data Management.
+
+WHAT THIS SPRINT CHANGES
+
+1. Regional / global formatting propagation
+- Added one reusable client regional-formatting hook.
+- Added a server-side company-regional-settings loader.
+- Quotes list and quote detail use the active company's currency/date settings.
+- Quote line editor and quote totals use the active company's currency symbol and tax label.
+- Invoice list and invoice detail use company-aware money/date/tax formatting.
+- Invoice PDF uses company currency and tax terminology instead of hard-coded GBP/VAT.
+- Job detail money fields use company currency formatting/symbol.
+- Technician parts card uses company currency.
+- Stock list, stock detail and purchase orders use company currency/date settings.
+- New purchase orders use the company's tax label/rate and currency formatting.
+- Reports Centre uses company currency, locale, timezone and tax terminology.
+- User charge-out rates use company currency.
+- Dashboard Summary Cards and customer/machine intelligence panels use company currency.
+- Revolut invoice orders now use the active company's currency code rather than GBP.
+
+Note: AgriCore's own SaaS marketing/subscription pricing remains GBP by design. The change applies to tenant operational/business data.
+
+2. Administration Audit Log
+- Added Administration -> Audit Log.
+- Reads the existing data_management_audit table created by migration 20260811_009.
+- Filters by record type/action.
+- Displays the latest 250 entries using the active company's regional date/time formatting.
+- No new audit database table is created.
+
+3. Broader Data Management audit coverage
+- Existing job deletion already wrote audit entries through agricore_delete_job.
+- Customer deletes, machine deletes, quote deletes, draft-invoice deletes, stock archives and user deactivations now also write data-management audit entries.
+
+DATABASE
+No new migration is required for this Sprint 2 overlay IF migration 20260811_009_core_data_deletion_engine.sql has already been run (it was required by the working Core Data Deletion Engine).
+
+INSTALL
+Extract this ZIP over:
+C:\projects\Agricore\frontend
+
+Then run:
+taskkill /F /IM node.exe
+Remove-Item ".next" -Recurse -Force -ErrorAction SilentlyContinue
+npm.cmd run build
+npm.cmd run dev -- --webpack
+
+ACCEPTANCE TEST
+A. UK regression
+1. Use McAteer/Glenagri with GB/GBP/VAT settings.
+2. Check Dashboard, Quotes, Invoice list/detail/PDF, Job detail, Stock and Purchase Orders.
+3. Confirm existing UK values still appear as GBP and VAT.
+
+B. International test (use a disposable/demo company)
+1. Set Regional Settings to United States / USD / Sales Tax.
+2. Refresh.
+3. Check Quotes, Jobs, Invoices, Stock, Purchase Orders and Reports.
+4. Confirm operational amounts show USD rather than £.
+5. Confirm Quote/Invoice/Report tax wording uses Sales Tax rather than VAT.
+6. Set Australia / AUD / GST and repeat a few key screens.
+
+C. Invoice PDF
+1. Generate a PDF while using a non-GBP demo company.
+2. Confirm line prices, totals and outstanding value use the company currency.
+3. Confirm the tax row uses the configured tax name.
+
+D. Revolut
+Only test with a company/currency supported by that company's Revolut configuration. Confirm newly-created orders use the company currency code.
+
+E. Audit Log
+1. Go to Administration -> Data Management.
+2. Delete one disposable non-invoiced job.
+3. Delete one unused disposable customer or machine if available.
+4. Archive one disposable stock item if available.
+5. Open Administration -> Audit Log.
+6. Confirm the actions appear and belong only to the active company.
+
+VALIDATION PERFORMED HERE
+- All changed TS/TSX files passed TypeScript transpile/syntax validation.
+- The clean upload intentionally excludes node_modules, so the full Next.js build must be run locally before deployment.
+
+OUT OF SCOPE / LEFT INTENTIONALLY UNCHANGED
+- AgriCore SaaS pricing/marketing remains GBP for the current UK commercial launch.
+- Customer Portal, Machinery Sales CRM and AI Service Intelligence remain future modules.
+- Calendar and Dispatch were not rebuilt because the audit confirmed they already contain substantial working functionality.

@@ -1,5 +1,7 @@
 "use client";
 
+import { useRegionalFormatters } from "@/lib/client/use-regional-formatters";
+
 export type QuoteDiscountType = "" | "percentage" | "fixed";
 
 type QuoteTotalsProps = {
@@ -21,6 +23,9 @@ export default function QuoteTotals({
   onDiscountValueChange,
   onVatRateChange,
 }: QuoteTotalsProps) {
+  const { money, number, taxName, currencySymbol } = useRegionalFormatters();
+  const formatCurrency = money;
+  const formatPercentage = (value: number) => number(value, { maximumFractionDigits: 2 });
   const safeSubtotal = toSafeNumber(subtotal);
   const safeDiscountValue = Math.max(0, toSafeNumber(discountValue));
   const safeVatRate = Math.max(0, toSafeNumber(vatRate));
@@ -66,7 +71,7 @@ export default function QuoteTotals({
           <div className="relative">
             {discountType ? (
               <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-slate-500">
-                {discountType === "percentage" ? "%" : "£"}
+                {discountType === "percentage" ? "%" : currencySymbol}
               </span>
             ) : null}
 
@@ -88,7 +93,7 @@ export default function QuoteTotals({
 
         <label className="space-y-2">
           <span className="text-sm font-semibold text-slate-700">
-            VAT rate
+            {taxName} rate
           </span>
 
           <div className="relative">
@@ -132,7 +137,7 @@ export default function QuoteTotals({
           />
 
           <SummaryRow
-            label={`VAT (${formatPercentage(safeVatRate)})`}
+            label={`${taxName} (${formatPercentage(safeVatRate)})`}
             value={formatCurrency(vatAmount)}
           />
         </dl>

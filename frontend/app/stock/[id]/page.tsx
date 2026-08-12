@@ -11,6 +11,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { loadActiveCompany } from "@/lib/company-context-client";
 import Card from "../../../Components/ui/Card";
+import { useRegionalFormatters } from "@/lib/client/use-regional-formatters";
 
 type StockFormState = {
   part_number: string;
@@ -80,6 +81,8 @@ export default function StockItemPage() {
   const [archiving, setArchiving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const { money } = useRegionalFormatters();
+  const formatCurrency = money;
 
   const loadStockItem = useCallback(async () => {
     setLoading(true);

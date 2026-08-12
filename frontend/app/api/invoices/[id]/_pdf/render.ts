@@ -7,6 +7,7 @@ import {
   rgb,
 } from "pdf-lib";
 import QRCode from "qrcode";
+import { formatCurrency as formatRegionalCurrency, normaliseRegionalSettings } from "@/lib/regional-settings";
 import type { InvoiceItemRow, InvoicePdfData, InvoiceRow, MachineRow } from "./types";
 import {
   loadCompanyLogoBytes,
@@ -306,8 +307,8 @@ function invoiceTable(ctx: Ctx, page: PDFPage, y: number, items: InvoiceItemRow[
       ty -= 11;
     }
     page.drawText(quantity(number(item.quantity)), { x: cols.qty, y: y - 8, size: 8.5, font: ctx.regular, color: DARK });
-    page.drawText(money(number(item.unit_price)), { x: cols.unit, y: y - 8, size: 8.5, font: ctx.regular, color: DARK });
-    const total = money(number(item.line_total));
+    page.drawText(money(number(item.unit_price), ctx.company), { x: cols.unit, y: y - 8, size: 8.5, font: ctx.regular, color: DARK });
+    const total = money(number(item.line_total), ctx.company);
     page.drawText(total, { x: W - M - ctx.bold.widthOfTextAtSize(total, 8.5), y: y - 8, size: 8.5, font: ctx.bold, color: DARK });
     y -= rowHeight + 3;
   }
@@ -318,9 +319,9 @@ function totals(page: PDFPage, ctx: Ctx, y: number, invoice: InvoiceRow) {
   const x = W - M - 235;
   const right = W - M;
   const rows = [
-    ["Subtotal", money(number(invoice.subtotal))],
-    [`VAT (${quantity(number(invoice.vat_rate))}%)`, money(number(invoice.vat_amount))],
-    ["Amount paid", money(number(invoice.amount_paid))],
+    ["Subtotal", money(number(invoice.subtotal), ctx.company)],
+    [`${ctx.company.tax_name || "Tax"} (${quantity(number(invoice.vat_rate))}%)`, money(number(invoice.vat_amount), ctx.company)],
+    ["Amount paid", money(number(invoice.amount_paid), ctx.company)],
   ];
   rows.forEach(([label, value], i) => {
     const ry = y - i * 22;
@@ -329,11 +330,11 @@ function totals(page: PDFPage, ctx: Ctx, y: number, invoice: InvoiceRow) {
   });
   y -= rows.length * 22 + 5;
   page.drawLine({ start: { x, y: y + 10 }, end: { x: right, y: y + 10 }, thickness: 1, color: LIGHT });
-  const total = money(number(invoice.total));
+  const total = money(number(invoice.total), ctx.company);
   page.drawText("Total", { x, y: y - 8, size: 13, font: ctx.bold, color: DARK });
   page.drawText(total, { x: right - ctx.bold.widthOfTextAtSize(total, 15), y: y - 10, size: 15, font: ctx.bold, color: GREEN });
   y -= 37;
-  const outstanding = money(Math.max(0, number(invoice.total) - number(invoice.amount_paid)));
+  const outstanding = money(Math.max(0, number(invoice.total) - number(invoice.amount_paid)), ctx.company);
   page.drawRectangle({ x, y: y - 29, width: 235, height: 38, color: PALE_GREEN, borderColor: GREEN, borderWidth: 1 });
   page.drawText("Outstanding", { x: x + 10, y: y - 15, size: 10, font: ctx.bold, color: GREEN });
   page.drawText(outstanding, { x: right - 10 - ctx.bold.widthOfTextAtSize(outstanding, 12), y: y - 16, size: 12, font: ctx.bold, color: GREEN });
@@ -350,7 +351,7 @@ function paymentPanel(page: PDFPage, ctx: Ctx, y: number, invoice: InvoiceRow, q
   }
   page.drawText("Pay securely online", { x: tx, y: y - 24, size: 12, font: ctx.bold, color: GREEN });
   const outstanding = Math.max(0, number(invoice.total) - number(invoice.amount_paid));
-  page.drawText(`Outstanding: ${money(outstanding)}`, { x: tx, y: y - 43, size: 10, font: ctx.bold, color: DARK });
+  page.drawText(`Outstanding: ${money(outstanding, ctx.company)}`, { x: tx, y: y - 43, size: 10, font: ctx.bold, color: DARK });
   page.drawText("Scan the QR code or use the secure payment link:", { x: tx, y: y - 60, size: 8.5, font: ctx.regular, color: MID });
   let py = y - 75;
   for (const line of wrap(invoice.payment_url || "", ctx.regular, 7.5, CW - (tx - M) - 15).slice(0, 2)) {
@@ -437,7 +438,7 @@ function footer(page: PDFPage, ctx: Ctx, reference: string) {
   const bits = [
     companyName,
     companyRegistration ? `Company No: ${companyRegistration}` : "",
-    vatNumber ? `VAT No: ${vatNumber}` : "",
+    vatNumber ? `${ctx.company.tax_name || "Tax"} No: ${vatNumber}` : "",
     reference,
   ].filter(Boolean);
 
@@ -549,8 +550,8 @@ function number(value: unknown) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function money(value: number) {
-  return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(value);
+function money(value: number, company: CompanySettings) {
+  return formatRegionalCurrency(value, normaliseRegionalSettings(company));
 }
 
 function quantity(value: number) {

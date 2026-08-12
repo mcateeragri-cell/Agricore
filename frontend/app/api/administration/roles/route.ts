@@ -40,6 +40,8 @@ const PERMISSIONS = [
   "calendar.manage",
   "invoices.view",
   "invoices.manage",
+  "sales.view",
+  "sales.manage",
 ] as const;
 
 type PermissionKey = (typeof PERMISSIONS)[number];

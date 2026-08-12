@@ -3,6 +3,7 @@
 import CompanyBrand from "@/Components/branding/company-brand";
 
 import SidebarIcon from "./sidebar-icon";
+import { Search } from "lucide-react";
 
 type MobileTopBarProps = {
   onOpenMenu: () => void;
@@ -26,6 +27,15 @@ export default function MobileTopBar({
         <div className="min-w-0 flex-1">
           <CompanyBrand compact />
         </div>
+
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new Event("agricore:open-search"))}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--border-soft)] bg-[var(--surface-muted)] text-[var(--text-primary)] transition active:scale-95 active:bg-[var(--surface-strong)]"
+          aria-label="Search AgriCore"
+        >
+          <Search className="h-5 w-5" />
+        </button>
       </div>
     </header>
   );

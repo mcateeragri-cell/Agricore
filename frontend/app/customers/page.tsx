@@ -37,6 +37,15 @@ type CompanyContextResponse = {
   error?: string;
 };
 
+
+function getMissingCustomerDetails(customer: Customer) {
+  const missing: string[] = [];
+  if (!customer.phone.trim()) missing.push("phone");
+  if (!customer.address.trim()) missing.push("address");
+  if (!customer.postcode.trim()) missing.push("postcode");
+  return missing;
+}
+
 const emptyForm = {
   name: "",
   businessName: "",
@@ -198,12 +207,9 @@ export default function CustomersPage() {
   ) {
     event.preventDefault();
 
-    if (
-      !form.name.trim() ||
-      !form.businessName.trim()
-    ) {
+    if (!form.name.trim() && !form.businessName.trim()) {
       setErrorMessage(
-        "Contact name and business name are required.",
+        "Enter either a contact name or a business name. The remaining details can be completed later.",
       );
       return;
     }
@@ -399,6 +405,11 @@ export default function CustomersPage() {
                         <p className="mt-1 text-xs text-slate-500">
                           {customer.name}
                         </p>
+                        {getMissingCustomerDetails(customer).length > 0 && (
+                          <span className="mt-2 inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-bold text-amber-800">
+                            Profile incomplete · {getMissingCustomerDetails(customer).join(", ")}
+                          </span>
+                        )}
                       </td>
 
                       <td className="px-5 py-4">

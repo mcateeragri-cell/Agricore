@@ -71,6 +71,13 @@ const GROUPS = [
     ],
   },
   {
+    label: "Machinery sales",
+    permissions: [
+      ["sales.view", "View machinery sales"],
+      ["sales.manage", "Manage sales pipeline, stock and trade-ins"],
+    ],
+  },
+  {
     label: "Calendar and invoicing",
     permissions: [
       ["calendar.manage", "Manage calendar"],

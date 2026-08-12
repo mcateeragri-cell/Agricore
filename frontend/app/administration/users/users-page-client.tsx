@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigationUser } from "@/Components/navigation/use-navigation-user";
 import { supabase } from "@/lib/supabase";
+import { useRegionalFormatters } from "@/lib/client/use-regional-formatters";
 
 type AppRole =
   | "company_admin"
@@ -191,6 +192,9 @@ function errorMessage(error: unknown): string {
 }
 
 export default function UsersPageClient() {
+  const { money, date } = useRegionalFormatters();
+  const formatCurrency = (value: number | null) => value == null ? "—" : money(value);
+  const formatDate = (value: string | null) => value ? date(value, { day: "2-digit", month: "short", year: "numeric" }) : "—";
   const {
     userState,
     loading: companyContextLoading,

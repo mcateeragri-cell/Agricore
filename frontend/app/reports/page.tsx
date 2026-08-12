@@ -17,6 +17,7 @@ import {
 
 import { requirePermission } from "@/lib/auth/require-permission";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { formatCurrency as formatRegionalCurrency, formatDate as formatRegionalDate, normaliseRegionalSettings } from "@/lib/regional-settings";
 import { ReportsExportButton, ReportsKpiGrid, type KpiItem } from "./ReportsInteractions";
 
 export const dynamic = "force-dynamic";
@@ -174,6 +175,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
     machinesResult,
     stockResult,
     serviceResult,
+    settingsResult,
   ] = await Promise.all([
     supabase
       .from("jobs")
@@ -214,6 +216,11 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
       `)
       .eq("company_id", user.companyId)
       .eq("active", true),
+    supabase
+      .from("company_settings")
+      .select("country_code,currency_code,locale,timezone,tax_name,default_tax_rate,date_format,time_format,week_start,measurement_system")
+      .eq("company_id", user.companyId)
+      .maybeSingle(),
   ]);
 
   const errors = [
@@ -225,6 +232,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
     machinesResult.error,
     stockResult.error,
     serviceResult.error,
+    settingsResult.error,
   ].filter(Boolean);
 
   const jobs = ((jobsResult.data ?? []) as JobRow[]).filter((row) => within(row.opened_date ?? row.created_at, start));
@@ -233,6 +241,15 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
   const quotes = ((quotesResult.data ?? []) as QuoteRow[]).filter((row) => within(row.quote_date ?? row.created_at, start));
   const stock = (stockResult.data ?? []) as StockRow[];
   const services = (serviceResult.data ?? []) as ServiceRow[];
+
+  const regional = normaliseRegionalSettings(settingsResult.data ?? undefined);
+  const money = (value: number, decimals = 0) => formatRegionalCurrency(value, regional, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+  const shortDate = (value: Date) => formatRegionalDate(value, regional, { day: "2-digit", month: "short" });
+  const monthLabel = (value: Date) => formatRegionalDate(value, regional, { month: "short" });
+  const taxName = regional.tax_name;
 
   const completedJobs = jobs.filter((job) => COMPLETE.has(normalise(job.status))).length;
   const openJobs = Math.max(0, jobs.length - completedJobs);
@@ -436,7 +453,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
       rows: [
         { label: "Invoices raised", value: invoices.length.toLocaleString("en-GB") },
         { label: "Average invoice", value: money(averageInvoice) },
-        { label: "VAT included", value: money(vat) },
+        { label: `${taxName} included`, value: money(vat) },
         { label: "Payments recorded", value: money(paid) },
       ],
       records: invoiceRecords,
@@ -467,16 +484,16 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
       recordsLabel: "Open invoice balances",
     },
     {
-      id: "vat", label: "VAT on invoices", value: money(vat), detail: `Average invoice ${money(averageInvoice)}`, icon: "vat", tone: "violet",
-      description: "VAT recorded on invoices in this operational report period. Reconcile with your accounting system for statutory VAT reporting.",
+      id: "vat", label: `${taxName} on invoices`, value: money(vat), detail: `Average invoice ${money(averageInvoice)}`, icon: "vat", tone: "violet",
+      description: `${taxName} recorded on invoices in this operational report period. Reconcile with your accounting system for statutory tax reporting.`,
       rows: [
         { label: "Invoice count", value: invoices.length.toLocaleString("en-GB") },
         { label: "Gross invoiced", value: money(invoiced) },
-        { label: "VAT recorded", value: money(vat) },
+        { label: `${taxName} recorded`, value: money(vat) },
         { label: "Average gross invoice", value: money(averageInvoice) },
       ],
       records: invoiceRecords,
-      recordsLabel: "Invoices contributing to VAT",
+      recordsLabel: `Invoices contributing to ${taxName}`,
     },
     {
       id: "jobs", label: "Jobs completed", value: completedJobs.toLocaleString("en-GB"), detail: `${completionRate}% completion rate · ${openJobs} open`, icon: "jobs",
@@ -503,11 +520,11 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
       recordsLabel: "Recent labour entries",
     },
     {
-      id: "quotes", label: "Quotes", value: activeQuotes.toLocaleString("en-GB"), detail: `${quoteWinRate}% decided quote win rate · ${money(quoteValue)} total`, icon: "quotes", tone: "violet",
+      id: "quotes", label: "Quotes", value: new Intl.NumberFormat(regional.locale).format(activeQuotes), detail: `${quoteWinRate}% decided quote win rate · ${money(quoteValue)} total`, icon: "quotes", tone: "violet",
       description: "Quote activity and outcomes for the selected period.",
       rows: [
         { label: "Quotes recorded", value: quotes.length.toLocaleString("en-GB") },
-        { label: "Active", value: activeQuotes.toLocaleString("en-GB") },
+        { label: "Active", value: new Intl.NumberFormat(regional.locale).format(activeQuotes) },
         { label: "Accepted / converted", value: acceptedQuotes.toLocaleString("en-GB") },
         { label: "Decided win rate", value: `${quoteWinRate}%` },
       ],
@@ -515,11 +532,11 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
       recordsLabel: "Quotes in this period",
     },
     {
-      id: "stock", label: "Stock alerts", value: lowStock.toLocaleString("en-GB"), detail: `${outOfStock} out of stock · ${money(stockCost)} at cost`, icon: "stock", tone: lowStock ? "rose" : "emerald",
+      id: "stock", label: "Stock alerts", value: new Intl.NumberFormat(regional.locale).format(lowStock), detail: `${outOfStock} out of stock · ${money(stockCost)} at cost`, icon: "stock", tone: lowStock ? "rose" : "emerald",
       description: "Current active inventory position for the company. Stock data is not restricted by report date because it represents today's position.",
       rows: [
         { label: "Items tracked", value: stock.length.toLocaleString("en-GB") },
-        { label: "Low stock", value: lowStock.toLocaleString("en-GB") },
+        { label: "Low stock", value: new Intl.NumberFormat(regional.locale).format(lowStock) },
         { label: "Out of stock", value: outOfStock.toLocaleString("en-GB") },
         { label: "Retail value", value: money(stockRetail) },
       ],
@@ -727,7 +744,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
             <dl className="mt-5 space-y-3">
               {[
                 ["Items tracked", stock.length.toLocaleString("en-GB")],
-                ["Low stock", lowStock.toLocaleString("en-GB")],
+                ["Low stock", new Intl.NumberFormat(regional.locale).format(lowStock)],
                 ["Out of stock", outOfStock.toLocaleString("en-GB")],
                 ["Cost value", money(stockCost)],
                 ["Retail value", money(stockRetail)],

@@ -6,6 +6,7 @@ import { loadCompanyRevolutCredentials } from "@/lib/payments/company-settings";
 import { createSupabaseAdmin } from "@/lib/payments/supabase-admin";
 import type { CreatePaymentLinkRequest, CreatePaymentLinkResponse, PaymentInvoiceRow } from "@/lib/payments/types";
 import { asNumber, buildInvoiceReference, safeErrorMessage, toMinorUnits } from "@/lib/payments/utils";
+import { loadCompanyRegionalSettings } from "@/lib/server/company-regional-settings";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -48,7 +49,8 @@ export async function POST(request: NextRequest) {
 
     const outstanding = Math.max(0, asNumber(invoice.total) - asNumber(invoice.amount_paid));
     const revolut = await loadCompanyRevolutCredentials(supabase, auth.companyId);
-    const order = await createRevolutOrder(revolut, { amountMinor: toMinorUnits(outstanding), currency: "GBP", merchantOrderReference: buildInvoiceReference(invoice.invoice_number, invoice.id), description: `Invoice ${invoice.invoice_number}`, customerEmail: invoice.customer_email, redirectUrl: `${getAppUrl()}/invoices/${invoice.id}?payment=return` });
+    const regional = await loadCompanyRegionalSettings(supabase, auth.companyId);
+    const order = await createRevolutOrder(revolut, { amountMinor: toMinorUnits(outstanding), currency: regional.currency_code, merchantOrderReference: buildInvoiceReference(invoice.invoice_number, invoice.id), description: `Invoice ${invoice.invoice_number}`, customerEmail: invoice.customer_email, redirectUrl: `${getAppUrl()}/invoices/${invoice.id}?payment=return` });
     if (!order.checkout_url) throw new Error("Revolut created the order but did not return a checkout URL.");
 if (outstanding <= 0) {
   return NextResponse.json<CreatePaymentLinkResponse>(

@@ -56,8 +56,18 @@ export default function NavigationMenu({
       userState.permissions.includes("service_programmes.manage");
 
     const canUseAiDiagnostics =
-      hasFullAccess ||
-      userState.permissions.includes("ai_diagnostics.use");
+      userState.enabledFeatures.includes("ai_diagnostics") &&
+      (hasFullAccess || userState.permissions.includes("ai_diagnostics.use"));
+
+    const canUseMachinerySales =
+      userState.enabledFeatures.includes("machinery_sales_crm") &&
+      (hasFullAccess ||
+        userState.permissions.includes("sales.view") ||
+        userState.permissions.includes("sales.manage"));
+
+    const canUseAtlas =
+      userState.enabledFeatures.includes("atlas_intelligence") &&
+      !fieldRole;
 
     if (fieldRole) {
       const items: NavigationItem[] = [
@@ -89,6 +99,14 @@ export default function NavigationMenu({
         return canUseAiDiagnostics;
       }
 
+      if (item.href === "/sales") {
+        return canUseMachinerySales && canViewMoney;
+      }
+
+      if (item.href === "/intelligence") {
+        return canUseAtlas && canViewMoney;
+      }
+
       if (!canViewMoney && [
         "/quotes",
         "/invoices",
@@ -104,6 +122,7 @@ export default function NavigationMenu({
     canViewMoney,
     fieldRole,
     userState.permissions,
+    userState.enabledFeatures,
     userState.platformRole,
     userState.role,
   ]);
@@ -132,6 +151,7 @@ export default function NavigationMenu({
     );
   }, [
     userState.permissions,
+    userState.enabledFeatures,
     userState.platformRole,
     userState.role,
   ]);

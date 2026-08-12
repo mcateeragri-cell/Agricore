@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRegionalFormatters } from "@/lib/client/use-regional-formatters";
 
 import Card from "../../../Components/ui/Card";
 import { supabase } from "@/lib/supabase";
@@ -118,6 +119,8 @@ export default function CustomerIntelligencePanel({
   customerId,
   canViewFinancials,
 }: CustomerIntelligencePanelProps) {
+  const { money } = useRegionalFormatters();
+  const formatCurrency = money;
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
   const [quotes, setQuotes] = useState<QuoteRow[]>([]);

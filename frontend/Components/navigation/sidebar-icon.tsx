@@ -113,6 +113,15 @@ export default function SidebarIcon({
         </svg>
       );
 
+    case "sales":
+      return (
+        <svg {...commonProps}>
+          <path d="M3 7h18v12H3z" />
+          <path d="M7 7V5h10v2M8 12h8M8 16h5" />
+          <path d="M17 13l2 2 3-4" />
+        </svg>
+      );
+
     case "reports":
       return (
         <svg {...commonProps}>

@@ -303,6 +303,15 @@ export async function PATCH(
       );
     }
 
+    const financiallyIssued = ["sent", "part_paid", "paid", "overdue"].includes(String(existingInvoice.status));
+    const financialEditRequested = body.items !== undefined || body.vatRate !== undefined || body.issueDate !== undefined;
+    if (financiallyIssued && financialEditRequested) {
+      return NextResponse.json(
+        { error: "Issued invoices are financially locked. Void/credit the invoice rather than changing line items, tax or issue date." },
+        { status: 409 },
+      );
+    }
+
     if (
       existingInvoice.status === "paid" &&
       body.items

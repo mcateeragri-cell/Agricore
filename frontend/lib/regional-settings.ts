@@ -190,6 +190,18 @@ export function formatDateTime(
   }).format(date);
 }
 
+export function currencySymbol(regional?: PartialRegional) {
+  const settings = normaliseRegionalSettings(regional);
+  const parts = new Intl.NumberFormat(settings.locale, {
+    style: "currency",
+    currency: settings.currency_code,
+    currencyDisplay: "narrowSymbol",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).formatToParts(0);
+  return parts.find((part) => part.type === "currency")?.value ?? settings.currency_code;
+}
+
 export function distanceUnit(regional?: PartialRegional) {
   return normaliseRegionalSettings(regional).measurement_system === "imperial" ? "mi" : "km";
 }

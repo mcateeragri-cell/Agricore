@@ -1,0 +1,162 @@
+AgriCore v1.3 — Growth Features Sprint
+
+AUDIT-FIRST RESULT
+This package was built from the latest uploaded AgriCore frontend.
+It does NOT rebuild Calendar, Dispatch, Service Programmes, Billing, Communications,
+Offline mode, Data Management, Core Deletion Engine, Theme Engine or existing dashboard widgets.
+It extends the current architecture.
+
+FEATURE 1 — GLOBAL SEARCH / COMMAND PALETTE
+- Ctrl+K / Cmd+K from anywhere in the authenticated app.
+- Mobile search button in the top bar.
+- Searches the ACTIVE COMPANY only.
+- Searches customers, machines, jobs, quotes, invoices, stock and users.
+- Financial search results are hidden from financially restricted field roles.
+- Technician/apprentice search is restricted to their own jobs rather than exposing company-wide customer/financial directories.
+- Quick navigation/actions are available when the search field is empty.
+- No new external search service is required.
+
+FEATURE 2 — CUSTOMISABLE WORKSHOP DASHBOARD
+- Uses the EXISTING dashboard widgets rather than building a second dashboard.
+- Users can:
+  * drag widgets to reorder them
+  * hide/show widgets
+  * choose small / medium / large / full width
+  * restore the default layout
+- Layout is saved per COMPANY + USER and follows the user across devices.
+- Subscription and onboarding banners remain outside the customisable layout so critical notices cannot be accidentally hidden.
+- Financial widgets remain permission-aware.
+
+FEATURE 3 — AI WORKSHOP ASSISTANT
+- Replaces the old placeholder AI Diagnostics page with a real Service Intelligence workspace.
+- Select an existing company machine.
+- Enter symptoms, fault codes and technician context.
+- Automatically loads up to 20 recent jobs for that machine plus relevant parts and labour history.
+- If OPENAI_API_KEY is configured, uses the OpenAI Responses API.
+- Default model: gpt-5.6 (override with OPENAI_MODEL).
+- If no OpenAI key is configured, the page still works in HISTORY-ONLY mode and summarises AgriCore repair history without making an external AI call.
+- Diagnostic prompt explicitly:
+  * treats suggestions as advisory
+  * refuses to invent manufacturer torque/pressure/fault-code specifications
+  * tells technicians to verify safety-critical/manufacturer information
+  * does not claim access to proprietary manuals or bulletins
+- Customer identity is not included in the OpenAI diagnostic payload.
+- Existing ai_diagnostics.use permission is retained.
+- AI Diagnostics is enabled for Professional and Enterprise plans by the migration.
+
+FEATURE 4 — ENTERPRISE MACHINERY SALES CRM
+New /sales module for Enterprise subscriptions.
+Professional/Starter subscription companies cannot elevate this module with a feature override.
+Internal/demo companies retain full platform access for testing/presentation.
+
+Includes:
+- Sales pipeline / opportunities
+- Lead → Qualified → Quoted → Negotiation → Won/Lost stages
+- Estimated value + probability / weighted pipeline
+- Existing AgriCore customer linking
+- Machinery stock inventory
+- New / Used / Ex-demo condition
+- Incoming / Available / Workshop / Reserved / Sold status
+- Cost and asking price
+- Trade-in appraisal records
+- Trade-ins can link directly to an existing customer machine, reusing its recorded identity/details
+- Sales permissions:
+  * sales.view
+  * sales.manage
+- Role editor updated to expose the new permissions
+- Navigation item only appears when BOTH plan entitlement and user permission allow it
+
+REQUIRED SUPABASE MIGRATION
+Run before starting the updated frontend:
+
+supabase/migrations/20260812_010_v13_growth_features.sql
+
+The migration adds:
+- global_search feature
+- dashboard_builder feature
+- machinery_sales_crm feature
+- Professional AI entitlement
+- Enterprise machinery-sales entitlement
+- company_dashboard_layouts
+- sales_opportunities
+- sales_stock_machines
+- sales_trade_ins
+- sales.view / sales.manage permissions
+
+OPENAI ENVIRONMENT (AI FEATURE)
+Optional for local/history-only testing; required for live AI reasoning:
+
+OPENAI_API_KEY=<your OpenAI API key>
+OPENAI_MODEL=gpt-5.6
+
+OPENAI_MODEL is optional. If omitted, AgriCore uses gpt-5.6.
+Never put OPENAI_API_KEY in NEXT_PUBLIC_* variables or browser code.
+Add it server-side to .env.local for local development and to Vercel Environment Variables for production.
+
+NO NEW NPM DEPENDENCIES
+The AI integration uses server-side fetch against the OpenAI Responses API, so this sprint does not add another JavaScript SDK dependency.
+
+INSTALL
+1. Run the Supabase migration above.
+2. Extract this ZIP over:
+   C:\projects\Agricore\frontend
+3. For AI, add OPENAI_API_KEY locally if you want to test live AI reasoning.
+4. Run:
+
+taskkill /F /IM node.exe
+Remove-Item ".next" -Recurse -Force -ErrorAction SilentlyContinue
+npm.cmd run build
+npm.cmd run dev -- --webpack
+
+ACCEPTANCE TEST — GLOBAL SEARCH
+1. Login to a normal office/admin account.
+2. Press Ctrl+K.
+3. Search a real customer, registration/serial, job number, quote, invoice and stock part.
+4. Open results with mouse and keyboard Enter.
+5. Confirm results are only from the active company.
+6. Switch company and search again.
+7. Login as technician/apprentice and confirm financial/company-directory results are not exposed.
+8. Test the mobile search button.
+
+ACCEPTANCE TEST — DASHBOARD
+1. Open Dashboard as an office/admin user.
+2. Click Customise dashboard.
+3. Drag widgets into a different order.
+4. Hide one widget.
+5. Change widget widths.
+6. Save and refresh.
+7. Confirm the layout persists.
+8. Login on another device/browser with the same user and confirm it follows the account.
+9. Confirm restricted users do not gain financial widgets.
+10. Reset to default and save again.
+
+ACCEPTANCE TEST — AI WORKSHOP ASSISTANT
+1. Ensure the company has ai_diagnostics enabled and the user has ai_diagnostics.use.
+2. Open AI Diagnostics.
+3. Choose a machine that has previous jobs.
+4. Enter a real-looking symptom and optionally a fault code.
+5. With no OPENAI_API_KEY, confirm History-only mode returns AgriCore repair-history context.
+6. Add OPENAI_API_KEY and restart the local server.
+7. Confirm the status says AI connected.
+8. Run the same case and confirm AI diagnostic guidance is returned.
+9. Confirm it references existing history when relevant and does not invent manufacturer specifications.
+
+ACCEPTANCE TEST — MACHINERY SALES CRM
+1. Run migration.
+2. Internal company: /sales should be available for testing if the user has sales permission/full admin access.
+3. Professional subscription test company: Sales should NOT appear and /sales should reject access.
+4. Enterprise subscription test company: Sales should appear for authorised office/admin roles.
+5. Add a sales opportunity linked to an existing customer.
+6. Move the opportunity through pipeline stages.
+7. Add a stock machine and change its status.
+8. Add a trade-in linked to an existing customer machine.
+9. Confirm financial values use the company regional currency formatter.
+10. Use Roles & Permissions to disable sales.view/sales.manage for a test role and confirm access disappears.
+
+VALIDATION COMPLETED IN PACKAGING ENVIRONMENT
+- All changed/new TS and TSX files were syntax/transpile checked with TypeScript 5.8.3 successfully.
+- No new npm dependencies were introduced.
+- The uploaded project intentionally excludes node_modules, so run the normal local Next.js production build for final whole-project type/build validation before pushing to main.
+
+RECOMMENDED RELEASE
+AgriCore v1.3.0 — Global Search, Dashboard Builder, AI Workshop Assistant & Enterprise Machinery Sales CRM

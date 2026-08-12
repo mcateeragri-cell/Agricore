@@ -6,6 +6,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { useRegionalFormatters } from "@/lib/client/use-regional-formatters";
 import { supabase } from "@/lib/supabase";
 import Card from "../ui/Card";
 import { useNavigationUser } from "../navigation/use-navigation-user";
@@ -182,6 +183,8 @@ export default function SummaryCards({
 }: {
   showFinancialCards?: boolean;
 }) {
+  const { money } = useRegionalFormatters();
+  const formatCurrency = money;
   const { userState, loading: companyLoading } = useNavigationUser();
   const companyId = userState.activeCompany?.id ?? "";
   const [jobs, setJobs] = useState<DatabaseRow[]>([]);

@@ -22,6 +22,7 @@ export type IconName =
   | "quotes"
   | "invoices"
   | "stock"
+  | "sales"
   | "reports"
   | "administration"
   | "users"
@@ -62,6 +63,7 @@ export type UserNavigationState = {
   platformRole: PlatformRole | null;
   role: UserRole | null;
   permissions: string[];
+  enabledFeatures: string[];
   activeCompany: CompanyOption | null;
   companies: CompanyOption[];
 };
@@ -76,6 +78,8 @@ export type CompanyContextResponse = {
     permissions: string[];
   };
   activeCompany?: CompanyOption;
+  enabledFeatures?: string[];
+  billingMode?: "subscription" | "internal" | "demo";
   companies?: CompanyOption[];
   error?: string;
 };
@@ -106,6 +110,7 @@ export const initialUserState: UserNavigationState = {
   platformRole: null,
   role: null,
   permissions: [],
+  enabledFeatures: [],
   activeCompany: null,
   companies: [],
 };

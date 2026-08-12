@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { loadActiveCompany } from "@/lib/company-context-client";
 import Card from "../../Components/ui/Card";
 import StockProNav from "../../Components/stock/StockProNav";
+import { useRegionalFormatters } from "@/lib/client/use-regional-formatters";
 
 type StockItem = {
   id: string;
@@ -92,6 +93,8 @@ export default function StockPage() {
   const [selectedStatus, setSelectedStatus] = useState<StockStatus>("all");
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const { money } = useRegionalFormatters();
+  const formatCurrency = money;
 
   const loadStock = useCallback(async () => {
     setLoading(true);

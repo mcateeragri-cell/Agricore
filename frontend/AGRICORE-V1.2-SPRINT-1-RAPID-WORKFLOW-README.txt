@@ -1,0 +1,69 @@
+AgriCore v1.2 — Sprint 1: Rapid Workflow Finish
+
+AUDIT-FIRST RESULT
+The latest uploaded project already contained:
+- Inline customer creation inside New Job
+- Inline machine creation inside New Job
+- Automatic selection of newly-created customer/machine
+- Minimal quick-entry fields
+- Invoice billing-detail validation
+- Existing Calendar, Offline, Service Programmes, Data Management and Deletion Engine foundations
+
+Those features were NOT duplicated.
+
+THIS SPRINT ADDS
+1. Emergency Callout mode directly inside the existing New Job workflow.
+   - One-click Emergency Callout button
+   - Automatically sets priority to urgent
+   - Quick fault-category chips:
+     Engine
+     Hydraulics
+     Electrical
+     Transmission
+     PTO
+     Air Conditioning
+     Other
+   - Uses the existing inline customer/machine drawers rather than creating another wizard/route
+   - Existing job details remain in place
+
+2. Customer profile-completeness indicators.
+   - Customers created rapidly can still be saved with only a name
+   - Customer list now flags records missing phone/address/postcode
+   - This is informational only; it does not slow down job creation
+   - Existing invoice validation remains the final billing safeguard
+
+3. Machine profile-completeness indicators.
+   - Machine list flags records missing year, identification (registration or serial), or hours
+   - No extra fields are made mandatory during rapid callout entry
+
+NO SQL MIGRATION REQUIRED.
+NO NEW ENVIRONMENT VARIABLES.
+
+INSTALL
+Extract over:
+C:\projects\Agricore\frontend
+
+Then:
+taskkill /F /IM node.exe
+Remove-Item ".next" -Recurse -Force -ErrorAction SilentlyContinue
+npm.cmd run build
+npm.cmd run dev -- --webpack
+
+ACCEPTANCE TEST
+1. Open Jobs -> New Job.
+2. Enter some fault text/engineer details first.
+3. Click Emergency Callout.
+4. Confirm priority switches to Urgent.
+5. Click a fault category and confirm it starts/prefixes the fault description.
+6. Create a new customer with only the business/customer name.
+7. Confirm the customer is auto-selected and the machine drawer opens.
+8. Create a machine with only Make + Model.
+9. Confirm it is auto-selected and previously-entered job details remain.
+10. Create the job.
+11. Open Customers and confirm the rapid-entry customer shows Profile incomplete.
+12. Open Machines and confirm the rapid-entry machine shows Details incomplete.
+13. Complete the customer/machine records and confirm the indicators disappear after reload.
+14. Confirm invoice creation still requires the existing billing address/postcode validation.
+
+VALIDATION NOTE
+The source files were checked against the latest uploaded project. A standalone TypeScript invocation cannot fully type-check this clean upload because node_modules/Next/React type packages are intentionally excluded; run the normal local Next.js production build above for final validation.

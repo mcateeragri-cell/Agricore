@@ -1,5 +1,7 @@
 "use client";
 
+import { useRegionalFormatters } from "@/lib/client/use-regional-formatters";
+
 export type QuoteItemType =
   | "labour"
   | "part"
@@ -63,6 +65,8 @@ export default function QuoteItems({
   stockItems,
   onChange,
 }: QuoteItemsProps) {
+  const { money, currencySymbol } = useRegionalFormatters();
+  const formatCurrency = money;
   function addItem(itemType: QuoteItemType) {
     const newItem: QuoteLine = {
       id: createLocalId(),
@@ -309,6 +313,9 @@ function QuoteItemRow({
   onMoveUp: () => void;
   onMoveDown: () => void;
 }) {
+  const { money: formatCurrency, currencySymbol } =
+    useRegionalFormatters();
+
   const lineTotal =
     toNumber(item.quantity) *
     toNumber(item.unit_price);
@@ -485,7 +492,7 @@ function QuoteItemRow({
 
           <div className="relative">
             <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-slate-500">
-              £
+              {currencySymbol}
             </span>
 
             <input
@@ -512,7 +519,7 @@ function QuoteItemRow({
 
           <div className="relative">
             <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-slate-500">
-              £
+              {currencySymbol}
             </span>
 
             <input

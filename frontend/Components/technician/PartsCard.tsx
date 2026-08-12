@@ -1,3 +1,6 @@
+"use client";
+
+import { useRegionalFormatters } from "@/lib/client/use-regional-formatters";
 type JobPart = {
   id: string;
   partNumber: string;
@@ -21,6 +24,7 @@ export default function PartsCard({
   onDeletePart,
   readOnly = false,
 }: PartsCardProps) {
+  const { money } = useRegionalFormatters();
   const total = parts.reduce(
     (sum, part) =>
       sum +
@@ -83,7 +87,7 @@ export default function PartsCard({
               </p>
 
               <p className="mt-1 text-lg font-bold text-slate-950 dark:text-white">
-                £{total.toFixed(2)}
+                {money(total)}
               </p>
             </div>
           </div>
@@ -104,6 +108,8 @@ function PartRow({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const { money } = useRegionalFormatters();
+
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-950">
       <div className="flex items-start justify-between gap-4">
@@ -149,16 +155,13 @@ function PartRow({
           value={
             part.unitPrice == null
               ? "-"
-              : `£${part.unitPrice.toFixed(2)}`
+              : money(part.unitPrice)
           }
         />
 
         <Stat
           label="Line Total"
-          value={`£${(
-            (part.unitPrice ?? 0) *
-            part.quantity
-          ).toFixed(2)}`}
+          value={money((part.unitPrice ?? 0) * part.quantity)}
         />
       </div>
     </article>

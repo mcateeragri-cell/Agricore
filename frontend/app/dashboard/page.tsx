@@ -1,15 +1,8 @@
 "use client";
 
 import DashboardHeader from "../../Components/Dashboard/DashboardHeader";
-import ExecutiveSummary from "../../Components/Dashboard/ExecutiveSummary";
-import QuickActions from "../../Components/Dashboard/QuickActions";
-import RecentActivity from "../../Components/Dashboard/RecentActivity";
-import RecentJobs from "../../Components/Dashboard/RecentJobs";
-import RevenueTrend from "../../Components/Dashboard/RevenueTrend";
-import Schedule from "../../Components/Dashboard/Schedule";
-import ServiceDueSummary from "../../Components/Dashboard/ServiceDueSummary";
-import TeamStatus from "../../Components/Dashboard/TeamStatus";
 import SubscriptionBanner from "../../Components/Dashboard/SubscriptionBanner";
+import CustomisableDashboard from "../../Components/Dashboard/CustomisableDashboard";
 import SetupProgressCard from "@/Components/onboarding/SetupProgressCard";
 import GuidedTour from "@/Components/onboarding/GuidedTour";
 import {
@@ -71,28 +64,11 @@ export default function Home() {
 
         <SetupProgressCard />
 
-        <ExecutiveSummary showFinancialCards={canViewMoney} />
-
-        {canViewMoney ? (
-          <section className="mt-6 grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.75fr)]">
-            <RevenueTrend />
-            <TeamStatus />
-          </section>
-        ) : (
-          <section className="mt-6"><TeamStatus /></section>
-        )}
-
-        <section className="mt-6 grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(340px,0.85fr)]">
-          <RecentJobs />
-          <RecentActivity />
-        </section>
-
-        <ServiceDueSummary />
-
-        <section className="mt-6 grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(340px,0.85fr)]">
-          <Schedule />
-          <QuickActions showFinancialActions={canViewMoney} />
-        </section>
+        <CustomisableDashboard
+          canViewMoney={canViewMoney}
+          enabled={userState.enabledFeatures.includes("dashboard_builder")}
+          atlasEnabled={userState.enabledFeatures.includes("atlas_intelligence")}
+        />
       </main>
     </div>
   );

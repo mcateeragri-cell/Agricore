@@ -40,6 +40,8 @@ type CustomerRow = {
   contact_name: string | null;
   phone: string | null;
   email: string | null;
+  address: string | null;
+  postcode: string | null;
 };
 
 type MachineRow = {
@@ -266,7 +268,9 @@ export async function POST(
               business_name,
               contact_name,
               phone,
-              email
+              email,
+              address,
+              postcode
             `)
             .eq("id", job.customer_id)
             .eq("company_id", auth.companyId)
@@ -386,6 +390,39 @@ export async function POST(
 
     const machine =
       machineResult.data as MachineRow | null;
+
+    // Rapid job creation deliberately allows a minimal customer record so the
+    // service desk can get urgent work assigned immediately. Before invoicing,
+    // require the billing identity/address to be completed.
+    if (!customer) {
+      return NextResponse.json(
+        { error: "Complete the customer record before creating an invoice." },
+        { status: 409 },
+      );
+    }
+
+    const missingBillingFields: string[] = [];
+    if (!cleanText(customer.business_name) && !cleanText(customer.contact_name)) {
+      missingBillingFields.push("customer name");
+    }
+    if (!cleanText(customer.address)) {
+      missingBillingFields.push("billing address");
+    }
+    if (!cleanText(customer.postcode)) {
+      missingBillingFields.push("postcode");
+    }
+
+    if (missingBillingFields.length > 0) {
+      return NextResponse.json(
+        {
+          error: `Customer details are incomplete. Add ${missingBillingFields.join(", ")} before creating the invoice.`,
+          code: "customer_billing_details_incomplete",
+          customerId: customer.id,
+          missingFields: missingBillingFields,
+        },
+        { status: 409 },
+      );
+    }
 
     const completion = completionResult.data
       ? (completionResult.data as CompletionRow)

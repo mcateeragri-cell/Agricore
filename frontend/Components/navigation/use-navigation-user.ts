@@ -100,6 +100,10 @@ export function useNavigationUser() {
             ),
           ),
 
+          enabledFeatures: Array.from(
+            new Set(result.enabledFeatures ?? []),
+          ),
+
           activeCompany:
             result.activeCompany ??
             null,

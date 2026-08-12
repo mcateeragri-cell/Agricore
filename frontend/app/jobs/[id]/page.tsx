@@ -1,6 +1,7 @@
 "use client";
 
 import FieldRolePageGate from "@/Components/auth/field-role-page-gate";
+import { useRegionalFormatters } from "@/lib/client/use-regional-formatters";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -374,6 +375,8 @@ function JobDetailPageContent() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { userState } = useNavigationUser();
+  const { money, currencySymbol } = useRegionalFormatters();
+  const formatCurrency = (value: number) => money(value);
   const demoMode = isDemoCompany(userState.activeCompany);
   const demoIdentity = getDemoPresentationIdentity(userState.activeCompany);
   const currentEngineer = demoIdentity?.name ?? DEFAULT_ENGINEER;
@@ -2646,7 +2649,7 @@ async function handleCreateInvoice() {
 
                       <div className="relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 dark:text-slate-400">
-                          £
+                          {currencySymbol}
                         </span>
 
                         <input
@@ -2882,7 +2885,7 @@ async function handleCreateInvoice() {
 
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 dark:text-slate-400">
-                    £
+                    {currencySymbol}
                   </span>
 
                   <input

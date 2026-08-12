@@ -35,6 +35,8 @@ const ALL_PERMISSIONS = [
   "calendar.manage",
   "invoices.view",
   "invoices.manage",
+  "sales.view",
+  "sales.manage",
 ] as const;
 
 function cleanText(value: unknown, max = 250) {

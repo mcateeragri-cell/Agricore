@@ -1,0 +1,173 @@
+AgriCore Project Atlas — v1.5 Workshop Intelligence + v2.0 Enterprise Network Foundation
+
+AUDIT-FIRST IMPLEMENTATION
+This package was built from the latest AgriCore Atlas upload and extends the existing:
+- AI Diagnostics
+- Dashboard Builder
+- Reports / regional formatting
+- Service Programmes
+- Enterprise Machinery Sales CRM
+- Subscription feature gating
+
+It does NOT duplicate those modules.
+
+MACHINE HEALTH SCORE
+No machine health percentage/status/scoring feature is included.
+
+WHAT IS NEW
+
+1. AgriCore Intelligence (/intelligence)
+- Workshop profitability / contribution estimates
+- Fleet intelligence
+- Recurring fault-pattern detection across similar machines
+- Predictive-maintenance patterns based on repeated repair history
+- Service-date/hour forecasting from existing service programmes
+- Business-advisor recommendations
+- Open automation alerts
+- No machine health score
+
+2. Atlas Event Engine
+- Database event capture for key operational tables
+- Jobs, invoices, quotes, job parts, stock movements, service programmes and sales opportunities
+- Events are tenant-scoped and retained in atlas_events
+- Event capture is implemented in PostgreSQL so existing API routes do not need duplicate logging logic
+
+3. Workflow Automation Foundation
+- Company-configurable rules
+- Service workload threshold
+- Stale quote follow-up
+- Out-of-stock alerting
+- Completed jobs not yet invoiced
+- Parts-cost threshold
+- Safe initial action = create an Atlas operational alert
+- Rules can be enabled/disabled from AgriCore Intelligence
+- “Run automations” evaluates them on demand
+
+This intentionally starts with advisory/alert actions instead of silently creating financial records or sending customer emails.
+That keeps the first production version safe while giving us a stable rule engine for future actions.
+
+4. AI Workshop Assistant v2 Context
+The existing AI Diagnostics route is extended rather than replaced.
+It now includes:
+- This machine's existing repair history
+- Parts and labour history
+- Active service programmes
+- Other machines of the same make/model in the active company
+- Repair history from those similar machines
+
+Manufacturer manuals/specifications are still NOT invented or assumed.
+
+5. Dashboard Integration
+- Adds an optional AgriCore Intelligence dashboard widget
+- The widget is available only when atlas_intelligence is enabled
+- Existing per-user dashboard layout/reorder/size behaviour is preserved
+
+6. Enterprise Dealer & Marketplace Network (/sales/network)
+Enterprise-only via atlas_enterprise_network entitlement.
+Adds opt-in foundations for:
+- Dealer network participation
+- Machinery marketplace publishing
+- Parts marketplace publishing
+- Dealer/manufacturer campaigns
+- Anonymous fleet benchmarking
+
+Privacy / tenancy behaviour:
+- Companies are opted OUT by default
+- Nothing is published unless the company enables marketplace participation AND explicitly publishes a record
+- Listings reuse existing Machinery Sales stock and Stock items — no duplicate machine/part master records
+- Benchmarks are only returned to companies that opt in
+- Benchmark output is aggregated make/model counts and job counts; customer identities are not returned
+
+7. Enterprise Sales Integration
+- Existing Machinery Sales CRM remains the source of sales stock/opportunities/trade-ins
+- Enterprise Network button appears only when the enterprise network entitlement is enabled
+
+REQUIRED SQL MIGRATION
+Run this in Supabase before starting the updated frontend:
+
+supabase/migrations/20260812_011_project_atlas_intelligence.sql
+
+The migration adds:
+- platform feature entitlements
+- atlas_events
+- atlas_automation_rules
+- atlas_alerts
+- enterprise_network_settings
+- marketplace_machine_listings
+- marketplace_part_listings
+- dealer_campaigns
+- database event-capture triggers
+
+PLAN GATING
+Professional + Enterprise:
+- atlas_intelligence
+- atlas_automations
+
+Enterprise only:
+- atlas_enterprise_network
+
+Internal/demo companies continue to receive all enabled platform features through the existing effective-features engine.
+
+NO NEW NPM DEPENDENCIES
+No package install is required.
+
+AI ENVIRONMENT
+The package reuses the existing AI Diagnostics environment configuration:
+OPENAI_API_KEY=...
+OPENAI_MODEL=...
+
+If no OpenAI key is configured, the existing history-only diagnostics fallback still works.
+
+INSTALL
+1. Run the migration.
+2. Extract this ZIP over:
+   C:\projects\Agricore\frontend
+3. Run:
+   taskkill /F /IM node.exe
+   Remove-Item ".next" -Recurse -Force -ErrorAction SilentlyContinue
+   npm.cmd run build
+   npm.cmd run dev -- --webpack
+
+ACCEPTANCE TEST — INTELLIGENCE
+1. Sign into an internal/demo/Professional test company.
+2. Open /intelligence.
+3. Confirm profitability, fleet metrics and advisor cards load.
+4. Confirm there is NO machine health score.
+5. Confirm service predictions use existing Service Programme records.
+6. If the company has repair history for multiple identical models, inspect recurring patterns.
+7. Add one automation rule.
+8. Run automations and confirm alerts appear where conditions are met.
+9. Open Dashboard -> Customise dashboard and confirm AgriCore Intelligence can be shown/hidden/reordered.
+
+ACCEPTANCE TEST — AI ASSISTANT
+1. Open AI Diagnostics.
+2. Select a machine with history.
+3. Run a diagnostic query.
+4. Confirm current-machine history is still used.
+5. Where similar same-make/model machines exist, confirm the response can reference that company-owned fleet history.
+6. Confirm the assistant does not claim proprietary manufacturer specifications unless supplied.
+
+ACCEPTANCE TEST — ENTERPRISE
+1. Use an internal/demo company or genuine Enterprise-entitled test company.
+2. Open Machinery Sales.
+3. Open Enterprise Network.
+4. Confirm all sharing toggles default OFF.
+5. Enable marketplace publishing.
+6. Publish one Machinery Sales stock machine.
+7. Publish one Stock item.
+8. Confirm the published records appear in Network Machinery / Network Parts.
+9. Add a dealer campaign.
+10. Enable Anonymous Benchmarks and confirm only aggregated make/model/job counts are shown.
+11. Test a Professional subscription company and confirm /sales/network is denied.
+
+PROFITABILITY NOTE
+Atlas currently estimates labour cost at 45% of recorded labour charge-out value because AgriCore does not yet hold a complete payroll/on-cost model per technician.
+The UI describes the result as an estimate. Future Atlas versions can replace this with actual labour cost rates when that data model is introduced.
+
+PREDICTIVE MAINTENANCE NOTE
+The first predictive-maintenance release is evidence-based pattern detection, not a statistical failure-probability model.
+Atlas requires repeated issue terms across at least two similar machines before displaying a recurring pattern. This avoids presenting a single repair as a fleet-wide prediction.
+
+VALIDATION
+17 modified/new TypeScript/TSX files were syntax-transpiled successfully with TypeScript 5.8.3.
+The clean upload deliberately excludes node_modules, so run the full local Next.js production build for final project-level validation.

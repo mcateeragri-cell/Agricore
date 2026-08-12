@@ -1,0 +1,38 @@
+AgriCore v1.1.1 — Rapid Job Creation
+
+WHAT CHANGED
+- New Job now supports creating a customer without leaving the job form.
+- Quick customer creation requires only a customer/business name.
+- Contact, phone and email are optional; address, postcode, VAT and other details are deliberately deferred.
+- After quick customer save, AgriCore immediately opens the quick machine drawer.
+- New machine can be created inline and is automatically linked to the selected customer.
+- Newly created customer and machine are automatically selected on the job.
+- Existing job description, priority, engineer and hours stay intact while drawers are open.
+- Standalone customer creation now accepts either contact name OR business name instead of requiring both.
+- Invoice creation now checks the customer has a name, billing address and postcode before an invoice can be generated.
+- If billing details are incomplete, the API returns a clear message naming the missing fields.
+- No database migration is required.
+
+QUICK WORKFLOW
+Jobs -> New Job -> + New customer -> Save & add machine -> Save & select machine -> fault/priority/engineer -> Create & Assign Job
+
+INTENDED OFFICE WORKFLOW
+The service manager can log and assign urgent work immediately. Customer billing details can then be completed later, but must be completed before invoicing.
+
+INSTALL
+Extract over C:\projects\Agricore\frontend
+
+TEST
+1. Create a new job and enter some fault/priority/engineer data first.
+2. Click + New customer and create one using only a business name.
+3. Confirm the machine drawer opens automatically.
+4. Add make/model only and save.
+5. Confirm both new records are selected and the existing job data is still present.
+6. Create the job.
+7. Complete the job and attempt Create Invoice before filling customer address/postcode.
+8. Confirm AgriCore blocks invoice creation with the missing billing fields.
+9. Complete the customer profile and confirm the invoice can then be created.
+10. Test the same workflow on mobile width.
+
+BUILD
+npm.cmd run build

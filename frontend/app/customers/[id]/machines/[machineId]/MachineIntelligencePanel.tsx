@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRegionalFormatters } from "@/lib/client/use-regional-formatters";
 import {
   useCallback,
   useEffect,
@@ -87,6 +88,8 @@ export default function MachineIntelligencePanel({
   customerId,
   machineId,
 }: MachineIntelligencePanelProps) {
+  const { money } = useRegionalFormatters();
+  const formatCurrency = money;
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [labour, setLabour] = useState<LabourRow[]>([]);
   const [parts, setParts] = useState<PartRow[]>([]);

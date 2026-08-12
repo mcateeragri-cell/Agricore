@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getActiveCompany } from "@/lib/client/active-company";
 import Card from "../../../Components/ui/Card";
+import { useRegionalFormatters } from "@/lib/client/use-regional-formatters";
 
 type QuoteStatus =
   | "draft"
@@ -187,6 +188,9 @@ export default function QuoteDetailPage() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const { money, date, taxName } = useRegionalFormatters();
+  const formatCurrency = money;
+  const formatDate = (value: string | null) => value ? date(`${value.slice(0, 10)}T12:00:00`, { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
   const loadQuote = useCallback(async () => {
     if (!quoteId) return;
@@ -692,7 +696,7 @@ export default function QuoteDetailPage() {
               )}
 
               <div className="flex justify-between text-slate-600">
-                <span>VAT ({formatQuantity(quote.vat_rate)}%)</span>
+                <span>{taxName} ({formatQuantity(quote.vat_rate)}%)</span>
                 <span>{formatCurrency(quote.vat_total)}</span>
               </div>
 
