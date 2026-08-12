@@ -3,21 +3,39 @@ import type {
   NavigationItem,
 } from "./navigation-types";
 
-export const mainNavigationItems: NavigationItem[] = [
+export const primaryNavigationItems: NavigationItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: "dashboard" },
+  { name: "Jobs", href: "/jobs", icon: "jobs" },
   { name: "Customers", href: "/customers", icon: "customers" },
   { name: "Machines", href: "/machines", icon: "machines" },
+  { name: "Calendar", href: "/calendar", icon: "calendar" },
+];
+
+export const operationsNavigationItems: NavigationItem[] = [
+  { name: "Dispatch", href: "/dispatch", icon: "calendar" },
   { name: "Service Programmes", href: "/service-programmes", icon: "service" },
   { name: "AI Diagnostics", href: "/ai-diagnostics", icon: "diagnostics" },
-  { name: "Intelligence", href: "/intelligence", icon: "diagnostics" },
-  { name: "Jobs", href: "/jobs", icon: "jobs" },
-  { name: "Dispatch", href: "/dispatch", icon: "calendar" },
-  { name: "Calendar", href: "/calendar", icon: "calendar" },
+  { name: "Stock", href: "/stock", icon: "stock" },
+];
+
+export const commercialNavigationItems: NavigationItem[] = [
   { name: "Quotes", href: "/quotes", icon: "quotes" },
   { name: "Invoices", href: "/invoices", icon: "invoices" },
-  { name: "Stock", href: "/stock", icon: "stock" },
   { name: "Sales", href: "/sales", icon: "sales" },
+];
+
+export const insightsNavigationItems: NavigationItem[] = [
+  { name: "Intelligence", href: "/intelligence", icon: "diagnostics" },
   { name: "Reports", href: "/reports", icon: "reports" },
+];
+
+export const financeNavigationItems: NavigationItem[] = [
+  { name: "Overview", href: "/administration/finance/dashboard", icon: "dashboard" },
+  { name: "Purchase Ledger", href: "/administration/finance/purchases", icon: "billing" },
+  { name: "Bank Reconciliation", href: "/administration/finance/bank", icon: "billing" },
+  { name: "Financial Reports", href: "/administration/finance/reports", icon: "reports" },
+  { name: "Accountant Workspace", href: "/administration/finance/accountant", icon: "reports" },
+  { name: "Finance Setup", href: "/administration/finance", icon: "settings" },
 ];
 
 export const administrationItems: AdministrationItem[] = [
@@ -90,42 +108,6 @@ export const administrationItems: AdministrationItem[] = [
     name: "Atlas Health",
     href: "/administration/atlas",
     icon: "settings",
-    permissions: ["settings.manage"],
-  },
-  {
-    name: "Finance Foundation",
-    href: "/administration/finance",
-    icon: "billing",
-    permissions: ["settings.manage"],
-  },
-  {
-    name: "Finance Dashboard",
-    href: "/administration/finance/dashboard",
-    icon: "reports",
-    permissions: ["settings.manage"],
-  },
-  {
-    name: "Purchase Ledger",
-    href: "/administration/finance/purchases",
-    icon: "billing",
-    permissions: ["settings.manage"],
-  },
-  {
-    name: "Accountant Workspace",
-    href: "/administration/finance/accountant",
-    icon: "reports",
-    permissions: ["settings.manage"],
-  },
-  {
-    name: "Bank Reconciliation",
-    href: "/administration/finance/bank",
-    icon: "billing",
-    permissions: ["settings.manage"],
-  },
-  {
-    name: "Financial Reports",
-    href: "/administration/finance/reports",
-    icon: "reports",
     permissions: ["settings.manage"],
   },
 ];

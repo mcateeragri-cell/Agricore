@@ -40,14 +40,14 @@ export default function Home() {
         <section className="mb-6 flex flex-col justify-between gap-4 sm:mb-8 lg:flex-row lg:items-end">
           <div>
             <p className="text-sm font-black uppercase tracking-[0.12em] text-emerald-700 dark:text-emerald-400">
-              {canViewMoney ? "Executive overview" : "My work overview"}
+              {canViewMoney ? "Today at a glance" : "My work today"}
             </p>
             <h1 className="mt-1 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl dark:text-white">
               {loading ? "Welcome back" : `${greetingForCurrentTime()}, ${firstName}`}
             </h1>
             <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-slate-600 sm:text-base dark:text-slate-400">
               {canViewMoney
-                ? "Live company performance, today’s workload and the items that need your attention."
+                ? "The work, customers and numbers that need your attention — without digging through menus."
                 : "Your current jobs, schedule and service workload in one place."}
             </p>
           </div>

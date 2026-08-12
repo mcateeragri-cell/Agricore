@@ -87,6 +87,10 @@ export async function loadEffectiveFeatures(
     if (!planEntitlements.get("machinery_sales_crm")) {
       enabled.set("machinery_sales_crm", false);
     }
+
+    if (!planEntitlements.get("financial_control")) {
+      enabled.set("financial_control", false);
+    }
   }
 
   return {
