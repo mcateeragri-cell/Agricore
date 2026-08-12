@@ -116,6 +116,18 @@ export const administrationItems: AdministrationItem[] = [
     icon: "reports",
     permissions: ["settings.manage"],
   },
+  {
+    name: "Bank Reconciliation",
+    href: "/administration/finance/bank",
+    icon: "billing",
+    permissions: ["settings.manage"],
+  },
+  {
+    name: "Financial Reports",
+    href: "/administration/finance/reports",
+    icon: "reports",
+    permissions: ["settings.manage"],
+  },
 ];
 
 export const mobilePrimaryItems: NavigationItem[] = [
