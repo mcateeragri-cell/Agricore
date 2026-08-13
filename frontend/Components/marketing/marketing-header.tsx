@@ -34,6 +34,7 @@ export default function MarketingHeader() {
 
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
           <Link href="/login" className="rounded-xl px-3 py-2.5 text-sm font-black text-slate-800 transition hover:bg-white dark:text-slate-100 dark:hover:bg-white/10 sm:px-4">Sign in</Link>
+          <Link href="/contact" className="hidden rounded-xl border border-emerald-950/15 bg-white/70 px-4 py-2.5 text-sm font-black text-slate-900 transition hover:border-emerald-700 hover:bg-white dark:border-white/15 dark:bg-white/5 dark:text-white dark:hover:border-emerald-400 sm:inline-flex">Book demo</Link>
           <Link href="/signup" className="rounded-xl bg-emerald-700 px-3 py-2.5 text-sm font-black text-white shadow-lg shadow-emerald-950/15 transition hover:-translate-y-0.5 hover:bg-emerald-800 sm:px-4">Start free trial</Link>
         </div>
       </div>

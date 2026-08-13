@@ -5,6 +5,7 @@ import { FormEvent, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { supabase } from "@/lib/supabase";
+import { trackMarketingEvent } from "@/lib/marketing/analytics";
 
 type SignupResponse = {
   success?: boolean;
@@ -52,12 +53,15 @@ export default function SignupForm() {
       }
 
       if (result.confirmationRequired) {
+        trackMarketingEvent("trial_signup_created", { plan: requestedPlan, confirmation_required: true });
         setSuccess(
           "Your company has been created. Check your email, confirm your address, then sign in to finish setup.",
         );
         event.currentTarget.reset();
         return;
       }
+
+      trackMarketingEvent("trial_signup_created", { plan: requestedPlan, confirmation_required: false });
 
       const { error: loginError } = await supabase.auth.signInWithPassword({
         email: payload.email,

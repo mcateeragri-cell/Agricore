@@ -3,6 +3,8 @@
 import { FormEvent, useMemo, useState } from "react";
 import { CheckCircle2, Loader2, Send } from "lucide-react";
 
+import { trackMarketingEvent } from "@/lib/marketing/analytics";
+
 export default function ContactForm() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -47,6 +49,11 @@ export default function ContactForm() {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Unable to send your request.");
+      trackMarketingEvent("demo_request_submitted", {
+        enquiry_type: String(payload.enquiryType || "demo"),
+        country: String(payload.country || ""),
+        team_size: String(payload.teamSize || ""),
+      });
       setSent(true);
       event.currentTarget.reset();
     } catch (caught) {
