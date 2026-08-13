@@ -4,6 +4,7 @@ import AgriCoreMark from "@/Components/branding/agricore-mark";
 
 const links = [
   { href: "/features", label: "Features" },
+  { href: "/industries", label: "Industries" },
   { href: "/pricing", label: "Pricing" },
   { href: "/demo", label: "Demo" },
   { href: "/security", label: "Security" },

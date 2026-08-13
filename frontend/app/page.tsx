@@ -47,7 +47,14 @@ const outcomes = [
   ["Clearer control", "See workload, outstanding work, stock position and business performance without chasing paper."],
 ];
 
-const sectors = ["Agricultural engineers", "Machinery dealers", "Dairy service teams", "Groundcare specialists", "Plant & field service", "Independent workshops"];
+const sectors = [
+  ["Agricultural engineers", "/industries/agricultural-engineers"],
+  ["Machinery dealers", "/industries/machinery-dealers"],
+  ["Mobile service engineers", "/industries/mobile-service-engineers"],
+  ["Dairy service teams", "/industries/dairy-service"],
+  ["Groundcare specialists", "/features"],
+  ["Independent workshops", "/features"],
+] as const;
 
 const faqs = [
   ["Does AgriCore work on phones?", "Yes. Technician Pro is designed for engineers using a phone in the workshop or out in the field."],
@@ -104,7 +111,7 @@ export default function MarketingHomePage() {
         <section className="border-b border-emerald-950/10 bg-white/65 dark:border-white/10 dark:bg-white/[0.03]">
           <div className="mx-auto max-w-7xl px-5 py-7 sm:px-8 lg:px-10">
             <p className="text-center text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Designed for service businesses around machinery</p>
-            <div className="mt-5 flex flex-wrap justify-center gap-x-8 gap-y-3">{sectors.map((sector) => <span key={sector} className="text-sm font-black text-slate-700 dark:text-slate-200">{sector}</span>)}</div>
+            <div className="mt-5 flex flex-wrap justify-center gap-x-8 gap-y-3">{sectors.map(([sector, href]) => <Link key={sector} href={href} className="text-sm font-black text-slate-700 transition hover:text-emerald-700 dark:text-slate-200 dark:hover:text-emerald-300">{sector}</Link>)}</div>
           </div>
         </section>
 
@@ -131,6 +138,26 @@ export default function MarketingHomePage() {
           <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-4">{outcomes.map(([title, copy]) => <article key={title} className="rounded-3xl border border-emerald-950/10 bg-white p-6 dark:border-white/10 dark:bg-white/5"><CheckCircle2 className="h-6 w-6 text-emerald-700"/><h3 className="mt-5 text-lg font-black">{title}</h3><p className="mt-2 text-sm font-medium leading-6 text-slate-600 dark:text-slate-300">{copy}</p></article>)}</div>
         </section>
 
+
+        <section className="border-y border-emerald-950/10 bg-white/70 dark:border-white/10 dark:bg-white/[0.03]">
+          <div className="mx-auto grid max-w-7xl gap-10 px-5 py-20 sm:px-8 lg:grid-cols-[0.8fr_1.2fr] lg:px-10 lg:py-24">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-black uppercase tracking-[0.15em] text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"><Sparkles className="h-4 w-4" /> AI Workshop Assistant</div>
+              <h2 className="mt-5 text-4xl font-black tracking-[-0.045em] sm:text-5xl">Fault-finding help with your own machine history in context.</h2>
+              <p className="mt-5 text-base font-medium leading-7 text-slate-600 dark:text-slate-300">Select the machine, describe the complaint and let AgriCore combine the current symptoms with recorded jobs, repairs and service history. The assistant is advisory and keeps manufacturer verification explicit for specifications and safety-critical decisions.</p>
+              <Link href="/features" className="mt-7 inline-flex items-center gap-2 font-black text-emerald-800 dark:text-emerald-300">Explore AI and Intelligence <ArrowRight className="h-4 w-4" /></Link>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {[
+                ["Machine-aware context", "Previous jobs, faults, parts and service history can travel with the diagnostic request."],
+                ["Checks in a useful order", "Use AI reasoning to structure likely causes and practical checks instead of starting from a blank page."],
+                ["Workshop knowledge grows", "Recorded repairs give future technicians more company-specific context on repeat issues."],
+                ["Advisory, not a manual", "AgriCore does not pretend AI-generated specifications replace authorised manufacturer information."],
+              ].map(([title, copy]) => <article key={title} className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900"><h3 className="font-black">{title}</h3><p className="mt-2 text-sm font-medium leading-6 text-slate-600 dark:text-slate-300">{copy}</p></article>)}
+            </div>
+          </div>
+        </section>
+
         <section className="border-y border-emerald-950/10 bg-white/60 dark:border-white/10 dark:bg-white/[0.03]">
           <div className="mx-auto grid max-w-7xl gap-10 px-5 py-20 sm:px-8 lg:grid-cols-[1fr_.8fr] lg:px-10">
             <div><p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-700">Security by design</p><h2 className="mt-3 text-4xl font-black tracking-[-0.04em]">Your company workspace stays your company workspace.</h2><p className="mt-5 max-w-2xl text-lg font-medium leading-8 text-slate-600 dark:text-slate-300">AgriCore is built as a multi-company platform with company-scoped access, role permissions, secure authentication and payments handled through specialist providers.</p><Link href="/security" className="mt-7 inline-flex items-center gap-2 font-black text-emerald-800 dark:text-emerald-300">Read about security <ArrowRight className="h-4 w-4"/></Link></div>
@@ -140,7 +167,7 @@ export default function MarketingHomePage() {
 
         <section className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:px-10 lg:py-24">
           <div className="grid gap-8 overflow-hidden rounded-[2.25rem] border border-emerald-950/10 bg-[radial-gradient(circle_at_15%_20%,rgba(52,211,153,.18),transparent_20rem),white] p-7 shadow-2xl shadow-emerald-950/10 sm:p-10 lg:grid-cols-[1fr_auto] lg:items-center dark:border-white/10 dark:bg-[radial-gradient(circle_at_15%_20%,rgba(52,211,153,.12),transparent_20rem),rgba(255,255,255,.04)]">
-            <div><p className="text-sm font-black uppercase tracking-[0.17em] text-emerald-700">AgriCore Professional</p><h2 className="mt-3 text-4xl font-black tracking-[-0.045em]">14 days to see how it fits your business.</h2><p className="mt-4 max-w-2xl text-base font-medium leading-7 text-slate-600 dark:text-slate-300">Set it up around your own customers, machines and technicians. £0 is charged today and you can cancel before the trial ends.</p></div>
+            <div><p className="text-sm font-black uppercase tracking-[0.17em] text-emerald-700">Start with the plan that fits</p><h2 className="mt-3 text-4xl font-black tracking-[-0.045em]">14 days to see how AgriCore fits your business.</h2><p className="mt-4 max-w-2xl text-base font-medium leading-7 text-slate-600 dark:text-slate-300">Choose Starter, Professional or Enterprise, set it up around your own customers, machines and technicians, and cancel before the trial ends if it is not the right fit.</p></div>
             <div className="min-w-64 rounded-3xl border border-emerald-950/10 bg-white/80 p-6 backdrop-blur dark:border-white/10 dark:bg-white/5"><p className="text-sm font-bold text-slate-500">Professional</p><p className="mt-1 text-4xl font-black">£89<span className="text-base font-bold text-slate-500"> / month + VAT</span></p><Link href="/signup" className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-5 py-3.5 font-black text-white transition hover:bg-emerald-800">Start free trial <ArrowRight className="h-4 w-4"/></Link><Link href="/pricing" className="mt-3 inline-flex w-full items-center justify-center rounded-2xl border border-emerald-950/10 px-5 py-3 text-sm font-black dark:border-white/10">Compare plans</Link></div>
           </div>
         </section>
