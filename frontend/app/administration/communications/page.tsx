@@ -3,15 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BUILT_IN_EMAIL_TEMPLATES } from "@/lib/communications/templates";
 
- type DnsRecord = {
-  record?: string;
-  name: string;
-  type: string;
-  value: string;
-  ttl?: string | number;
-  status?: string;
-  priority?: number;
- };
 
  type Settings = {
   sender_name: string | null;
@@ -19,10 +10,7 @@ import { BUILT_IN_EMAIL_TEMPLATES } from "@/lib/communications/templates";
   from_email: string | null;
   email_mode?: "agricore" | "custom_domain";
   custom_domain?: string | null;
-  resend_domain_id?: string | null;
   domain_status?: string | null;
-  domain_records?: DnsRecord[];
-  domain_last_checked_at?: string | null;
   custom_sender_verified: boolean;
   enabled: boolean;
  };
@@ -53,9 +41,7 @@ export default function CommunicationsPage() {
   const [webhookConfigured, setWebhookConfigured] = useState(false);
   const [selectedKey, setSelectedKey] = useState("welcome");
   const [testEmail, setTestEmail] = useState("");
-  const [domainInput, setDomainInput] = useState("");
   const [busy, setBusy] = useState(false);
-  const [domainBusy, setDomainBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
 
@@ -119,57 +105,6 @@ export default function CommunicationsPage() {
     finally { setBusy(false); }
   }
 
-  async function addDomain() {
-    if (!domainInput.trim()) return;
-    setDomainBusy(true); setError(""); setNotice("");
-    try {
-      const response = await fetch("/api/communications/domain", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ domain: domainInput.trim() }),
-      });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error || "Unable to add domain.");
-      setSettings(body.settings);
-      setDomainInput(body.domain?.name || domainInput.trim());
-      setNotice("Domain added. Add the DNS records below, then verify.");
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Unable to add domain.");
-    } finally {
-      setDomainBusy(false);
-    }
-  }
-
-  async function refreshDomain() {
-    setDomainBusy(true); setError(""); setNotice("");
-    try {
-      const response = await fetch("/api/communications/domain", { cache: "no-store" });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error || "Unable to refresh domain.");
-      if (body.settings) setSettings(body.settings);
-      setNotice(body.domain?.status === "verified" ? "Domain is verified." : "Domain status refreshed.");
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Unable to refresh domain.");
-    } finally {
-      setDomainBusy(false);
-    }
-  }
-
-  async function verifyDomain() {
-    setDomainBusy(true); setError(""); setNotice("");
-    try {
-      const response = await fetch("/api/communications/domain/verify", { method: "POST" });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error || "Unable to verify domain.");
-      if (body.settings) setSettings(body.settings);
-      setNotice(body.message || "Domain verification started.");
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Unable to verify domain.");
-    } finally {
-      setDomainBusy(false);
-    }
-  }
-
   function updateSelected(field: "subject_template" | "body_template" | "enabled", value: string | boolean) {
     setTemplates((current) => current.map((template) => template.key === selectedKey ? { ...template, [field]: value } : template));
   }
@@ -208,40 +143,47 @@ export default function CommunicationsPage() {
             >
               <p className="text-sm font-black text-slate-950 dark:text-white">Use AgriCore Email</p>
               <p className="mt-2 text-sm leading-6 text-slate-500">
-                Ready immediately. Messages use the AgriCore sending domain and customer replies go to your company.
+                Ready immediately. AgriCore handles delivery from its verified platform domain and customer replies go directly to your company.
               </p>
-              <p className="mt-4 text-xs font-bold uppercase tracking-wide text-emerald-700">
-                Best for getting started
+              <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-emerald-700">
+                Recommended · no setup required
               </p>
             </button>
 
-            <button
-              type="button"
-              onClick={() => setSettings({ ...settings, email_mode: "custom_domain" })}
-              className={`rounded-2xl border p-5 text-left transition ${
-                settings.email_mode === "custom_domain"
-                  ? "border-emerald-600 bg-emerald-50 ring-1 ring-emerald-600 dark:bg-emerald-950/20"
-                  : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950"
-              }`}
-            >
-              <p className="text-sm font-black text-slate-950 dark:text-white">Use my own domain</p>
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                Send invoices, quotes and service emails from your own verified business domain.
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-950">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-black text-slate-950 dark:text-white">Use your own email provider</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-500">
+                    For companies that need their own From address and existing mail infrastructure.
+                  </p>
+                </div>
+                <span className="rounded-full border border-slate-200 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500 dark:border-slate-700">
+                  Optional
+                </span>
+              </div>
+
+              <div className="mt-4 grid gap-2 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+                {["Microsoft 365", "Google Workspace", "Own Resend"].map((provider) => (
+                  <div
+                    key={provider}
+                    className="rounded-xl border border-slate-200 px-3 py-3 text-xs font-bold text-slate-700 dark:border-slate-800 dark:text-slate-200"
+                  >
+                    {provider}
+                  </div>
+                ))}
+              </div>
+
+              <p className="mt-4 text-xs leading-5 text-slate-500">
+                Provider connections are separate from AgriCore&apos;s platform Resend account, so one customer&apos;s domain never consumes another customer&apos;s allowance.
               </p>
-              <p className="mt-4 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">
-                Professional branded sender
-              </p>
-            </button>
+            </div>
           </section>
 
           <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,.9fr)]">
             <Card
               title="Sender settings"
-              description={
-                settings.email_mode === "custom_domain"
-                  ? "Choose the branded sender customers will see after your domain is verified."
-                  : "AgriCore handles delivery while replies go directly to your company."
-              }
+              description="Control the company identity customers see and where replies are delivered."
             >
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Sender name">
@@ -258,30 +200,10 @@ export default function CommunicationsPage() {
                     value={settings.reply_to_email || ""}
                     onChange={(event) => setSettings({ ...settings, reply_to_email: event.target.value })}
                     className="input"
-                    placeholder="service@yourcompany.com"
+                    placeholder="accounts@yourcompany.com"
                   />
                 </Field>
               </div>
-
-              {settings.email_mode === "custom_domain" && (
-                <Field label="From email address">
-                  <input
-                    type="email"
-                    value={settings.from_email || ""}
-                    onChange={(event) => setSettings({ ...settings, from_email: event.target.value })}
-                    className="input"
-                    placeholder={
-                      settings.custom_domain
-                        ? `accounts@${settings.custom_domain}`
-                        : "accounts@yourcompany.com"
-                    }
-                    disabled={!settings.custom_sender_verified}
-                  />
-                  <p className="mt-2 text-xs leading-5 text-slate-500">
-                    Once verified, Resend allows any sender address on the verified domain. Use an address customers will recognise.
-                  </p>
-                </Field>
-              )}
 
               <label className="mt-5 flex items-center gap-3 rounded-xl border border-slate-200 p-4 text-sm font-semibold dark:border-slate-800">
                 <input
@@ -301,111 +223,52 @@ export default function CommunicationsPage() {
               </button>
             </Card>
 
-            {settings.email_mode === "custom_domain" ? (
-              <Card
-                title="Custom sending domain"
-                description="Add a domain you own, copy the DNS records to your DNS provider, then verify it."
-              >
-                {!settings.resend_domain_id ? (
-                  <>
-                    <Field label="Business domain">
-                      <input
-                        value={domainInput}
-                        onChange={(event) => setDomainInput(event.target.value)}
-                        className="input"
-                        placeholder="yourcompany.co.uk"
-                      />
-                    </Field>
-                    <button
-                      disabled={domainBusy || !domainInput.trim()}
-                      onClick={() => void addDomain()}
-                      className="rounded-xl bg-[#103D2E] px-5 py-3 text-sm font-bold text-white disabled:opacity-50"
-                    >
-                      {domainBusy ? "Adding…" : "Generate DNS records"}
-                    </button>
-                    <p className="text-xs leading-5 text-slate-500">
-                      Public mailbox domains such as Gmail cannot be used. You must own and control the DNS for the domain.
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <StatusBadge
-                        ok={settings.custom_sender_verified}
-                        label={
-                          settings.custom_sender_verified
-                            ? "Domain verified"
-                            : `Domain ${settings.domain_status || "not verified"}`
-                        }
-                      />
-                      <span className="text-sm font-bold text-slate-900 dark:text-white">
-                        {settings.custom_domain}
-                      </span>
-                    </div>
+            <Card
+              title="Current email delivery"
+              description="AgriCore Email is the safe default for trials and companies without their own connected mail provider."
+            >
+              <dl className="space-y-4 text-sm">
+                <Info label="Delivery service" value="AgriCore Email" />
+                <Info label="Platform sender" value={providerConfigured ? "Ready" : "Not configured"} />
+                <Info label="Sender name" value={settings.sender_name || "Your company name"} />
+                <Info label="Replies go to" value={settings.reply_to_email || "Set your reply-to email"} />
+                <Info label="Delivery tracking" value={webhookConfigured ? "Enabled" : "Webhook secret missing"} />
+              </dl>
 
-                    <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
-                      <table className="min-w-full text-left text-xs">
-                        <thead className="bg-slate-50 text-slate-500 dark:bg-slate-900">
-                          <tr>
-                            <th className="px-3 py-3">Type</th>
-                            <th className="px-3 py-3">Name</th>
-                            <th className="px-3 py-3">Value</th>
-                            <th className="px-3 py-3">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-900">
-                          {(settings.domain_records || []).map((record, index) => (
-                            <tr key={`${record.type}-${record.name}-${index}`}>
-                              <td className="px-3 py-3 font-bold">{record.type}</td>
-                              <td className="px-3 py-3 font-mono">{record.name}</td>
-                              <td className="max-w-sm break-all px-3 py-3 font-mono">{record.value}</td>
-                              <td className="px-3 py-3">{record.status || "not started"}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+              {settings.custom_sender_verified && settings.from_email ? (
+                <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm dark:border-emerald-900 dark:bg-emerald-950/20">
+                  <p className="font-black text-emerald-900 dark:text-emerald-100">Existing custom sender retained</p>
+                  <p className="mt-1 break-all text-emerald-800 dark:text-emerald-200">{settings.from_email}</p>
+                  <p className="mt-2 text-xs leading-5 text-emerald-700 dark:text-emerald-300">
+                    Existing verified senders remain compatible. New customer domains are not added to the central AgriCore Resend account.
+                  </p>
+                </div>
+              ) : null}
+            </Card>
+          </section>
 
-                    <div className="flex flex-wrap gap-3">
-                      {!settings.custom_sender_verified && (
-                        <button
-                          disabled={domainBusy}
-                          onClick={() => void verifyDomain()}
-                          className="rounded-xl bg-[#103D2E] px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
-                        >
-                          {domainBusy ? "Checking…" : "I've added the DNS records"}
-                        </button>
-                      )}
-                      <button
-                        disabled={domainBusy}
-                        onClick={() => void refreshDomain()}
-                        className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold dark:border-slate-700"
-                      >
-                        Refresh status
-                      </button>
-                    </div>
-
-                    {settings.domain_last_checked_at && (
-                      <p className="text-xs text-slate-500">
-                        Last checked {new Date(settings.domain_last_checked_at).toLocaleString()}.
-                      </p>
-                    )}
-                  </>
-                )}
-              </Card>
-            ) : (
-              <Card
-                title="AgriCore Email"
-                description="No DNS configuration is required. This is the default for trials and companies that do not have their own sending domain."
-              >
-                <dl className="space-y-4 text-sm">
-                  <Info label="Email provider" value="AgriCore via Resend" />
-                  <Info label="Platform From address" value={providerConfigured ? "Ready" : "Not configured"} />
-                  <Info label="Replies" value={settings.reply_to_email || "Set your reply-to email"} />
-                  <Info label="Delivery tracking" value={webhookConfigured ? "Enabled" : "Webhook secret missing"} />
-                </dl>
-              </Card>
-            )}
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-950">
+            <p className="text-sm font-black text-slate-950 dark:text-white">How company email works</p>
+            <div className="mt-4 grid gap-4 md:grid-cols-3">
+              <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-900">
+                <p className="text-xs font-black uppercase tracking-[0.12em] text-emerald-700">1 · Start instantly</p>
+                <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                  New companies use AgriCore Email automatically, so quotes and invoices can be sent during onboarding.
+                </p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-900">
+                <p className="text-xs font-black uppercase tracking-[0.12em] text-emerald-700">2 · Replies stay yours</p>
+                <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                  Set your normal company mailbox as Reply-To. Customer replies go directly to your business.
+                </p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-900">
+                <p className="text-xs font-black uppercase tracking-[0.12em] text-emerald-700">3 · Brand when needed</p>
+                <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                  Larger businesses can connect their own email provider when branded From addresses or internal IT controls are required.
+                </p>
+              </div>
+            </div>
           </section>
         </div>
       )}

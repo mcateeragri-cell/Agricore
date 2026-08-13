@@ -57,35 +57,27 @@ export async function PUT(request: NextRequest) {
     if (currentError) throw new Error(currentError.message);
 
     let fromEmail: string | null = current?.from_email ?? null;
-    if (requestedMode === "custom_domain") {
-      if (!current?.custom_sender_verified || current?.domain_status !== "verified" || !current?.custom_domain) {
-        return NextResponse.json(
-          { error: "Verify your company domain before using it as the sender." },
-          { status: 400 },
-        );
-      }
+    const canUseExistingCustomSender =
+      requestedMode === "custom_domain" &&
+      current?.custom_sender_verified === true &&
+      current?.domain_status === "verified" &&
+      Boolean(current?.custom_domain) &&
+      Boolean(requestedFrom);
 
-      if (!requestedFrom || !requestedFrom.includes("@")) {
-        return NextResponse.json(
-          { error: "Enter the email address you want customers to see in the From field." },
-          { status: 400 },
-        );
-      }
+    let effectiveMode: "agricore" | "custom_domain" = "agricore";
 
+    if (canUseExistingCustomSender && requestedFrom) {
       const fromDomain = requestedFrom.split("@").pop()?.trim().toLowerCase();
-      if (fromDomain !== String(current.custom_domain).toLowerCase()) {
-        return NextResponse.json(
-          { error: `The sender address must use ${current.custom_domain}.` },
-          { status: 400 },
-        );
+      if (fromDomain === String(current.custom_domain).toLowerCase()) {
+        effectiveMode = "custom_domain";
+        fromEmail = requestedFrom.toLowerCase();
       }
-      fromEmail = requestedFrom.toLowerCase();
     }
 
     const { data, error } = await admin.from("company_email_settings").upsert({
       company_id: user.companyId,
       provider: "resend",
-      email_mode: requestedMode,
+      email_mode: effectiveMode,
       sender_name: text("sender_name", 120) || user.companyName,
       reply_to_email: replyTo,
       from_email: fromEmail,
