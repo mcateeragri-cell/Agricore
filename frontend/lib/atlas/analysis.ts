@@ -72,10 +72,10 @@ export async function buildAtlasOverview(admin: SupabaseClient, companyId: strin
     rows(admin, "job_parts_used", "job_id,quantity,unit_cost,unit_price,part_number,description", companyId),
     rows(admin, "invoices", "id,job_id,status,total,amount_paid,due_date,created_at", companyId),
     rows(admin, "machines", "id,make,model,registration,serial_number,hours,estimated_hours_per_week", companyId),
-    rows(admin, "machine_service_programmes", "id,machine_id,last_service_hours,last_service_date,active,service_programme_id", companyId),
+    rows(admin, "machine_service_programmes", "id,machine_id,last_service_hours,last_service_date,active,programme_id", companyId),
   ]);
 
-  const serviceProgrammeIds = [...new Set(services.map((item) => item.service_programme_id).filter(Boolean))];
+  const serviceProgrammeIds = [...new Set(services.map((item) => item.programme_id).filter(Boolean))];
   let programmeRows: AnyRow[] = [];
   if (serviceProgrammeIds.length) {
     const result = await admin.from("service_programmes").select("id,name,interval_hours,interval_months").in("id", serviceProgrammeIds);
@@ -155,7 +155,7 @@ export async function buildAtlasOverview(admin: SupabaseClient, companyId: strin
   for (const service of services) {
     if (service.active === false) continue;
     const machine = machineById.get(String(service.machine_id ?? ""));
-    const programme = programmeById.get(String(service.service_programme_id ?? ""));
+    const programme = programmeById.get(String(service.programme_id ?? ""));
     if (!machine || !programme) continue;
     const intervalHours = programme.interval_hours == null ? null : n(programme.interval_hours);
     const currentHours = n(machine.hours);
