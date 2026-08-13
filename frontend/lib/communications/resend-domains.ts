@@ -43,19 +43,29 @@ async function resendRequest<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   if (!response.ok) {
-    const detail =
+    const message =
       body?.message ||
       body?.error?.message ||
+      body?.error ||
+      "Resend rejected the request.";
+
+    const errorType =
       body?.name ||
-      `Resend API request failed (${response.status}).`;
+      body?.code ||
+      body?.error?.name ||
+      body?.error?.code ||
+      null;
 
-    if (response.status === 403) {
-      throw new Error(
-        `${detail} The AgriCore RESEND_API_KEY must have Full Access to manage customer sending domains.`,
-      );
-    }
+    const context = [
+      `Resend API ${response.status}${response.statusText ? ` ${response.statusText}` : ""}`,
+      errorType ? `(${String(errorType)})` : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
 
-    throw new Error(detail);
+    // Deliberately expose only Resend's response metadata/message.
+    // Never include request headers or RESEND_API_KEY in user-facing errors.
+    throw new Error(`${context}: ${String(message)}`);
   }
 
   return body as T;
