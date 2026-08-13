@@ -8,6 +8,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ["/pricing", 0.9, "monthly"],
     ["/roi-calculator", 0.85, "monthly"],
     ["/demo", 0.85, "monthly"],
+    ["/founding-customers", 0.85, "monthly"],
     ["/security", 0.7, "monthly"],
     ["/about", 0.7, "monthly"],
     ["/contact", 0.7, "monthly"],

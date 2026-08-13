@@ -40,6 +40,13 @@ export default function ContactPage() {
               })}
             </div>
 
+            <div className="mt-8 rounded-3xl border border-emerald-950/10 bg-emerald-50 p-6 dark:border-white/10 dark:bg-emerald-950/30">
+              <p className="text-xs font-black uppercase tracking-[0.17em] text-emerald-800 dark:text-emerald-300">Early customers</p>
+              <h2 className="mt-2 text-xl font-black">Ask about the Founding Customer Programme.</h2>
+              <p className="mt-2 text-sm font-medium leading-6 text-slate-600 dark:text-slate-300">If you are willing to test AgriCore on real workshop or field-service work, we can help you get the first workflows set up and collect direct feedback during the trial.</p>
+              <Link href="/founding-customers" className="mt-4 inline-flex items-center gap-2 text-sm font-black text-emerald-800 dark:text-emerald-300">See the programme <ArrowRight className="h-4 w-4" /></Link>
+            </div>
+
             <div className="mt-8 rounded-3xl bg-emerald-950 p-7 text-white">
               <p className="text-xs font-black uppercase tracking-[0.17em] text-emerald-300">Prefer to explore first?</p>
               <h2 className="mt-2 text-2xl font-black">Try AgriCore before you speak to anyone.</h2>

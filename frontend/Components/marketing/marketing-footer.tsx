@@ -23,6 +23,7 @@ export default function MarketingFooter() {
             <Link href="/pricing" className="hover:text-white">Pricing</Link>
             <Link href="/roi-calculator" className="hover:text-white">ROI calculator</Link>
             <Link href="/demo" className="hover:text-white">Product demo</Link>
+            <Link href="/founding-customers" className="hover:text-white">Founding customers</Link>
             <Link href="/signup" className="hover:text-white">Start free trial</Link>
             <Link href="/login" className="hover:text-white">Sign in</Link>
           </div>

@@ -136,7 +136,8 @@ async function addInvoice(ctx: Ctx, data: InvoicePdfData) {
   y = totals(page, ctx, y, invoice);
 
   if (clean(invoice.payment_terms)) {
-    y -= 14;
+    ({ page, y } = ensure(ctx, page, y, 58, "TAX INVOICE", invoice.invoice_number));
+    y -= 8;
     y = textBlock(page, ctx, y, "Payment terms", invoice.payment_terms || "");
   }
 
@@ -148,9 +149,16 @@ async function addInvoice(ctx: Ctx, data: InvoicePdfData) {
   }
 
   if (clean(invoice.notes)) {
-    ({ page, y } = ensure(ctx, page, y, 90, "TAX INVOICE", invoice.invoice_number));
-    y -= 12;
-    textBlock(page, ctx, y, "Notes", invoice.notes || "");
+    y -= 6;
+    ({ page, y } = paginatedTextBlock(
+      ctx,
+      page,
+      y,
+      "Notes",
+      invoice.notes || "",
+      "TAX INVOICE",
+      invoice.invoice_number,
+    ));
   }
 
   footer(page, ctx, invoice.invoice_number);
@@ -383,6 +391,71 @@ function textBlock(page: PDFPage, ctx: Ctx, y: number, title: string, text: stri
     y -= 13;
   }
   return y - 13;
+}
+
+
+function paginatedTextBlock(
+  ctx: Ctx,
+  page: PDFPage,
+  y: number,
+  title: string,
+  text: string,
+  documentTitle: string,
+  reference: string,
+) {
+  const lines = wrap(text, ctx.regular, 9.5, CW);
+  const contentBottom = 58;
+
+  const startBlock = (
+    targetPage: PDFPage,
+    targetY: number,
+    continued: boolean,
+  ) => {
+    const blockTitle = continued ? `${title} (continued)` : title;
+    targetPage.drawText(blockTitle, {
+      x: M,
+      y: targetY,
+      size: 11,
+      font: ctx.bold,
+      color: GREEN,
+    });
+
+    return targetY - 16;
+  };
+
+  if (y - 32 < contentBottom) {
+    footer(page, ctx, reference);
+    page = ctx.pdf.addPage([W, H]);
+    header(page, ctx, documentTitle);
+    y = H - 120;
+  }
+
+  y = startBlock(page, y, false);
+
+  for (const line of lines) {
+    const lineHeight = line ? 13 : 9;
+
+    if (y - lineHeight < contentBottom) {
+      footer(page, ctx, reference);
+      page = ctx.pdf.addPage([W, H]);
+      header(page, ctx, documentTitle);
+      y = startBlock(page, H - 120, true);
+    }
+
+    if (line) {
+      page.drawText(line, {
+        x: M,
+        y,
+        size: 9.5,
+        font: ctx.regular,
+        color: DARK,
+      });
+    }
+
+    y -= lineHeight;
+  }
+
+  return { page, y: y - 8 };
 }
 
 function serviceItems(page: PDFPage, ctx: Ctx, y: number, title: string, items: InvoiceItemRow[]) {
