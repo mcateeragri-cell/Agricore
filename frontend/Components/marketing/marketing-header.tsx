@@ -6,6 +6,7 @@ const links = [
   { href: "/features", label: "Features" },
   { href: "/industries", label: "Industries" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/roi-calculator", label: "ROI" },
   { href: "/demo", label: "Demo" },
   { href: "/security", label: "Security" },
   { href: "/about", label: "About" },

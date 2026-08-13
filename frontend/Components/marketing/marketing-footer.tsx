@@ -21,6 +21,7 @@ export default function MarketingFooter() {
           <div className="mt-4 grid gap-3 text-sm font-semibold text-emerald-50/75">
             <Link href="/features" className="hover:text-white">Features</Link>
             <Link href="/pricing" className="hover:text-white">Pricing</Link>
+            <Link href="/roi-calculator" className="hover:text-white">ROI calculator</Link>
             <Link href="/demo" className="hover:text-white">Product demo</Link>
             <Link href="/signup" className="hover:text-white">Start free trial</Link>
             <Link href="/login" className="hover:text-white">Sign in</Link>

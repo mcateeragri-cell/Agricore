@@ -22,6 +22,7 @@ import {
 
 import MarketingShell from "@/Components/marketing/marketing-shell";
 import ProductPreview from "@/Components/marketing/product-preview";
+import RoiCalculator from "@/Components/marketing/roi-calculator";
 
 export const metadata: Metadata = {
   title: "Agricultural engineering management software",
@@ -155,6 +156,16 @@ export default function MarketingHomePage() {
                 ["Advisory, not a manual", "AgriCore does not pretend AI-generated specifications replace authorised manufacturer information."],
               ].map(([title, copy]) => <article key={title} className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900"><h3 className="font-black">{title}</h3><p className="mt-2 text-sm font-medium leading-6 text-slate-600 dark:text-slate-300">{copy}</p></article>)}
             </div>
+          </div>
+        </section>
+
+        <section className="border-y border-emerald-950/10 bg-white/70 dark:border-white/10 dark:bg-white/[0.03]">
+          <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:px-10 lg:py-24">
+            <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
+              <div><p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-700">Build the business case</p><h2 className="mt-3 text-4xl font-black tracking-[-0.045em] sm:text-5xl">Put your own workload against the numbers.</h2></div>
+              <p className="max-w-2xl text-lg font-medium leading-8 text-slate-600 dark:text-slate-300">AgriCore should earn its place in the workshop. Use your engineer count, weekly jobs and labour rate to see the scale of admin time and productive capacity represented by your current workflow.</p>
+            </div>
+            <div className="mt-10"><RoiCalculator /></div>
           </div>
         </section>
 

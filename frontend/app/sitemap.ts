@@ -6,6 +6,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ["", 1, "weekly"],
     ["/features", 0.9, "monthly"],
     ["/pricing", 0.9, "monthly"],
+    ["/roi-calculator", 0.85, "monthly"],
     ["/demo", 0.85, "monthly"],
     ["/security", 0.7, "monthly"],
     ["/about", 0.7, "monthly"],
