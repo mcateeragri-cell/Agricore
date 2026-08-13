@@ -10,8 +10,8 @@ export type RevolutClientConfig = {
 
 function baseUrl(environment: RevolutClientConfig["environment"]) {
   return environment === "production"
-    ? "https://merchant.revolut.com/api/1.0"
-    : "https://sandbox-merchant.revolut.com/api/1.0";
+    ? "https://merchant.revolut.com/api"
+    : "https://sandbox-merchant.revolut.com/api";
 }
 
 async function revolutRequest<T>(config: RevolutClientConfig, path: string, init: RequestInit): Promise<T> {
@@ -34,8 +34,25 @@ async function revolutRequest<T>(config: RevolutClientConfig, path: string, init
   return await response.json() as T;
 }
 
-export function createRevolutOrder(config: RevolutClientConfig, input: CreateRevolutOrderInput): Promise<RevolutOrder> {
-  return revolutRequest<RevolutOrder>(config, "/orders", { method: "POST", body: JSON.stringify({ amount: input.amountMinor, currency: input.currency.toUpperCase(), merchant_order_ext_ref: input.merchantOrderReference, description: input.description, redirect_url: input.redirectUrl, customer: input.customerEmail ? { email: input.customerEmail } : undefined }) });
+export function createRevolutOrder(
+  config: RevolutClientConfig,
+  input: CreateRevolutOrderInput,
+): Promise<RevolutOrder> {
+  return revolutRequest<RevolutOrder>(config, "/orders", {
+    method: "POST",
+    body: JSON.stringify({
+      amount: input.amountMinor,
+      currency: input.currency.toUpperCase(),
+      description: input.description,
+      redirect_url: input.redirectUrl,
+      customer: input.customerEmail
+        ? { email: input.customerEmail }
+        : undefined,
+      merchant_order_data: {
+        reference: input.merchantOrderReference,
+      },
+    }),
+  });
 }
 export function retrieveRevolutOrder(config: RevolutClientConfig, orderId: string): Promise<RevolutOrder> {
   return revolutRequest<RevolutOrder>(config, `/orders/${encodeURIComponent(orderId)}`, { method: "GET" });

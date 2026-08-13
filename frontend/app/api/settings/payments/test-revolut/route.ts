@@ -19,8 +19,8 @@ type TestRequest = {
 
 function baseUrl(environment: RevolutEnvironment) {
   return environment === "production"
-    ? "https://merchant.revolut.com/api/1.0"
-    : "https://sandbox-merchant.revolut.com/api/1.0";
+    ? "https://merchant.revolut.com/api"
+    : "https://sandbox-merchant.revolut.com/api";
 }
 
 export async function POST(request: NextRequest) {
@@ -45,15 +45,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const probeId = `agricore-connection-test-${context.companyId}`;
+  // Validate the credentials against Revolut's current Merchant API
+  // without creating or mutating any payment data.
   const response = await fetch(
-    `${baseUrl(environment)}/orders/${encodeURIComponent(probeId)}`,
+    `${baseUrl(environment)}/orders?limit=1`,
     {
       method: "GET",
       cache: "no-store",
       headers: {
         Authorization: `Bearer ${secretKey}`,
-        "Content-Type": "application/json",
         "Revolut-Api-Version": apiVersion,
       },
     },
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (response.ok || response.status === 404) {
+  if (response.ok) {
     return NextResponse.json({
       success: true,
       environment,
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json(
     {
       success: false,
-      error: `Revolut connection test failed (${response.status})${detail ? `: ${detail}` : "."}`,
+      error: `Revolut connection test failed (${response.status})${detail ? `: ${detail}` : ". Check the Merchant API environment, API version and account permissions."}`,
     },
     { status: 400 },
   );
