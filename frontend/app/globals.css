@@ -527,3 +527,107 @@ a[href],
     scroll-behavior: auto !important;
   }
 }
+
+/* AgriCore UX Refresh 2: consistent high-frequency workspaces */
+.ui-workspace-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 1.25rem;
+  background: color-mix(in srgb, var(--surface-raised) 94%, transparent);
+  box-shadow: var(--shadow-soft);
+}
+
+.ui-workspace-eyebrow {
+  margin: 0;
+  color: var(--brand);
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.ui-workspace-title {
+  margin: .2rem 0 0;
+  color: var(--text-primary);
+  font-size: clamp(1.75rem, 4vw, 2.35rem);
+  line-height: 1.05;
+  font-weight: 800;
+  letter-spacing: -.035em;
+}
+
+.ui-workspace-description {
+  max-width: 46rem;
+  margin: .45rem 0 0;
+  color: var(--text-muted);
+  font-size: .925rem;
+  line-height: 1.55;
+}
+
+.ui-workspace-actions {
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+  gap: .65rem;
+}
+
+.ui-workspace-actions > * {
+  min-height: 2.75rem;
+}
+
+.ui-compact-metrics {
+  display: grid;
+  gap: .75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ui-compact-metrics .ui-card {
+  padding: 1rem !important;
+}
+
+.ui-data-toolbar {
+  position: relative;
+  border-bottom: 1px solid var(--border-soft);
+  background: color-mix(in srgb, var(--surface-raised) 72%, transparent);
+}
+
+.ui-data-table tbody tr {
+  transition: background-color .16s ease, transform .16s ease;
+}
+
+.ui-data-table tbody tr:hover {
+  background: var(--surface-muted);
+}
+
+@media (min-width: 640px) {
+  .ui-workspace-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.35rem 1.5rem;
+  }
+  .ui-workspace-actions {
+    width: auto;
+    justify-content: flex-end;
+  }
+  .ui-compact-metrics {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 639px) {
+  .ui-workspace-actions > a,
+  .ui-workspace-actions > button {
+    flex: 1 1 auto;
+  }
+  .ui-card {
+    border-radius: 1rem;
+  }
+  table th,
+  table td {
+    padding-left: .8rem !important;
+    padding-right: .8rem !important;
+  }
+}

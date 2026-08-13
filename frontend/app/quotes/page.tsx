@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { getActiveCompany } from "@/lib/client/active-company";
 import Card from "../../Components/ui/Card";
+import WorkspaceHeader from "../../Components/ui/WorkspaceHeader";
 import { useRegionalFormatters } from "@/lib/client/use-regional-formatters";
 
 type QuoteStatus =
@@ -286,26 +287,19 @@ export default function QuotesPage() {
 
   return (
     <div className="w-full space-y-6 px-5 py-5 lg:px-7">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm font-semibold text-green-700">
-            Sales &amp; Estimating
-          </p>
-
-          <h1 className="text-3xl font-bold text-slate-900">Quotes</h1>
-
-          <p className="mt-1 text-sm text-slate-500">
-            Create, track and convert customer quotations.
-          </p>
-        </div>
-
-        <Link
-          href="/quotes/new"
-          className="inline-flex items-center justify-center rounded-xl bg-[#103d2e] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0c3024]"
-        >
-          + New Quote
-        </Link>
-      </div>
+      <WorkspaceHeader
+        eyebrow="Sales & estimating"
+        title="Quotes"
+        description="Create, track and convert customer quotations without making the estimating workflow feel heavy."
+        actions={
+          <Link
+            href="/quotes/new"
+            className="inline-flex items-center justify-center rounded-xl bg-[var(--brand-strong)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--brand-hover)]"
+          >
+            + New quote
+          </Link>
+        }
+      />
 
       {errorMessage && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -313,7 +307,7 @@ export default function QuotesPage() {
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="ui-compact-metrics">
         <Card>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Draft Quotes
@@ -405,7 +399,7 @@ export default function QuotesPage() {
               </p>
             </div>
           ) : (
-            <table className="min-w-full">
+            <table className="ui-data-table min-w-full">
               <thead>
                 <tr className="border-b border-slate-200 text-left">
                   <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">

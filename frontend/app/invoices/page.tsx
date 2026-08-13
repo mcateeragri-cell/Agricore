@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import WorkspaceHeader from "@/Components/ui/WorkspaceHeader";
 import { useEffect, useMemo, useState } from "react";
 import { useRegionalFormatters } from "@/lib/client/use-regional-formatters";
 
@@ -151,50 +152,43 @@ export default function InvoicesPage() {
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
-        <header className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
-              AgriCore
-            </p>
-
-            <h1 className="text-3xl font-bold text-slate-950">
-              Invoices
-            </h1>
-
-            <p className="mt-1 text-sm text-slate-600">
-              Review, approve and send customer invoices.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <label className="text-sm font-semibold text-slate-700">
-              Reporting period
-              <select
-                value={period}
-                onChange={(event) =>
-                  setPeriod(event.target.value as PeriodKey)
-                }
-                className="mt-1 block min-w-44 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm"
-              >
-                {Object.entries(PERIOD_LABELS).map(
-                  ([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ),
-                )}
-              </select>
-            </label>
-
-            <button
-              type="button"
-              onClick={() => void loadInvoices()}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-100"
-            >
-              Refresh
-            </button>
-          </div>
-        </header>
+        <div className="mb-6">
+          <WorkspaceHeader
+            eyebrow="Sales"
+            title="Invoices"
+            description="Review what is due, open the invoice you need and keep payment follow-up visible without finance clutter."
+            actions={
+              <>
+                <label className="text-sm font-semibold text-[var(--text-secondary)]">
+                  <span className="sr-only">Reporting period</span>
+                  <select
+                    value={period}
+                    onChange={(event) =>
+                      setPeriod(event.target.value as PeriodKey)
+                    }
+                    className="min-h-11 min-w-44 rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-3 text-sm"
+                    aria-label="Reporting period"
+                  >
+                    {Object.entries(PERIOD_LABELS).map(
+                      ([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => void loadInvoices()}
+                  className="rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)]"
+                >
+                  Refresh
+                </button>
+              </>
+            }
+          />
+        </div>
 
         {period === "custom" ? (
           <section className="mb-6 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-end">
@@ -239,7 +233,7 @@ export default function InvoicesPage() {
           </p>
         </div>
 
-        <section className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="ui-compact-metrics mb-6">
           <SummaryCard
             label="Total invoiced"
             value={formatMoney(totals.totalInvoiced)}
@@ -338,7 +332,7 @@ export default function InvoicesPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200">
+              <table className="ui-data-table min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-50">
                   <tr>
                     <TableHeading>Invoice</TableHeading>

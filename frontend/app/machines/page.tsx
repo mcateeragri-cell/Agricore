@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import Card from "../../Components/ui/Card";
+import WorkspaceHeader from "../../Components/ui/WorkspaceHeader";
 import { supabase } from "@/lib/supabase";
 import { useNavigationUser } from "@/Components/navigation/use-navigation-user";
 
@@ -257,32 +258,16 @@ export default function MachinesPage() {
 
   return (
     <div className="w-full min-w-0 space-y-6 p-4 sm:p-6 lg:p-8">
-      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div className="min-w-0">
-          <p className="text-sm font-bold uppercase tracking-wide text-emerald-700">
-            Equipment register
+      <WorkspaceHeader
+        eyebrow="Equipment register"
+        title="Machines"
+        description="Search customer machinery, jump into service history and get to the right job record quickly."
+        meta={
+          <p className="text-sm font-semibold text-[var(--text-secondary)]">
+            {machines.length} machine{machines.length === 1 ? "" : "s"} registered
           </p>
-
-          <h1 className="mt-1 text-3xl font-bold text-slate-900">
-            Machines
-          </h1>
-
-          <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-slate-700 sm:text-base">
-            Search and view all customer machinery and
-            equipment.
-          </p>
-        </div>
-
-        <div className="w-fit rounded-xl border border-slate-200 bg-white px-5 py-3 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-wide text-slate-600">
-            Total machines
-          </p>
-
-          <p className="mt-1 text-2xl font-bold text-slate-900">
-            {machines.length}
-          </p>
-        </div>
-      </header>
+        }
+      />
 
       {errorMessage && (
         <div
@@ -483,7 +468,7 @@ export default function MachinesPage() {
             </div>
 
             <div className="hidden overflow-x-auto lg:block">
-              <table className="w-full min-w-[950px] text-left">
+              <table className="ui-data-table w-full min-w-[950px] text-left">
                 <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-700">
                   <tr>
                     <th className="px-6 py-3 font-bold">

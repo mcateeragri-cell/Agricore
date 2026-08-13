@@ -12,6 +12,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import Button from "../../Components/ui/Button";
 import Card from "../../Components/ui/Card";
+import WorkspaceHeader from "../../Components/ui/WorkspaceHeader";
 
 type Customer = {
   id: string | number;
@@ -257,37 +258,29 @@ export default function CustomersPage() {
 
   return (
     <main className="min-h-screen bg-slate-100 text-slate-900">
-      <header className="border-b border-slate-200 bg-white px-5 py-4 md:px-8">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-sm text-slate-500">
-              Customer relationship management
-            </p>
-
-            <h1 className="text-2xl font-bold">
-              Customers
-            </h1>
-          </div>
-
-          <Button
-            onClick={() => {
-              setErrorMessage("");
-              setShowForm(true);
-            }}
-          >
-            + Add customer
-          </Button>
-        </div>
-      </header>
-
-      <div className="p-5 md:p-8">
+      <div className="p-4 sm:p-6 lg:p-8">
+        <WorkspaceHeader
+          eyebrow="Customer relationships"
+          title="Customers"
+          description="Find a customer fast, open their machines and jobs, or add a new account without leaving the directory."
+          actions={
+            <Button
+              onClick={() => {
+                setErrorMessage("");
+                setShowForm(true);
+              }}
+            >
+              + Add customer
+            </Button>
+          }
+        />
         {errorMessage && !showForm && (
           <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {errorMessage}
           </div>
         )}
 
-        <section className="grid gap-4 sm:grid-cols-3">
+        <section className="ui-compact-metrics mt-5 sm:grid-cols-3">
           <Card className="p-5">
             <p className="text-sm font-medium text-slate-500">
               Total customers
@@ -320,7 +313,7 @@ export default function CustomersPage() {
         </section>
 
         <Card className="mt-6 overflow-hidden">
-          <div className="flex flex-col gap-4 border-b border-slate-200 p-5 md:flex-row md:items-center md:justify-between">
+          <div className="ui-data-toolbar flex flex-col gap-4 p-4 md:flex-row md:items-center md:justify-between">
             <div>
               <h2 className="font-bold">
                 Customer directory
@@ -343,7 +336,7 @@ export default function CustomersPage() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-left">
+            <table className="ui-data-table w-full min-w-[900px] text-left">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-5 py-3 font-semibold">

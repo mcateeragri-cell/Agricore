@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { loadActiveCompany } from "@/lib/company-context-client";
 import Card from "../../Components/ui/Card";
+import WorkspaceHeader from "../../Components/ui/WorkspaceHeader";
 import StockProNav from "../../Components/stock/StockProNav";
 import { useRegionalFormatters } from "@/lib/client/use-regional-formatters";
 
@@ -254,29 +255,22 @@ export default function StockPage() {
 
   return (
     <div className="w-full space-y-6 px-5 py-5 lg:px-7">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm font-semibold text-green-700">
-            Workshop Inventory
-          </p>
-
-          <h1 className="text-3xl font-bold text-slate-900">Stock</h1>
-
-          <p className="mt-1 text-sm text-slate-500">
-            Manage parts, pricing, stock levels and reorder requirements.
-          </p>
-        </div>
-
-        <div className="flex flex-col items-start gap-3 sm:items-end">
-          <StockProNav />
-          <Link
-            href="/stock/new"
-            className="inline-flex items-center justify-center rounded-xl bg-[#103d2e] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0c3024]"
-          >
-            + New Stock Item
-          </Link>
-        </div>
-      </div>
+      <WorkspaceHeader
+        eyebrow="Workshop inventory"
+        title="Stock"
+        description="See what is available, what needs reordered and get to purchasing without digging through separate screens."
+        actions={
+          <>
+            <StockProNav />
+            <Link
+              href="/stock/new"
+              className="inline-flex items-center justify-center rounded-xl bg-[var(--brand-strong)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--brand-hover)]"
+            >
+              + New stock item
+            </Link>
+          </>
+        }
+      />
 
       {errorMessage && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -284,7 +278,7 @@ export default function StockPage() {
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-3 grid-cols-2 xl:grid-cols-5">
         <Card>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Active Items
@@ -504,7 +498,7 @@ export default function StockPage() {
             </div>
 
             <div className="mt-5 hidden overflow-x-auto md:block">
-              <table className="min-w-full">
+              <table className="ui-data-table min-w-full">
                 <thead>
                   <tr className="border-b border-slate-200 text-left">
                     <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
