@@ -3,15 +3,12 @@ import Link from "next/link";
 import AgriCoreMark from "@/Components/branding/agricore-mark";
 
 const links = [
-  { href: "/features", label: "Features" },
+  { href: "/features", label: "Product" },
+  { href: "/agricultural-engineering-software", label: "Solutions" },
   { href: "/industries", label: "Industries" },
   { href: "/pricing", label: "Pricing" },
-  { href: "/roi-calculator", label: "ROI" },
+  { href: "/roi-calculator", label: "ROI calculator" },
   { href: "/demo", label: "Demo" },
-  { href: "/founding-customers", label: "Founding customers" },
-  { href: "/security", label: "Security" },
-  { href: "/about", label: "About" },
-  { href: "/contact", label: "Contact" },
 ];
 
 export default function MarketingHeader() {
@@ -26,7 +23,7 @@ export default function MarketingHeader() {
           </div>
         </Link>
 
-        <nav className="hidden items-center gap-6 xl:flex" aria-label="Marketing navigation">
+        <nav className="hidden items-center gap-5 lg:flex" aria-label="Marketing navigation">
           {links.map((link) => (
             <Link key={link.href} href={link.href} className="text-sm font-bold text-slate-700 transition hover:text-emerald-800 dark:text-slate-200 dark:hover:text-emerald-300">
               {link.label}
@@ -41,7 +38,7 @@ export default function MarketingHeader() {
         </div>
       </div>
 
-      <nav className="mx-auto flex max-w-7xl gap-5 overflow-x-auto px-5 pb-3 text-xs font-black text-slate-600 xl:hidden dark:text-slate-300" aria-label="Mobile marketing navigation">
+      <nav className="mx-auto flex max-w-7xl gap-5 overflow-x-auto px-5 pb-3 text-xs font-black text-slate-600 lg:hidden dark:text-slate-300" aria-label="Mobile marketing navigation">
         {links.map((link) => <Link key={link.href} href={link.href} className="whitespace-nowrap hover:text-emerald-700">{link.label}</Link>)}
       </nav>
     </header>
