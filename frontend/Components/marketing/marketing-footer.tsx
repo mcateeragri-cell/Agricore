@@ -4,7 +4,7 @@ import Link from "next/link";
 export default function MarketingFooter() {
   return (
     <footer className="border-t border-emerald-950/10 bg-emerald-950 text-white dark:border-white/10">
-      <div className="mx-auto grid max-w-7xl gap-10 px-5 py-14 sm:px-8 md:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr] lg:px-10">
+      <div className="mx-auto grid max-w-7xl gap-10 px-5 py-14 sm:px-8 md:grid-cols-2 lg:grid-cols-[1.35fr_.9fr_1fr_.9fr_.9fr] lg:px-10">
         <div className="max-w-md">
           <div className="flex items-center gap-3">
             <Image src="/icons/icon-192.png" alt="" width={44} height={44} className="rounded-xl shadow-lg" />
@@ -24,6 +24,15 @@ export default function MarketingFooter() {
             <Link href="/demo" className="hover:text-white">Product demo</Link>
             <Link href="/signup" className="hover:text-white">Start free trial</Link>
             <Link href="/login" className="hover:text-white">Sign in</Link>
+          </div>
+        </div>
+        <div>
+          <p className="text-sm font-black uppercase tracking-[0.14em] text-emerald-300">Solutions</p>
+          <div className="mt-4 grid gap-3 text-sm font-semibold text-emerald-50/75">
+            <Link href="/agricultural-engineering-software" className="hover:text-white">Agricultural engineers</Link>
+            <Link href="/farm-machinery-workshop-software" className="hover:text-white">Workshop software</Link>
+            <Link href="/mobile-job-sheets-agricultural-engineers" className="hover:text-white">Mobile job sheets</Link>
+            <Link href="/machinery-service-management-software" className="hover:text-white">Service management</Link>
           </div>
         </div>
         <div>
