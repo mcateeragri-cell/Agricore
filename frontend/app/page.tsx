@@ -54,13 +54,33 @@ const faqs = [
   ["Can I keep machine service history?", "Yes. Customer, machine, job and service history stay connected so technicians can quickly understand previous work."],
   ["What happens when there is poor signal?", "AgriCore includes offline-ready technician workflows and a sync centre for queued field updates."],
   ["Can I manage stock and purchase orders?", "Yes. Stock Pro covers inventory, suppliers, purchase orders, receipts and movement history."],
-  ["Is there a free trial?", "Yes. AgriCore Professional includes a 14-day free trial. £0 is charged today and the paid subscription starts after the trial unless cancelled beforehand."],
+  ["Is there a free trial?", "Yes. Starter, Professional and Enterprise can each begin with a 14-day free trial. £0 is charged today and the selected paid subscription starts after the trial unless cancelled beforehand."],
   ["Is company data separated?", "Yes. AgriCore is multi-company by design and company-scoped data and permissions are kept isolated between businesses."],
+  ["Can AgriCore be used outside the UK?", "AgriCore includes company-level regional settings for country, currency, timezone, date formats and tax naming. Local accounting, tax and regulatory requirements should still be checked for the country where your business operates."],
 ];
 
 export default function MarketingHomePage() {
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "AgriCore",
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web",
+    url: "https://getagricore.com",
+    description: "Agricultural engineering management software for customers, machines, jobs, technicians, stock, service programmes, quotes and invoices.",
+    offers: [
+      { "@type": "Offer", name: "Starter", price: "49", priceCurrency: "GBP" },
+      { "@type": "Offer", name: "Professional", price: "89", priceCurrency: "GBP" },
+      { "@type": "Offer", name: "Enterprise", price: "225", priceCurrency: "GBP" },
+    ],
+  };
+
   return (
     <MarketingShell>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       <main>
         <section className="relative overflow-hidden border-b border-emerald-950/10 bg-[radial-gradient(circle_at_10%_5%,rgba(52,211,153,.25),transparent_26rem),radial-gradient(circle_at_92%_16%,rgba(163,230,53,.16),transparent_28rem)] dark:border-white/10">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-400/60 to-transparent" />
