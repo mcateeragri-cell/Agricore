@@ -31,10 +31,14 @@ export default function MarketingFooter() {
         <div>
           <p className="text-sm font-black uppercase tracking-[0.14em] text-emerald-300">Solutions</p>
           <div className="mt-4 grid gap-3 text-sm font-semibold text-emerald-50/75">
-            <Link href="/agricultural-engineering-software" className="hover:text-white">Agricultural engineers</Link>
+            <Link href="/agricultural-engineering-software" className="hover:text-white">Agricultural engineering software</Link>
+            <Link href="/agricultural-crm" className="hover:text-white">Agricultural CRM</Link>
             <Link href="/farm-machinery-workshop-software" className="hover:text-white">Workshop software</Link>
+            <Link href="/workshop-scheduling-software" className="hover:text-white">Workshop scheduling</Link>
             <Link href="/mobile-job-sheets-agricultural-engineers" className="hover:text-white">Mobile job sheets</Link>
+            <Link href="/agricultural-invoicing-software" className="hover:text-white">Agricultural invoicing</Link>
             <Link href="/machinery-service-management-software" className="hover:text-white">Service management</Link>
+            <Link href="/field-service-management-agriculture" className="hover:text-white">Field service management</Link>
           </div>
         </div>
         <div>

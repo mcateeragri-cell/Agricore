@@ -36,8 +36,32 @@ export default function SearchLanding({
   secondaryTitle,
   secondaryCopy,
 }: SearchLandingProps) {
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "AgriCore",
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web",
+    description,
+    audience: {
+      "@type": "BusinessAudience",
+      audienceType: audience,
+    },
+    offers: {
+      "@type": "AggregateOffer",
+      lowPrice: "49",
+      highPrice: "225",
+      priceCurrency: "GBP",
+      offerCount: "3",
+    },
+  };
+
   return (
     <MarketingShell>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       <main>
         <section className="relative overflow-hidden border-b border-emerald-950/10 bg-[radial-gradient(circle_at_8%_8%,rgba(52,211,153,.22),transparent_30rem)] dark:border-white/10">
           <div className="mx-auto grid max-w-7xl items-center gap-14 px-5 py-16 sm:px-8 lg:grid-cols-[.92fr_1.08fr] lg:px-10 lg:py-24">

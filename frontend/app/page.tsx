@@ -25,9 +25,24 @@ import ProductPreview from "@/Components/marketing/product-preview";
 import RoiCalculator from "@/Components/marketing/roi-calculator";
 
 export const metadata: Metadata = {
-  title: "Agricultural engineering management software",
-  description: "AgriCore connects customers, machines, jobs, technicians, service programmes, stock, quotes and invoices in one platform built for agricultural service businesses.",
+  title: "Agricultural Workshop & Service Management Software | AgriCore",
+  description: "Run customers, machines, jobs, mobile technicians, service programmes, stock, quotes and invoices in one agricultural engineering management platform.",
+  keywords: [
+    "agricultural workshop software",
+    "agricultural engineering software",
+    "farm machinery workshop software",
+    "agricultural CRM",
+    "mobile job sheets",
+    "machinery service management software",
+  ],
   alternates: { canonical: "https://getagricore.com" },
+  openGraph: {
+    title: "AgriCore | Agricultural Workshop & Service Management Software",
+    description: "Built for agricultural engineering businesses: customers, machines, jobs, field engineers, stock, service programmes, quotes and invoices in one platform.",
+    url: "https://getagricore.com",
+    siteName: "AgriCore",
+    type: "website",
+  },
 };
 
 const features = [
@@ -83,11 +98,28 @@ export default function MarketingHomePage() {
     ],
   };
 
+  const faqStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map(([question, answer]) => ({
+      "@type": "Question",
+      name: question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: answer,
+      },
+    })),
+  };
+
   return (
     <MarketingShell>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqStructuredData) }}
       />
       <main>
         <section className="relative overflow-hidden border-b border-emerald-950/10 bg-[radial-gradient(circle_at_10%_5%,rgba(52,211,153,.25),transparent_26rem),radial-gradient(circle_at_92%_16%,rgba(163,230,53,.16),transparent_28rem)] dark:border-white/10">
