@@ -15,9 +15,15 @@ export async function GET() {
       settings: data ?? {
         company_id: user.companyId,
         provider: "resend",
+        email_mode: "agricore",
         sender_name: user.companyName,
         reply_to_email: user.email,
         from_email: null,
+        custom_domain: null,
+        resend_domain_id: null,
+        domain_status: null,
+        domain_records: [],
+        domain_last_checked_at: null,
         custom_sender_verified: false,
         enabled: true,
       },
@@ -35,13 +41,54 @@ export async function PUT(request: NextRequest) {
     const body = await request.json() as Record<string, unknown>;
     const text = (key: string, max = 254) => typeof body[key] === "string" ? String(body[key]).trim().slice(0, max) || null : null;
     const replyTo = text("reply_to_email");
-    if (replyTo && !replyTo.includes("@")) return NextResponse.json({ error: "Enter a valid reply-to email address." }, { status: 400 });
+    const requestedFrom = text("from_email");
+    const requestedMode = body.email_mode === "custom_domain" ? "custom_domain" : "agricore";
+
+    if (replyTo && !replyTo.includes("@")) {
+      return NextResponse.json({ error: "Enter a valid reply-to email address." }, { status: 400 });
+    }
+
     const admin = createSupabaseAdmin();
+    const { data: current, error: currentError } = await admin
+      .from("company_email_settings")
+      .select("*")
+      .eq("company_id", user.companyId)
+      .maybeSingle();
+    if (currentError) throw new Error(currentError.message);
+
+    let fromEmail: string | null = current?.from_email ?? null;
+    if (requestedMode === "custom_domain") {
+      if (!current?.custom_sender_verified || current?.domain_status !== "verified" || !current?.custom_domain) {
+        return NextResponse.json(
+          { error: "Verify your company domain before using it as the sender." },
+          { status: 400 },
+        );
+      }
+
+      if (!requestedFrom || !requestedFrom.includes("@")) {
+        return NextResponse.json(
+          { error: "Enter the email address you want customers to see in the From field." },
+          { status: 400 },
+        );
+      }
+
+      const fromDomain = requestedFrom.split("@").pop()?.trim().toLowerCase();
+      if (fromDomain !== String(current.custom_domain).toLowerCase()) {
+        return NextResponse.json(
+          { error: `The sender address must use ${current.custom_domain}.` },
+          { status: 400 },
+        );
+      }
+      fromEmail = requestedFrom.toLowerCase();
+    }
+
     const { data, error } = await admin.from("company_email_settings").upsert({
       company_id: user.companyId,
       provider: "resend",
+      email_mode: requestedMode,
       sender_name: text("sender_name", 120) || user.companyName,
       reply_to_email: replyTo,
+      from_email: fromEmail,
       enabled: body.enabled !== false,
       updated_at: new Date().toISOString(),
     }, { onConflict: "company_id" }).select("*").single();

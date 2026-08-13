@@ -82,7 +82,13 @@ export async function sendCompanyEmail(input: SendCompanyEmailInput) {
   const body = mergeVariables(input.bodyOverride || templateResult.data?.body_template || builtIn.body, variables).trim();
 
   const senderSettings = settingsResult.data;
-  const from = senderSettings?.custom_sender_verified && senderSettings?.from_email
+  const useCustomSender =
+    senderSettings?.email_mode === "custom_domain" &&
+    senderSettings?.custom_sender_verified === true &&
+    senderSettings?.domain_status === "verified" &&
+    Boolean(senderSettings?.from_email);
+
+  const from = useCustomSender
     ? `${senderSettings.sender_name || companySettings.company_name} <${senderSettings.from_email}>`
     : defaultFrom();
   const replyTo = input.replyTo || senderSettings?.reply_to_email || companySettings.email || undefined;
