@@ -13,6 +13,20 @@ export async function POST(request: NextRequest) {
     const user = await requirePermission(["settings.manage"]);
     const billing = await loadBillingStatus(user.companyId);
     const admin = createSupabaseAdmin();
+    let requestedPlanSlug = billing.plan.slug;
+    try {
+      const body = await request.json();
+      if (typeof body?.planSlug === "string" && body.planSlug.trim()) requestedPlanSlug = body.planSlug.trim().toLowerCase();
+    } catch { /* body optional */ }
+
+    const { data: requestedPlan, error: requestedPlanError } = await admin
+      .from("subscription_plans")
+      .select("id,name,slug,trial_days,stripe_monthly_price_id,is_public")
+      .eq("slug", requestedPlanSlug)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (requestedPlanError) throw new Error(requestedPlanError.message);
+    if (!requestedPlan || !requestedPlan.is_public) return NextResponse.json({ error: "That AgriCore plan is not available for self-service checkout." }, { status: 409 });
 
     if (user.companySlug.includes("demo-") || user.companyName.toLowerCase().includes(" demo ")) {
       return NextResponse.json({ error: "Demo workspaces do not create Stripe subscriptions." }, { status: 409 });
@@ -25,15 +39,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (billing.plan.slug !== "professional" || !billing.plan.isPublic) {
-      return NextResponse.json(
-        { error: "The selected AgriCore plan is not available for self-service checkout." },
-        { status: 409 },
-      );
-    }
-
     const appUrl = applicationUrl(request.url);
-    const priceId = stripePriceIdForPlan(billing.plan.slug, billing.plan.stripeMonthlyPriceId);
+    const priceId = stripePriceIdForPlan(requestedPlan.slug, requestedPlan.stripe_monthly_price_id);
     let customerId = billing.subscription.stripeCustomerId;
 
     if (!customerId) {
@@ -59,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     const remainingTrialDays = Math.max(
       1,
-      trialDaysRemaining(billing.subscription.trialEndsAt) || billing.plan.trialDays,
+      trialDaysRemaining(billing.subscription.trialEndsAt) || Number(requestedPlan.trial_days ?? 14),
     );
 
     const session = await stripeRequest("/checkout/sessions", {
@@ -74,29 +81,18 @@ export async function POST(request: NextRequest) {
         line_items: [{ price: priceId, quantity: 1 }],
         subscription_data: {
           trial_period_days: remainingTrialDays,
-          metadata: { company_id: billing.companyId, plan_slug: billing.plan.slug },
+          metadata: { company_id: billing.companyId, plan_slug: requestedPlan.slug },
         },
-        metadata: { company_id: billing.companyId, plan_slug: billing.plan.slug },
+        metadata: { company_id: billing.companyId, plan_slug: requestedPlan.slug },
         success_url: `${appUrl}/settings/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${appUrl}/settings/billing?checkout=cancelled&setup=1`,
       },
     });
 
-    const [{ error: subscriptionUpdateError }, { error: planUpdateError }] = await Promise.all([
-      admin
-        .from("company_subscriptions")
-        .update({ payment_provider: "stripe", stripe_price_id: priceId, updated_at: new Date().toISOString() })
-        .eq("company_id", billing.companyId),
-      admin
-        .from("subscription_plans")
-        .update({ stripe_monthly_price_id: priceId, updated_at: new Date().toISOString() })
-        .eq("id", billing.plan.id)
-        .is("stripe_monthly_price_id", null),
-    ]);
-
-    if (subscriptionUpdateError) throw new Error(subscriptionUpdateError.message);
-    if (planUpdateError) throw new Error(planUpdateError.message);
-
+    // Do not switch the local plan before Stripe Checkout completes. The
+    // checkout session carries plan_slug metadata and the webhook/sync layer
+    // activates the matching plan only after Stripe creates the subscription.
+    // This prevents a cancelled checkout from granting higher-tier entitlements.
     return NextResponse.json({ url: session.url });
   } catch (error) {
     console.error("Unable to create Stripe checkout session:", error);

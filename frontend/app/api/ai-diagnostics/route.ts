@@ -4,6 +4,8 @@ import { getAuthenticatedUserContext } from "@/lib/auth/require-permission";
 import { createSupabaseAdmin } from "@/lib/payments/supabase-admin";
 import { isCompanyFeatureEnabled } from "@/lib/platform/effective-features";
 import { loadOrBuildAtlasMachineContext } from "@/lib/atlas/context-cache";
+import { loadBillingStatus } from "@/lib/platform/billing";
+import { planPolicy } from "@/lib/platform/plan-policy";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -177,6 +179,17 @@ export async function POST(request: NextRequest) {
     activeServiceProgrammes: cachedContext.activeServiceProgrammes ?? [],
   };
 
+  const billing = await loadBillingStatus(auth.companyId);
+  if (billing.billingMode === "subscription") {
+    const allowance = planPolicy(billing.plan.slug).aiDiagnosticsPerMonth;
+    if (billing.usage.aiRequestsThisMonth >= allowance) {
+      return NextResponse.json(
+        { error: `Your ${billing.plan.name} AI allowance (${allowance.toLocaleString()} diagnostics per month) has been reached. Upgrade your subscription to continue using AI Workshop Assistant.`, upgradeRequired: true },
+        { status: 429 },
+      );
+    }
+  }
+
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) {
     return NextResponse.json({
@@ -217,6 +230,14 @@ export async function POST(request: NextRequest) {
 
   const answer = extractOutputText(responseBody);
   if (!answer) return NextResponse.json({ error: "The AI provider returned no diagnostic text." }, { status: 502 });
+
+  const { error: usageError } = await admin.from("company_ai_usage").insert({
+    company_id: auth.companyId,
+    user_id: auth.userId ?? null,
+    usage_type: "diagnostic",
+    model,
+  });
+  if (usageError) console.error("Unable to record AI usage:", usageError);
 
   return NextResponse.json({
     providerConfigured: true,

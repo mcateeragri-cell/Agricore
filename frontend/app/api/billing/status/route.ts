@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { requirePermission } from "@/lib/auth/require-permission";
-import { loadBillingStatus, trialDaysRemaining } from "@/lib/platform/billing";
+import { loadBillingStatus, loadPublicBillingPlans, trialDaysRemaining } from "@/lib/platform/billing";
 import { syncStripeSubscriptionById } from "@/lib/platform/billing-sync";
 import { stripeRequest } from "@/lib/platform/stripe";
 
@@ -49,8 +49,11 @@ export async function GET() {
       }
     }
 
+    const plans = await loadPublicBillingPlans();
+
     return NextResponse.json({
       billing,
+      plans,
       trialDaysRemaining: trialDaysRemaining(billing.subscription.trialEndsAt),
       paymentMethod,
     });

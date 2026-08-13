@@ -47,6 +47,17 @@ export async function syncStripeSubscriptionById(
   const resolvedCompanyId =
     companyId || subscription?.metadata?.company_id || null;
 
+  const stripePriceId = subscription.items?.data?.[0]?.price?.id ?? null;
+  const metadataPlanSlug = typeof subscription?.metadata?.plan_slug === "string" ? subscription.metadata.plan_slug : null;
+  let resolvedPlanId: string | null = null;
+  if (metadataPlanSlug || stripePriceId) {
+    let query = admin.from("subscription_plans").select("id").limit(1);
+    query = metadataPlanSlug ? query.eq("slug", metadataPlanSlug) : query.eq("stripe_monthly_price_id", stripePriceId);
+    const { data: plan, error: planError } = await query.maybeSingle();
+    if (planError) throw new Error(planError.message);
+    resolvedPlanId = plan?.id ?? null;
+  }
+
   const update = {
     status: mapStripeSubscriptionStatus(String(subscription.status ?? "")),
     payment_provider: "stripe",
@@ -55,7 +66,8 @@ export async function syncStripeSubscriptionById(
         ? subscription.customer
         : subscription.customer?.id ?? null,
     payment_subscription_id: subscription.id,
-    stripe_price_id: subscription.items?.data?.[0]?.price?.id ?? null,
+    stripe_price_id: stripePriceId,
+    ...(resolvedPlanId ? { plan_id: resolvedPlanId } : {}),
     trial_started_at: isoFromStripeUnix(subscription.trial_start),
     trial_ends_at: isoFromStripeUnix(subscription.trial_end),
     subscription_started_at: isoFromStripeUnix(subscription.start_date),

@@ -8,6 +8,7 @@ import {
   type User,
 } from "@supabase/supabase-js";
 import { sendCompanyEmail } from "@/lib/communications/email";
+import { loadBillingStatus } from "@/lib/platform/billing";
 
 import {
   getAuthenticatedUserContext,
@@ -516,6 +517,14 @@ export async function POST(
         {
           status: 403,
         },
+      );
+    }
+
+    const billing = await loadBillingStatus(requestedCompanyId);
+    if (billing.billingMode === "subscription" && billing.plan.maxUsers > 0 && billing.plan.maxUsers < 9000 && billing.usage.users >= billing.plan.maxUsers) {
+      return NextResponse.json(
+        { error: `${billing.plan.name} supports up to ${billing.plan.maxUsers} users. Upgrade your AgriCore subscription to add another team member.`, upgradeRequired: true },
+        { status: 409 },
       );
     }
 

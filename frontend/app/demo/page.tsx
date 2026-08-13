@@ -32,7 +32,7 @@ export default function DemoPage() {
             <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-300">Ready to use your own workflow?</p>
-                <h2 className="mt-3 text-3xl font-black tracking-tight">Start your 14-day Professional trial.</h2>
+                <h2 className="mt-3 text-3xl font-black tracking-tight">Start your 14-day AgriCore trial.</h2>
                 <p className="mt-3 max-w-2xl font-medium leading-7 text-emerald-50/80">Create your own company workspace and start adding customers, machines, jobs and invoices. £0 is charged today.</p>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">

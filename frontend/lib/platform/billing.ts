@@ -28,7 +28,7 @@ export type BillingStatus = {
     stripeMonthlyPriceId: string | null;
     isPublic: boolean;
   };
-  usage: { users: number };
+  usage: { users: number; customers: number; machines: number; jobs: number; aiRequestsThisMonth: number };
   subscription: {
     status: string;
     trialStartedAt: string | null;
@@ -70,6 +70,10 @@ export async function loadBillingStatus(companyId: string): Promise<BillingStatu
     { data: company, error: companyError },
     { data: settings, error: settingsError },
     { count: userCount, error: usersError },
+    { count: customerCount, error: customersError },
+    { count: machineCount, error: machinesError },
+    { count: jobCount, error: jobsError },
+    { count: aiUsageCount, error: aiUsageError },
   ] = await Promise.all([
     admin
       .from("companies")
@@ -86,9 +90,13 @@ export async function loadBillingStatus(companyId: string): Promise<BillingStatu
       .select("user_id", { count: "exact", head: true })
       .eq("company_id", companyId)
       .eq("is_active", true),
+    admin.from("customers").select("id", { count: "exact", head: true }).eq("company_id", companyId),
+    admin.from("machines").select("id", { count: "exact", head: true }).eq("company_id", companyId),
+    admin.from("jobs").select("id", { count: "exact", head: true }).eq("company_id", companyId),
+    admin.from("company_ai_usage").select("id", { count: "exact", head: true }).eq("company_id", companyId).gte("created_at", new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)).toISOString()),
   ]);
 
-  const firstError = companyError || settingsError || usersError;
+  const firstError = companyError || settingsError || usersError || customersError || machinesError || jobsError || aiUsageError;
   if (firstError) throw new Error(firstError.message);
   if (!company) throw new Error("Unable to load the company.");
 
@@ -133,7 +141,7 @@ export async function loadBillingStatus(companyId: string): Promise<BillingStatu
       stripeMonthlyPriceId: plan.stripe_monthly_price_id ?? null,
       isPublic: Boolean(plan.is_public),
     },
-    usage: { users: userCount ?? 0 },
+    usage: { users: userCount ?? 0, customers: customerCount ?? 0, machines: machineCount ?? 0, jobs: jobCount ?? 0, aiRequestsThisMonth: aiUsageCount ?? 0 },
     subscription: {
       status: billingMode === "subscription" ? (subscription?.status ?? syntheticStatus) : syntheticStatus,
       trialStartedAt: billingMode === "subscription" ? (subscription?.trial_started_at ?? null) : null,
@@ -156,4 +164,35 @@ export async function loadBillingStatus(companyId: string): Promise<BillingStatu
 export function trialDaysRemaining(trialEndsAt: string | null) {
   if (!trialEndsAt) return 0;
   return Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / 86_400_000));
+}
+
+export type PublicBillingPlan = {
+  id: string;
+  name: string;
+  slug: string;
+  monthlyPrice: number;
+  yearlyPrice: number;
+  trialDays: number;
+  maxUsers: number;
+  maxStorageGb: number;
+  currencyCode: string;
+  stripeMonthlyPriceId: string | null;
+};
+
+export async function loadPublicBillingPlans(): Promise<PublicBillingPlan[]> {
+  const admin = createSupabaseAdmin();
+  const { data, error } = await admin
+    .from("subscription_plans")
+    .select("id,name,slug,monthly_price,yearly_price,trial_days,max_users,max_storage_gb,currency_code,stripe_monthly_price_id,sort_order")
+    .eq("is_active", true)
+    .eq("is_public", true)
+    .order("sort_order", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((plan) => ({
+    id: String(plan.id), name: String(plan.name), slug: String(plan.slug),
+    monthlyPrice: Number(plan.monthly_price ?? 0), yearlyPrice: Number(plan.yearly_price ?? 0),
+    trialDays: Number(plan.trial_days ?? 14), maxUsers: Number(plan.max_users ?? 0),
+    maxStorageGb: Number(plan.max_storage_gb ?? 0), currencyCode: String(plan.currency_code ?? "GBP"),
+    stripeMonthlyPriceId: plan.stripe_monthly_price_id ?? null,
+  }));
 }

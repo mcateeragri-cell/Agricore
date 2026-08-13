@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { formatCurrency, formatDate, type RegionalSettings } from "@/lib/regional-settings";
+import { planPolicy } from "@/lib/platform/plan-policy";
 
 type PaymentMethod = {
   brand: string;
@@ -12,6 +13,8 @@ type PaymentMethod = {
   expMonth: number;
   expYear: number;
 } | null;
+
+type PublicPlan = { id:string; name:string; slug:string; monthlyPrice:number; yearlyPrice:number; trialDays:number; maxUsers:number; maxStorageGb:number; currencyCode:string; stripeMonthlyPriceId:string|null };
 
 type BillingResponse = {
   billing?: {
@@ -27,7 +30,7 @@ type BillingResponse = {
       maxStorageGb: number;
       currencyCode: string;
     };
-    usage: { users: number };
+    usage: { users: number; customers: number; machines: number; jobs: number; aiRequestsThisMonth: number };
     subscription: {
       status: string;
       trialEndsAt: string | null;
@@ -43,6 +46,7 @@ type BillingResponse = {
     };
   };
   paymentMethod?: PaymentMethod;
+  plans?: PublicPlan[];
   trialDaysRemaining?: number;
   error?: string;
 };
@@ -76,7 +80,7 @@ export default function BillingCentre() {
   const [data, setData] = useState<BillingResponse | null>(null);
   const [history, setHistory] = useState<BillingInvoice[]>([]);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState<"checkout" | "portal" | "cancel" | "reactivate" | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   async function load() {
@@ -109,16 +113,37 @@ export default function BillingCentre() {
     [data],
   );
 
-  async function redirectFrom(endpoint: string, kind: "checkout" | "portal") {
+  async function redirectFrom(endpoint: string, kind: "checkout" | "portal", body?: Record<string, unknown>) {
     setBusy(kind);
     setError("");
     try {
-      const response = await fetch(endpoint, { method: "POST" });
+      const response = await fetch(endpoint, { method: "POST", headers: body ? { "Content-Type": "application/json" } : undefined, body: body ? JSON.stringify(body) : undefined });
       const result = await response.json();
       if (!response.ok || !result.url) throw new Error(result.error || "Unable to continue.");
       window.location.assign(result.url);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Unable to continue.");
+      setBusy(null);
+    }
+  }
+
+
+  async function upgradePlan(planSlug: string) {
+    if (!window.confirm(`Upgrade AgriCore to ${planSlug === "professional" ? "Professional" : "Enterprise"}? Stripe will apply the plan change and any applicable proration immediately.`)) return;
+    setBusy(`upgrade-${planSlug}`);
+    setError("");
+    try {
+      const response = await fetch("/api/billing/subscription", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "upgrade_plan", planSlug }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Unable to upgrade subscription.");
+      await load();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Unable to upgrade subscription.");
+    } finally {
       setBusy(null);
     }
   }
@@ -257,7 +282,7 @@ export default function BillingCentre() {
             </div>
             <div className="rounded-2xl bg-slate-50 p-5 dark:bg-slate-950">
               <p className="text-xs font-bold uppercase text-slate-500">Users</p>
-              <p className="mt-2 text-2xl font-black">{billing.usage.users}{billing.plan.maxUsers > 0 ? ` / ${billing.plan.maxUsers}` : ""}</p>
+              <p className="mt-2 text-2xl font-black">{billing.usage.users}{billing.plan.maxUsers > 0 && billing.plan.maxUsers < 9000 ? ` / ${billing.plan.maxUsers}` : ""}</p>
             </div>
           </div>
 
@@ -269,7 +294,7 @@ export default function BillingCentre() {
 
           <div className="mt-6 flex flex-wrap gap-3">
             {!hasStripeSubscription ? (
-              <button onClick={() => void redirectFrom("/api/billing/create-checkout-session", "checkout")} disabled={busy !== null} className="rounded-xl bg-emerald-700 px-6 py-3 font-black text-white disabled:opacity-60">
+              <button onClick={() => void redirectFrom("/api/billing/create-checkout-session", "checkout", { planSlug: billing.plan.slug })} disabled={busy !== null} className="rounded-xl bg-emerald-700 px-6 py-3 font-black text-white disabled:opacity-60">
                 {busy === "checkout" ? "Opening secure checkout…" : "Add card or Apple Pay"}
               </button>
             ) : (
@@ -295,9 +320,9 @@ export default function BillingCentre() {
         </div>
 
         <aside className="rounded-3xl bg-slate-950 p-7 text-white shadow-xl">
-          <p className="text-sm font-black uppercase tracking-[0.16em] text-emerald-300">Professional includes</p>
+          <p className="text-sm font-black uppercase tracking-[0.16em] text-emerald-300">{billing.plan.name} includes</p>
           <ul className="mt-6 space-y-4 text-sm font-semibold text-slate-200">
-            {["Customers, machines and jobs", "Quotes and invoicing", "Reports and Stock Pro", "Technician Pro mobile workflow", "Offline field working", "GPS, photos and signatures", "Service programmes"].map((item) => (
+            {(billing.plan.slug === "starter" ? ["Customers, machines and jobs","Quotes and invoicing","Calendar and service programmes","Basic stock workflow","Limited AI Workshop Assistant"] : billing.plan.slug === "enterprise" ? ["Everything in Professional","Financial Control","Purchase ledger & bank reconciliation","Accountant workspace","Enterprise dealer capabilities","API access and priority support"] : ["Customers, machines and jobs", "Quotes and invoicing", "Reports and Stock Pro", "Technician Pro mobile workflow", "Offline field working", "GPS, photos and signatures", "Service programmes", "AI Workshop Assistant & Atlas Intelligence"]).map((item) => (
               <li key={item} className="flex gap-3"><span className="text-emerald-400">✓</span>{item}</li>
             ))}
           </ul>
@@ -305,6 +330,33 @@ export default function BillingCentre() {
             <p className="mt-8 rounded-xl bg-amber-400/10 p-4 text-sm font-semibold text-amber-200">Cancellation is scheduled for the end of the current billing period. Choose Keep subscription to reverse it before then.</p>
           ) : null}
         </aside>
+      </section>
+
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-8">
+        <p className="text-sm font-black uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">Usage</p>
+        <h2 className="mt-2 text-2xl font-black text-slate-950 dark:text-white">Your AgriCore workspace</h2>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {[
+            ["Team members", billing.usage.users, billing.plan.maxUsers > 0 && billing.plan.maxUsers < 9000 ? billing.plan.maxUsers : null],
+            ["Customers", billing.usage.customers, null],
+            ["Machines", billing.usage.machines, null],
+            ["Jobs", billing.usage.jobs, null],
+            ["AI this month", billing.usage.aiRequestsThisMonth, planPolicy(billing.plan.slug).aiDiagnosticsPerMonth],
+          ].map(([label,value,limit]) => <div key={String(label)} className="rounded-2xl bg-slate-50 p-5 dark:bg-slate-950"><p className="text-xs font-bold uppercase text-slate-500">{String(label)}</p><p className="mt-2 text-2xl font-black">{Number(value).toLocaleString()}{limit ? ` / ${Number(limit).toLocaleString()}` : ""}</p></div>)}
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-8">
+        <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-sm font-black uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">Plans</p><h2 className="mt-2 text-2xl font-black text-slate-950 dark:text-white">Grow when you need to</h2></div><Link href="/pricing" className="text-sm font-black text-emerald-700 dark:text-emerald-300">Full comparison →</Link></div>
+        <div className="mt-6 grid gap-4 lg:grid-cols-3">
+          {(data?.plans ?? []).map((plan, index, plans) => {
+            const current = plan.slug === billing.plan.slug;
+            const currentIndex = plans.findIndex((item) => item.slug === billing.plan.slug);
+            const isNext = index === currentIndex + 1;
+            const features = plan.slug === "starter" ? ["Core CRM & job workflow","Quotes, invoices & basic stock","Limited AI Workshop Assistant"] : plan.slug === "professional" ? ["Full workshop operations","Stock Pro, dispatch & field tools","Atlas Intelligence & higher AI usage"] : ["Everything in Professional","Financial Control & accountant workspace","Enterprise capabilities & API access"];
+            return <article key={plan.slug} className={`rounded-3xl border p-6 ${current ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-950/20" : "border-slate-200 dark:border-slate-800"}`}><div className="flex items-start justify-between gap-3"><div><h3 className="text-xl font-black">{plan.name}</h3><p className="mt-2 text-3xl font-black">{formatCurrency(plan.monthlyPrice, { ...regional, currency_code: plan.currencyCode })}<span className="text-sm font-bold text-slate-500">/mo</span></p></div>{current ? <span className="rounded-full bg-emerald-700 px-3 py-1 text-xs font-black text-white">Current</span> : null}</div><ul className="mt-5 space-y-2 text-sm font-semibold text-slate-600 dark:text-slate-300">{features.map((feature) => <li key={feature} className="flex gap-2"><span className="text-emerald-600">✓</span>{feature}</li>)}</ul>{!hasStripeSubscription && !current ? <button onClick={() => void redirectFrom("/api/billing/create-checkout-session", "checkout", { planSlug: plan.slug })} disabled={busy !== null} className="mt-6 w-full rounded-xl bg-emerald-700 px-4 py-3 font-black text-white disabled:opacity-60">Choose {plan.name}</button> : null}{hasStripeSubscription && isNext ? <button onClick={() => void upgradePlan(plan.slug)} disabled={busy !== null} className="mt-6 w-full rounded-xl bg-emerald-700 px-4 py-3 font-black text-white disabled:opacity-60">{busy === `upgrade-${plan.slug}` ? "Upgrading…" : `Upgrade to ${plan.name}`}</button> : null}{hasStripeSubscription && index > currentIndex + 1 ? <p className="mt-6 text-xs font-semibold text-slate-500">Upgrade through {plans[currentIndex + 1]?.name ?? "the next plan"} first.</p> : null}</article>;
+          })}
+        </div>
       </section>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-8">

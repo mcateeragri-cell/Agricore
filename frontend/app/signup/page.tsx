@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 
 import SignupForm from "@/Components/platform/signup-form";
 import AgriCoreMark from "@/Components/branding/agricore-mark";
@@ -15,8 +16,23 @@ const benefits = [
   "Customer and machine service history",
   "Mobile technician workflow",
   "Offline-ready field working",
-  "Card or Apple Pay required before trial starts",
+  "Choose Starter, Professional or Enterprise",
 ];
+
+function SignupFormFallback() {
+  return (
+    <div className="mt-8 space-y-4" aria-busy="true" aria-live="polite">
+      <div className="h-12 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />
+      <div className="h-12 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />
+      <div className="h-12 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />
+      <div className="h-12 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />
+      <div className="h-12 animate-pulse rounded-xl bg-emerald-100 dark:bg-emerald-950/50" />
+      <p className="text-center text-sm font-medium text-slate-500 dark:text-slate-400">
+        Loading signup form…
+      </p>
+    </div>
+  );
+}
 
 export default function SignupPage() {
   return (
@@ -30,8 +46,12 @@ export default function SignupPage() {
               aria-label="AgriCore home"
             >
               <AgriCoreMark size={60} priority />
+
               <div>
-                <p className="text-xl font-black tracking-tight">AgriCore</p>
+                <p className="text-xl font-black tracking-tight">
+                  AgriCore
+                </p>
+
                 <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
                   Agricultural service management
                 </p>
@@ -49,7 +69,8 @@ export default function SignupPage() {
 
               <p className="mt-6 max-w-xl text-base font-medium leading-7 text-slate-650 sm:text-lg dark:text-slate-300">
                 Manage jobs, customers, machines, technicians, service schedules,
-                quotations and invoicing in a platform designed around field service work.
+                quotations and invoicing in a platform designed around field
+                service work.
               </p>
 
               <ul className="mt-9 grid gap-4 sm:grid-cols-2">
@@ -64,6 +85,7 @@ export default function SignupPage() {
                     >
                       ✓
                     </span>
+
                     {benefit}
                   </li>
                 ))}
@@ -72,7 +94,8 @@ export default function SignupPage() {
           </div>
 
           <p className="mt-10 text-xs font-medium text-slate-500 dark:text-slate-400">
-            © {new Date().getFullYear()} AgriCore. Built for agricultural service businesses.
+            © {new Date().getFullYear()} AgriCore. Built for agricultural
+            service businesses.
           </p>
         </section>
 
@@ -87,11 +110,14 @@ export default function SignupPage() {
             </h2>
 
             <p className="mt-2 text-sm font-medium leading-6 text-slate-600 dark:text-slate-300">
-              Enter your details below. Company creation and trial activation will be
-              completed securely before you add a card or Apple Pay for billing after the trial.
+              Enter your details below. Company creation and trial activation
+              will be completed securely before you add a card or Apple Pay for
+              billing after the trial.
             </p>
 
-            <SignupForm />
+            <Suspense fallback={<SignupFormFallback />}>
+              <SignupForm />
+            </Suspense>
 
             <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
               <span>✓ £0 charged today</span>

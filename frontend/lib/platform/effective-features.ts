@@ -69,6 +69,13 @@ export async function loadEffectiveFeatures(
       throw new Error(planError.message);
     }
 
+    // Subscription plans are an allow-list. Start with every registered feature
+    // disabled, then apply the plan matrix. This makes newly introduced platform
+    // features fail closed until a migration explicitly assigns them to a plan.
+    for (const feature of platformFeatures) {
+      enabled.set(String(feature.feature_key), false);
+    }
+
     for (const row of planFeatures ?? []) {
       const key = String(row.feature_key);
       const value = Boolean(row.enabled);
@@ -79,17 +86,22 @@ export async function loadEffectiveFeatures(
 
   if (billingMode === "subscription") {
     for (const row of overrideResult.data ?? []) {
-      enabled.set(String(row.feature_key), Boolean(row.enabled));
-    }
+      const key = String(row.feature_key);
+      const requested = Boolean(row.enabled);
 
-    // Enterprise-only modules cannot be elevated by a company override.
-    // Overrides may still disable them for an Enterprise company.
-    if (!planEntitlements.get("machinery_sales_crm")) {
-      enabled.set("machinery_sales_crm", false);
-    }
-
-    if (!planEntitlements.get("financial_control")) {
-      enabled.set("financial_control", false);
+      // The subscription plan is the entitlement ceiling. A company override may
+      // switch an entitled feature off, but it must never unlock a feature the
+      // current plan explicitly disables. This prevents legacy/default company
+      // feature rows from accidentally giving Starter or Professional customers
+      // higher-tier capabilities.
+      if (planEntitlements.has(key)) {
+        enabled.set(key, requested && planEntitlements.get(key) === true);
+      } else if (!requested) {
+        // Features that pre-date the plan matrix may still be disabled safely.
+        // They are not elevated by an override until they are explicitly mapped
+        // into subscription_plan_features.
+        enabled.set(key, false);
+      }
     }
   }
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { supabase } from "@/lib/supabase";
 
@@ -15,6 +15,10 @@ type SignupResponse = {
 
 export default function SignupForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedPlan = ["starter","professional","enterprise"].includes(searchParams.get("plan") || "") ? String(searchParams.get("plan")) : "professional";
+  const planPrice = requestedPlan === "starter" ? 49 : requestedPlan === "enterprise" ? 225 : 89;
+  const planName = requestedPlan === "starter" ? "Starter" : requestedPlan === "enterprise" ? "Enterprise" : "Professional";
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -33,6 +37,7 @@ export default function SignupForm() {
       password: String(form.get("password") ?? ""),
       termsAccepted: form.get("termsAccepted") === "on",
       website: String(form.get("website") ?? ""),
+      planSlug: requestedPlan,
     };
 
     try {
@@ -69,7 +74,7 @@ export default function SignupForm() {
         });
       }
 
-      router.replace("/settings/billing?setup=1");
+      router.replace(`/settings/billing?setup=1&plan=${requestedPlan}`);
       router.refresh();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Unable to create your account.");
@@ -104,7 +109,7 @@ export default function SignupForm() {
 
       <label className="flex items-start gap-3 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:bg-slate-950 dark:text-slate-300">
         <input name="termsAccepted" type="checkbox" required className="mt-0.5 h-4 w-4 rounded border-slate-300 accent-emerald-700" />
-        <span>I agree to the AgriCore terms of service and privacy policy, and understand that the £89 + VAT monthly subscription will begin automatically after the 14-day free trial unless I cancel beforehand.</span>
+        <span>I agree to the AgriCore terms of service and privacy policy, and understand that the <strong>{planName}</strong> subscription at <strong>£{planPrice} + VAT per month</strong> will begin automatically after the 14-day free trial unless I cancel beforehand.</span>
       </label>
 
       {error ? <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-200">{error}</p> : null}

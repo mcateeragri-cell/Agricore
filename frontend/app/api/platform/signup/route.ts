@@ -12,6 +12,7 @@ type SignupBody = {
   password?: unknown;
   termsAccepted?: unknown;
   website?: unknown;
+  planSlug?: unknown;
 };
 
 const ALL_PERMISSIONS = [
@@ -408,21 +409,19 @@ export async function POST(
       );
     }
 
-    const {
-      data: plan,
-      error: planError,
-    } = await adminClient
+    const requestedPlanSlug = ["starter", "professional", "enterprise"].includes(cleanText(body.planSlug, 30).toLowerCase())
+      ? cleanText(body.planSlug, 30).toLowerCase()
+      : "professional";
+
+    const { data: plan, error: planError } = await adminClient
       .from("subscription_plans")
-      .select("id, trial_days")
-      .eq("slug", "professional")
+      .select("id, name, trial_days, slug, is_public")
+      .eq("slug", requestedPlanSlug)
       .eq("is_active", true)
       .maybeSingle();
 
-    if (planError || !plan) {
-      throw new Error(
-        planError?.message ||
-          "Professional trial plan is unavailable.",
-      );
+    if (planError || !plan || !plan.is_public) {
+      throw new Error(planError?.message || "Selected AgriCore trial plan is unavailable.");
     }
 
     const trialDays =
@@ -522,6 +521,7 @@ export async function POST(
         variables: {
           first_name: fullName.split(/\s+/)[0] || "there",
           company_name: companyName,
+          plan_name: String(plan.name ?? "AgriCore"),
           action_url: `${appUrl}/login`,
         },
         idempotencyKey: `welcome:${company.id}:${createdUserId}`,
