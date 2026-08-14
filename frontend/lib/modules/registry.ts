@@ -15,6 +15,7 @@ export const AGRICORE_MODULES: AgriCoreModule[] = [
   { key: "jobs", name: "Jobs & Workshop", description: "Workshop and field jobs, labour, parts, completion and technician workflows.", category: "core", locked: true, dependencies: ["customers", "machines"] },
   { key: "calendar", name: "Calendar", description: "Workshop and field scheduling.", category: "operations", dependencies: ["jobs"] },
   { key: "dispatch", name: "Dispatch", description: "Engineer dispatch and live operational planning.", category: "operations", dependencies: ["jobs"] },
+  { key: "workshop_operations", name: "Workshop Operations", description: "Visual workshop control, technician capacity and live workshop screen.", category: "operations", dependencies: ["jobs", "dispatch"] },
   { key: "service_programmes", name: "Service Programmes", description: "Planned servicing and preventative maintenance.", category: "operations", dependencies: ["machines"] },
   { key: "stock", name: "Stock & Parts", description: "Parts catalogue, stock control, movements and depot inventory.", category: "operations" },
   { key: "quotes", name: "Quotes", description: "Customer quotations and quote-to-job workflow.", category: "commercial", dependencies: ["customers"] },

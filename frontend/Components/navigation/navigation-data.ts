@@ -12,6 +12,7 @@ export const primaryNavigationItems: NavigationItem[] = [
 ];
 
 export const operationsNavigationItems: NavigationItem[] = [
+  { name: "Workshop", href: "/workshop", icon: "jobs" },
   { name: "Dispatch", href: "/dispatch", icon: "calendar" },
   { name: "Service Programmes", href: "/service-programmes", icon: "service" },
   { name: "AI Diagnostics", href: "/ai-diagnostics", icon: "diagnostics" },
@@ -66,6 +67,12 @@ export const administrationItems: AdministrationItem[] = [
     href: "/settings/dashboard",
     icon: "dashboard",
     permissions: ["settings.manage"],
+  },
+  {
+    name: "Workshop Workflow",
+    href: "/settings/workshop",
+    icon: "settings",
+    permissions: ["settings.manage", "jobs.assign", "jobs.edit"],
   },
   {
     name: "Manufacturers",

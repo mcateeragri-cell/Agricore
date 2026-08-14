@@ -9,6 +9,7 @@ export const MODULE_ROUTE_RULES: ModuleRouteRule[] = [
   { featureKey: "jobs", prefixes: ["/jobs", "/technician", "/office"] },
   { featureKey: "calendar", prefixes: ["/calendar"] },
   { featureKey: "dispatch", prefixes: ["/dispatch"] },
+  { featureKey: "workshop_operations", prefixes: ["/workshop"] },
   { featureKey: "service_programmes", prefixes: ["/service-programmes", "/administration/manufacturers", "/administration/service-templates"] },
   { featureKey: "stock", prefixes: ["/stock"] },
   { featureKey: "quotes", prefixes: ["/quotes"] },

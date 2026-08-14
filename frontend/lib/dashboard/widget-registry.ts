@@ -34,6 +34,10 @@ export const DASHBOARD_WIDGETS: DashboardWidgetDefinition[] = [
   { id: "schedule", label: "Schedule", description: "Upcoming planned work and appointments.", defaultSize: "large", requiredFeatures: ["calendar"] },
   { id: "quick_actions", label: "Quick actions", description: "Shortcuts for frequently used actions.", defaultSize: "medium" },
   { id: "atlas_intelligence", label: "AgriCore Intelligence", description: "Service forecasts, recurring patterns and business advice.", defaultSize: "medium", financial: true, requiredFeatures: ["atlas_intelligence"] },
+  { id: "dealer_principal_kpis", label: "Dealer principal KPIs", description: "Depot count, workshop pressure, active engineers and outstanding balances.", defaultSize: "large", requiredFeatures: ["multi_branch"] },
+  { id: "service_manager_kpis", label: "Service manager KPIs", description: "Open and urgent jobs, waiting-parts pressure and engineer activity.", defaultSize: "large", requiredFeatures: ["jobs"] },
+  { id: "parts_manager_kpis", label: "Parts manager KPIs", description: "Low stock, available units, open purchase orders and depot transfers.", defaultSize: "large", requiredFeatures: ["stock"] },
+  { id: "office_kpis", label: "Office KPIs", description: "Outstanding balances, draft invoices, quotes and open jobs.", defaultSize: "large", requiredFeatures: ["invoices"] },
 ];
 
 export const DASHBOARD_WIDGET_IDS = new Set(DASHBOARD_WIDGETS.map((widget) => widget.id));
@@ -43,9 +47,10 @@ const DEFAULT_ORDER = DASHBOARD_WIDGETS.map((widget) => widget.id);
 
 const ROLE_VISIBLE_ORDER: Record<DashboardPresetScope, string[]> = {
   company_default: DEFAULT_ORDER,
-  company_admin: DEFAULT_ORDER,
-  administrator: DEFAULT_ORDER,
+  company_admin: ["dealer_principal_kpis", ...DEFAULT_ORDER],
+  administrator: ["dealer_principal_kpis", ...DEFAULT_ORDER],
   service_manager: [
+    "service_manager_kpis",
     "executive_summary",
     "team_status",
     "recent_jobs",
@@ -57,6 +62,7 @@ const ROLE_VISIBLE_ORDER: Record<DashboardPresetScope, string[]> = {
     "atlas_intelligence",
   ],
   office: [
+    "office_kpis",
     "executive_summary",
     "recent_jobs",
     "schedule",
@@ -68,6 +74,7 @@ const ROLE_VISIBLE_ORDER: Record<DashboardPresetScope, string[]> = {
     "atlas_intelligence",
   ],
   parts_manager: [
+    "parts_manager_kpis",
     "executive_summary",
     "recent_activity",
     "recent_jobs",
@@ -92,10 +99,13 @@ const ROLE_VISIBLE_ORDER: Record<DashboardPresetScope, string[]> = {
 };
 
 const ROLE_HIDDEN: Partial<Record<DashboardPresetScope, string[]>> = {
-  service_manager: ["atlas_intelligence"],
-  office: ["team_status", "atlas_intelligence"],
-  parts_manager: ["revenue_trend", "atlas_intelligence"],
-  read_only: ["quick_actions", "revenue_trend", "atlas_intelligence"],
+  company_default: ["dealer_principal_kpis", "service_manager_kpis", "parts_manager_kpis", "office_kpis"],
+  company_admin: ["service_manager_kpis", "parts_manager_kpis", "office_kpis"],
+  administrator: ["service_manager_kpis", "parts_manager_kpis", "office_kpis"],
+  service_manager: ["atlas_intelligence", "dealer_principal_kpis", "parts_manager_kpis", "office_kpis"],
+  office: ["team_status", "atlas_intelligence", "dealer_principal_kpis", "service_manager_kpis", "parts_manager_kpis"],
+  parts_manager: ["revenue_trend", "atlas_intelligence", "dealer_principal_kpis", "service_manager_kpis", "office_kpis"],
+  read_only: ["quick_actions", "revenue_trend", "atlas_intelligence", "dealer_principal_kpis", "service_manager_kpis", "parts_manager_kpis", "office_kpis"],
 };
 
 export const DASHBOARD_PRESET_SCOPES: Array<{ key: DashboardPresetScope; label: string; description: string }> = [

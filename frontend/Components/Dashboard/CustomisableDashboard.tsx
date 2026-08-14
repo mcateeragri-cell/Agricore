@@ -20,6 +20,7 @@ import Schedule from "./Schedule";
 import ServiceDueSummary from "./ServiceDueSummary";
 import TeamStatus from "./TeamStatus";
 import AtlasIntelligenceSummary from "./AtlasIntelligenceSummary";
+import RoleKpiWidget from "./RoleKpiWidget";
 
 type LayoutResponse = {
   layout?: LayoutItem[];
@@ -160,6 +161,10 @@ export default function CustomisableDashboard({
     if (id === "schedule") return <Schedule />;
     if (id === "quick_actions") return <QuickActions showFinancialActions={canViewMoney} enabledFeatures={enabledFeatures} />;
     if (id === "atlas_intelligence") return canViewMoney ? <AtlasIntelligenceSummary /> : null;
+    if (id === "dealer_principal_kpis") return <RoleKpiWidget variant="dealer" />;
+    if (id === "service_manager_kpis") return <RoleKpiWidget variant="service" />;
+    if (id === "parts_manager_kpis") return <RoleKpiWidget variant="parts" />;
+    if (id === "office_kpis") return <RoleKpiWidget variant="office" />;
     return null;
   }
 
