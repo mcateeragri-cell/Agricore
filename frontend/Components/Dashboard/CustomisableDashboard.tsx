@@ -3,6 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { GripVertical, LayoutDashboard, RotateCcw, Settings2, X } from "lucide-react";
 
+import {
+  DASHBOARD_WIDGETS as WIDGETS,
+  dashboardScopeForCompanyRole,
+  systemDashboardLayout,
+  type DashboardLayoutItem as LayoutItem,
+  type DashboardSize as Size,
+} from "@/lib/dashboard/widget-registry";
+
 import ExecutiveSummary from "./ExecutiveSummary";
 import QuickActions from "./QuickActions";
 import RecentActivity from "./RecentActivity";
@@ -13,45 +21,14 @@ import ServiceDueSummary from "./ServiceDueSummary";
 import TeamStatus from "./TeamStatus";
 import AtlasIntelligenceSummary from "./AtlasIntelligenceSummary";
 
-type Size = "small" | "medium" | "large" | "full";
-type LayoutItem = { id: string; visible: boolean; size: Size };
-type LayoutResponse = { layout?: LayoutItem[]; error?: string };
-
-type WidgetDefinition = {
-  id: string;
-  label: string;
-  description: string;
-  defaultSize: Size;
-  financial?: boolean;
-  requiredFeatures?: string[];
+type LayoutResponse = {
+  layout?: LayoutItem[];
+  source?: "user" | "role" | "company" | "system" | "disabled";
+  inheritedSource?: "role" | "company" | "system";
+  allowUserCustomisation?: boolean;
+  roleScope?: string;
+  error?: string;
 };
-
-const WIDGETS: WidgetDefinition[] = [
-  { id: "executive_summary", label: "Executive summary", description: "Key workload and financial KPI cards.", defaultSize: "full" },
-  { id: "revenue_trend", label: "Revenue trend", description: "Revenue performance over time.", defaultSize: "large", financial: true, requiredFeatures: ["invoices"] },
-  { id: "team_status", label: "Team status", description: "Engineer availability and current workload.", defaultSize: "medium" },
-  { id: "recent_jobs", label: "Recent jobs", description: "Latest work activity and job status.", defaultSize: "large" },
-  { id: "recent_activity", label: "Recent activity", description: "Latest company activity and changes.", defaultSize: "medium" },
-  { id: "service_due", label: "Service due", description: "Upcoming preventative maintenance and services.", defaultSize: "full", requiredFeatures: ["service_programmes"] },
-  { id: "schedule", label: "Schedule", description: "Upcoming planned work and appointments.", defaultSize: "large", requiredFeatures: ["calendar"] },
-  { id: "quick_actions", label: "Quick actions", description: "Shortcuts for frequently used actions.", defaultSize: "medium" },
-  { id: "atlas_intelligence", label: "AgriCore Intelligence", description: "Service forecasts, recurring patterns and business advice.", defaultSize: "medium", financial: true, requiredFeatures: ["atlas_intelligence"] },
-];
-
-const DEFAULT_LAYOUT: LayoutItem[] = WIDGETS.map((widget) => ({
-  id: widget.id,
-  visible: true,
-  size: widget.defaultSize,
-}));
-
-function mergeLayout(saved: LayoutItem[]) {
-  const byId = new Map(saved.map((item) => [item.id, item]));
-  const ordered = saved.filter((item) => WIDGETS.some((widget) => widget.id === item.id));
-  for (const fallback of DEFAULT_LAYOUT) {
-    if (!byId.has(fallback.id)) ordered.push(fallback);
-  }
-  return ordered;
-}
 
 function spanClass(size: Size) {
   if (size === "small") return "xl:col-span-4";
@@ -65,17 +42,21 @@ export default function CustomisableDashboard({
   enabled,
   atlasEnabled,
   enabledFeatures,
+  role,
 }: {
   canViewMoney: boolean;
   enabled: boolean;
   atlasEnabled: boolean;
   enabledFeatures: string[];
+  role: string | null;
 }) {
-  const [layout, setLayout] = useState<LayoutItem[]>(DEFAULT_LAYOUT);
+  const [layout, setLayout] = useState<LayoutItem[]>(() => systemDashboardLayout(dashboardScopeForCompanyRole(role)));
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [layoutSource, setLayoutSource] = useState<LayoutResponse["source"]>("system");
+  const [allowUserCustomisation, setAllowUserCustomisation] = useState(true);
 
   useEffect(() => {
     if (!enabled) return;
@@ -85,13 +66,17 @@ export default function CustomisableDashboard({
         const response = await fetch("/api/dashboard/layout", { cache: "no-store" });
         const body = (await response.json()) as LayoutResponse;
         if (!response.ok) throw new Error(body.error || "Unable to load dashboard layout.");
-        if (!cancelled && body.layout?.length) setLayout(mergeLayout(body.layout));
+        if (!cancelled) {
+          if (body.layout?.length) setLayout(body.layout);
+          setLayoutSource(body.source ?? "system");
+          setAllowUserCustomisation(body.allowUserCustomisation !== false);
+        }
       } catch (caught) {
         if (!cancelled) setError(caught instanceof Error ? caught.message : "Unable to load dashboard layout.");
       }
     })();
     return () => { cancelled = true; };
-  }, [enabled]);
+  }, [enabled, role]);
 
   const availableWidgets = useMemo(
     () => WIDGETS.filter((widget) =>
@@ -138,9 +123,28 @@ export default function CustomisableDashboard({
       });
       const body = (await response.json()) as LayoutResponse;
       if (!response.ok) throw new Error(body.error || "Unable to save dashboard layout.");
+      setLayoutSource("user");
       setEditing(false);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Unable to save dashboard layout.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function resetLayout() {
+    setSaving(true);
+    setError("");
+    try {
+      const response = await fetch("/api/dashboard/layout", { method: "DELETE" });
+      const body = (await response.json()) as LayoutResponse;
+      if (!response.ok) throw new Error(body.error || "Unable to reset dashboard layout.");
+      if (body.layout?.length) setLayout(body.layout);
+      setLayoutSource(body.source ?? "system");
+      setAllowUserCustomisation(body.allowUserCustomisation !== false);
+      setEditing(false);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Unable to reset dashboard layout.");
     } finally {
       setSaving(false);
     }
@@ -162,16 +166,17 @@ export default function CustomisableDashboard({
   return (
     <>
       {enabled ? (
-        <div className="mb-4 flex items-center justify-end gap-3">
+        <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
           {error ? <p className="mr-auto text-xs font-semibold text-amber-700 dark:text-amber-300">{error}</p> : null}
-          <button
+          {!error ? <span className="mr-auto text-xs font-bold text-slate-400">{layoutSource === "user" ? "Your dashboard" : layoutSource === "role" ? "Role dashboard" : layoutSource === "company" ? "Company dashboard" : "AgriCore default"}</span> : null}
+          {allowUserCustomisation ? <button
             type="button"
             onClick={() => setEditing(true)}
             className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700 shadow-sm transition hover:border-emerald-300 hover:text-emerald-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
           >
             <Settings2 className="h-4 w-4" />
             Customise dashboard
-          </button>
+          </button> : <span className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-500 dark:border-slate-700 dark:bg-slate-900">Managed by company</span>}
         </div>
       ) : null}
 
@@ -238,7 +243,7 @@ export default function CustomisableDashboard({
             </div>
 
             <footer className="sticky bottom-0 mt-6 flex flex-wrap justify-between gap-3 border-t border-slate-200 bg-white py-4 dark:border-slate-800 dark:bg-slate-950">
-              <button type="button" onClick={() => setLayout(DEFAULT_LAYOUT)} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-black text-slate-700 dark:border-slate-700 dark:text-slate-200"><RotateCcw className="h-4 w-4" /> Reset</button>
+              <button type="button" onClick={() => void resetLayout()} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-black text-slate-700 dark:border-slate-700 dark:text-slate-200"><RotateCcw className="h-4 w-4" /> Reset</button>
               <div className="flex gap-3">
                 <button type="button" onClick={() => setEditing(false)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-black text-slate-700 dark:border-slate-700 dark:text-slate-200">Cancel</button>
                 <button type="button" disabled={saving} onClick={() => void saveLayout()} className="rounded-xl bg-emerald-700 px-5 py-2 text-sm font-black text-white disabled:opacity-50">{saving ? "Saving…" : "Save layout"}</button>

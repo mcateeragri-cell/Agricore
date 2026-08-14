@@ -62,6 +62,12 @@ export const administrationItems: AdministrationItem[] = [
     permissions: ["settings.manage"],
   },
   {
+    name: "Dashboard Layouts",
+    href: "/settings/dashboard",
+    icon: "dashboard",
+    permissions: ["settings.manage"],
+  },
+  {
     name: "Manufacturers",
     href: "/administration/manufacturers",
     icon: "manufacturers",

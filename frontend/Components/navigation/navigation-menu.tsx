@@ -144,6 +144,7 @@ export default function NavigationMenu({
           item.href === "/administration/service-templates") &&
         !userState.enabledFeatures.includes("service_programmes")
       ) return false;
+      if (item.href === "/settings/dashboard" && !userState.enabledFeatures.includes("dashboard_builder")) return false;
       if (item.href === "/administration/communications" && !userState.enabledFeatures.includes("communications")) return false;
       if (item.href === "/administration/atlas" && !userState.enabledFeatures.includes("atlas_intelligence")) return false;
       if (hasFullAccess) return true;

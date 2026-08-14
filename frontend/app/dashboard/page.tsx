@@ -69,6 +69,7 @@ export default function Home() {
           enabled={userState.enabledFeatures.includes("dashboard_builder")}
           atlasEnabled={userState.enabledFeatures.includes("atlas_intelligence")}
           enabledFeatures={userState.enabledFeatures}
+          role={userState.role}
         />
       </main>
     </div>
