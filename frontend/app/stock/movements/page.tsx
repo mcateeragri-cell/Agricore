@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { loadActiveCompany } from "@/lib/company-context-client";
+import { loadClientBranchContext } from "@/lib/branches/client";
 import Card from "../../../Components/ui/Card";
 import StockProNav from "../../../Components/stock/StockProNav";
 
@@ -53,6 +54,7 @@ export default function StockMovementsPage() {
     setError("");
     try {
       const company = await loadActiveCompany();
+      const branch = await loadClientBranchContext();
       const [{ data: itemData, error: itemError }, { data: movementData, error: movementError }] = await Promise.all([
         supabase.from("stock_items").select("id,part_number,description,quantity_in_stock").eq("company_id", company.id).eq("active", true).order("description"),
         supabase.from("stock_movements").select("id,stock_item_id,movement_type,quantity,reference,notes,created_at,stock_items(part_number,description)").eq("company_id", company.id).order("created_at", { ascending: false }).limit(250),
@@ -95,10 +97,12 @@ export default function StockMovementsPage() {
     setSaving(true);
     try {
       const company = await loadActiveCompany();
+      const branch = await loadClientBranchContext();
+      if (!branch.activeBranchId) throw new Error("Select a specific depot before making a stock adjustment.");
       const now = new Date().toISOString();
       const { error: updateError } = await supabase.from("stock_items").update({ quantity_in_stock: newQty, updated_at: now }).eq("id", itemId).eq("company_id", company.id);
       if (updateError) throw updateError;
-      const { error: movementError } = await supabase.from("stock_movements").insert({ company_id: company.id, stock_item_id: itemId, movement_type: direction, quantity: signed, reference: reference.trim() || null, notes: notes.trim() || null, created_at: now });
+      const { error: movementError } = await supabase.from("stock_movements").insert({ company_id: company.id, stock_item_id: itemId, branch_id: branch.activeBranchId, movement_type: direction, quantity: signed, reference: reference.trim() || null, notes: notes.trim() || null, created_at: now });
       if (movementError) {
         await supabase.from("stock_items").update({ quantity_in_stock: item.quantity_in_stock, updated_at: new Date().toISOString() }).eq("id", itemId).eq("company_id", company.id);
         throw movementError;

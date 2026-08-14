@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabase";
-import { loadActiveCompany } from "@/lib/company-context-client";
+
 import Card from "../../Components/ui/Card";
 import WorkspaceHeader from "../../Components/ui/WorkspaceHeader";
 import StockProNav from "../../Components/stock/StockProNav";
@@ -102,21 +101,10 @@ export default function StockPage() {
     setErrorMessage("");
 
     try {
-      const activeCompany =
-        await loadActiveCompany();
-
-      const { data, error } = await supabase
-        .from("stock_items")
-        .select("*")
-        .eq("company_id", activeCompany.id)
-        .eq("active", true)
-        .order("description", { ascending: true });
-
-      if (error) {
-        throw error;
-      }
-
-      setStockItems((data ?? []) as StockItem[]);
+      const response = await fetch("/api/stock/inventory", { cache: "no-store" });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Unable to load depot stock.");
+      setStockItems((body.items ?? []) as StockItem[]);
     } catch (error) {
       console.error("Unable to load stock:", error);
       setErrorMessage(

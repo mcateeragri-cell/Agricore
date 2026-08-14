@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { loadActiveCompany } from "@/lib/company-context-client";
+import { loadClientBranchContext } from "@/lib/branches/client";
 import Card from "../../../Components/ui/Card";
 
 type StockFormState = {
@@ -99,6 +100,9 @@ export default function NewStockItemPage() {
 
     try {
       activeCompany = await loadActiveCompany();
+      const branchContext = await loadClientBranchContext();
+      if (!branchContext.activeBranchId) throw new Error("Select a specific depot before creating stock with an opening balance.");
+      (activeCompany as any).branchId = branchContext.activeBranchId;
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -113,6 +117,7 @@ export default function NewStockItemPage() {
       .from("stock_items")
       .insert({
         company_id: activeCompany.id,
+        branch_id: (activeCompany as any).branchId,
         part_number: textOrNull(form.part_number),
         description,
         category: textOrNull(form.category),
