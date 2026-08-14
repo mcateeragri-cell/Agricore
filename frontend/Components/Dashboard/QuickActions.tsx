@@ -32,10 +32,12 @@ const commonActions = [
 
 export default function QuickActions({
   showFinancialActions = true,
+  enabledFeatures = [],
 }: {
   showFinancialActions?: boolean;
+  enabledFeatures?: string[];
 }) {
-  const actions = showFinancialActions
+  const actions = (showFinancialActions && enabledFeatures.includes("quotes")
     ? [
         ...commonActions,
         {
@@ -46,7 +48,14 @@ export default function QuickActions({
           primary: false,
         },
       ]
-    : commonActions;
+    : commonActions
+  ).filter((action) => {
+    if (action.href.startsWith("/jobs")) return enabledFeatures.includes("jobs");
+    if (action.href.startsWith("/customers")) return enabledFeatures.includes("customers");
+    if (action.href.startsWith("/machines")) return enabledFeatures.includes("machines");
+    if (action.href.startsWith("/quotes")) return enabledFeatures.includes("quotes");
+    return true;
+  });
 
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">

@@ -1,3 +1,4 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import { NextRequest, NextResponse } from "next/server";
 
 import { requirePermission } from "@/lib/auth/require-permission";
@@ -22,6 +23,9 @@ function rangeStart(range: string) {
 }
 
 export async function GET(request: NextRequest) {
+  const moduleGate = await requireApiModule("reports");
+  if (moduleGate) return moduleGate;
+
   const user = await requirePermission(["invoices.view", "invoices.manage"]);
   const supabase = await createSupabaseServerClient();
   const requested = request.nextUrl.searchParams.get("range") ?? "12m";

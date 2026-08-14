@@ -1,3 +1,4 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import { NextResponse } from "next/server";
 
 import { requirePermission } from "@/lib/auth/require-permission";
@@ -11,6 +12,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST() {
+  const moduleGate = await requireApiModule("communications");
+  if (moduleGate) return moduleGate;
+
   try {
     const user = await requirePermission(["settings.manage"]);
     const admin = createSupabaseAdmin();

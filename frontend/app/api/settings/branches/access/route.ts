@@ -1,3 +1,4 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import { NextRequest, NextResponse } from "next/server";
 
 import { requirePermission } from "@/lib/auth/require-permission";
@@ -8,6 +9,9 @@ const OPERATIONS = new Set(["own_jobs","branch","selected","company"]);
 const FINANCE = new Set(["none","branch","selected","company"]);
 
 export async function PUT(request: NextRequest) {
+  const moduleGate = await requireApiModule("multi_branch");
+  if (moduleGate) return moduleGate;
+
   try {
     const user = await requirePermission(["settings.manage"]);
     const admin = createSupabaseAdmin();

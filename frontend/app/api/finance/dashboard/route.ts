@@ -1,3 +1,4 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import { NextResponse } from "next/server";
 import { getAuthenticatedUserContext } from "@/lib/auth/require-permission";
 import { createSupabaseAdmin } from "@/lib/payments/supabase-admin";
@@ -6,6 +7,9 @@ import { financeBranchIds } from "@/lib/branches/finance";
 export const dynamic = "force-dynamic";
 const n=(v:unknown)=>Number(v??0)||0, m=(v:number)=>Math.round((v+Number.EPSILON)*100)/100;
 export async function GET(){
+  const moduleGate = await requireApiModule("financial_control");
+  if (moduleGate) return moduleGate;
+
  const auth=await getAuthenticatedUserContext(); if(!auth)return NextResponse.json({error:"Authentication required."},{status:401}); if(!canManageCompany(auth)&&!auth.permissions.includes("finance.reports"))return NextResponse.json({error:"Finance reporting permission is required."},{status:403});
  const admin=createSupabaseAdmin(); const branchIds=financeBranchIds(auth); const today=new Date().toISOString().slice(0,10); const yearStart=`${new Date().getUTCFullYear()}-01-01`;
  const [invoices,credits,journals,issues]=await Promise.all([

@@ -1,3 +1,4 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import { NextRequest, NextResponse } from "next/server";
 import {
   createClient,
@@ -40,6 +41,9 @@ const TECHNICIAN_COLOURS = [
 ];
 
 export async function GET(request: NextRequest) {
+  const moduleGate = await requireApiModule("calendar");
+  if (moduleGate) return moduleGate;
+
   try {
     const supabaseUrl =
       process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -431,6 +435,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const moduleGate = await requireApiModule("calendar");
+  if (moduleGate) return moduleGate;
+
   try {
     const supabaseUrl =
       process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -884,6 +891,9 @@ export async function POST(request: NextRequest) {
 
 
 export async function PATCH(request: NextRequest) {
+  const moduleGate = await requireApiModule("calendar");
+  if (moduleGate) return moduleGate;
+
   try {
     const context = await createAuthenticatedAdminClient(
       request,
@@ -1103,6 +1113,9 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const moduleGate = await requireApiModule("calendar");
+  if (moduleGate) return moduleGate;
+
   try {
     const context = await createAuthenticatedAdminClient(
       request,

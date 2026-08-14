@@ -1,3 +1,4 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import { NextRequest, NextResponse } from "next/server";
 
 import { requirePermission } from "@/lib/auth/require-permission";
@@ -18,6 +19,9 @@ async function guard() {
 }
 
 export async function GET() {
+  const moduleGate = await requireApiModule("multi_branch");
+  if (moduleGate) return moduleGate;
+
   try {
     const { auth, admin } = await guard();
     const allowed = auth.accessibleOperationalBranchIds;
@@ -40,6 +44,9 @@ export async function GET() {
 }
 
 export async function POST(request:NextRequest) {
+  const moduleGate = await requireApiModule("multi_branch");
+  if (moduleGate) return moduleGate;
+
   try {
     const { auth, admin } = await guard();
     const body=await request.json(); const entityType=clean(body.entityType,40); const entityId=clean(body.entityId,80); const toBranchId=clean(body.toBranchId,80); const reason=clean(body.reason,1000);

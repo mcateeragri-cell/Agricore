@@ -84,24 +84,23 @@ export async function loadEffectiveFeatures(
     }
   }
 
-  if (billingMode === "subscription") {
-    for (const row of overrideResult.data ?? []) {
-      const key = String(row.feature_key);
-      const requested = Boolean(row.enabled);
+  for (const row of overrideResult.data ?? []) {
+    const key = String(row.feature_key);
+    const requested = Boolean(row.enabled);
 
+    if (billingMode === "subscription") {
       // The subscription plan is the entitlement ceiling. A company override may
       // switch an entitled feature off, but it must never unlock a feature the
-      // current plan explicitly disables. This prevents legacy/default company
-      // feature rows from accidentally giving Starter or Professional customers
-      // higher-tier capabilities.
+      // current plan disables.
       if (planEntitlements.has(key)) {
         enabled.set(key, requested && planEntitlements.get(key) === true);
       } else if (!requested) {
-        // Features that pre-date the plan matrix may still be disabled safely.
-        // They are not elevated by an override until they are explicitly mapped
-        // into subscription_plan_features.
         enabled.set(key, false);
       }
+    } else {
+      // Internal/demo companies have the full catalogue available, but can still
+      // tailor their workspace by switching modules off.
+      enabled.set(key, requested);
     }
   }
 

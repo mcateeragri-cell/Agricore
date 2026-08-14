@@ -1,3 +1,4 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import { NextResponse } from "next/server";
 
 import { requirePermission } from "@/lib/auth/require-permission";
@@ -22,6 +23,9 @@ function weekBounds() {
 }
 
 export async function GET() {
+  const moduleGate = await requireApiModule("multi_branch");
+  if (moduleGate) return moduleGate;
+
   try {
     const auth = await requirePermission(["settings.manage", "jobs.view_all", "finance.reports"]);
     const admin = createSupabaseAdmin();

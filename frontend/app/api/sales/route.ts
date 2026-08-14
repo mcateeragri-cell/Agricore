@@ -1,3 +1,4 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import { NextRequest, NextResponse } from "next/server";
 
 import { getAuthenticatedUserContext } from "@/lib/auth/require-permission";
@@ -60,6 +61,9 @@ async function authorise(requireManage = false) {
 }
 
 export async function GET() {
+  const moduleGate = await requireApiModule("machinery_sales_crm");
+  if (moduleGate) return moduleGate;
+
   const access = await authorise(false);
   if (access.error) return access.error;
   const { auth, admin } = access;
@@ -108,6 +112,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const moduleGate = await requireApiModule("machinery_sales_crm");
+  if (moduleGate) return moduleGate;
+
   const access = await authorise(true);
   if (access.error) return access.error;
   const { auth, admin } = access;

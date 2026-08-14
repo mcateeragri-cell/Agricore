@@ -1,3 +1,4 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import {
   NextRequest,
   NextResponse,
@@ -74,6 +75,9 @@ export async function GET(
   _request: NextRequest,
   context: RouteContext,
 ) {
+  const moduleGate = await requireApiModule("invoices");
+  if (moduleGate) return moduleGate;
+
   try {
     const { id } = await context.params;
 
@@ -245,6 +249,9 @@ export async function PATCH(
   request: NextRequest,
   context: RouteContext,
 ) {
+  const moduleGate = await requireApiModule("invoices");
+  if (moduleGate) return moduleGate;
+
   try {
     const { id } = await context.params;
 

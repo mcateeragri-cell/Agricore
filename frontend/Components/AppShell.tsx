@@ -14,6 +14,7 @@ import MobileBottomNav from "./navigation/mobile-bottom-nav";
 import MobileDrawer from "./navigation/mobile-drawer";
 import MobileTopBar from "./navigation/mobile-top-bar";
 import SubscriptionAccessGate from "./platform/subscription-access-gate";
+import ModuleAccessGate from "./platform/module-access-gate";
 import CompanyThemeProvider from "./theme/company-theme-provider";
 import GlobalSearch from "./search/global-search";
 import {
@@ -122,7 +123,7 @@ export default function AppShell({
       />
 
       <div className="w-full min-w-0 flex-1">
-        <GlobalSearch />
+        {userState.enabledFeatures.includes("global_search") ? <GlobalSearch /> : null}
 
         <MobileTopBar
           onOpenMenu={() =>
@@ -137,7 +138,15 @@ export default function AppShell({
         )}
 
         <main className="w-full min-w-0 overflow-x-clip pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0">
-          <SubscriptionAccessGate>{children}</SubscriptionAccessGate>
+          <SubscriptionAccessGate>
+            <ModuleAccessGate
+              pathname={pathname}
+              enabledFeatures={userState.enabledFeatures}
+              loading={loading}
+            >
+              {children}
+            </ModuleAccessGate>
+          </SubscriptionAccessGate>
         </main>
       </div>
 

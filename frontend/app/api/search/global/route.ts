@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getAuthenticatedUserContext } from "@/lib/auth/require-permission";
 import { createSupabaseAdmin } from "@/lib/payments/supabase-admin";
-import { isCompanyFeatureEnabled } from "@/lib/platform/effective-features";
+import { loadEffectiveFeatures } from "@/lib/platform/effective-features";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,8 +55,9 @@ export async function GET(request: NextRequest) {
   }
 
   const admin = createSupabaseAdmin();
-  const enabled = await isCompanyFeatureEnabled(admin, auth.companyId, "global_search");
-  if (!enabled) {
+  const effective = await loadEffectiveFeatures(admin, auth.companyId);
+  const enabledFeatures = new Set(effective.enabledFeatures);
+  if (!enabledFeatures.has("global_search")) {
     return NextResponse.json({ error: "Global Search is not enabled for this company." }, { status: 403 });
   }
 
@@ -99,7 +100,7 @@ export async function GET(request: NextRequest) {
     jobsQuery = jobsQuery.eq("engineer_name", auth.fullName);
   }
 
-  const quotePromise = moneyAllowed
+  const quotePromise = moneyAllowed && enabledFeatures.has("quotes")
     ? admin
         .from("quotes")
         .select("id,quote_number,title,status,total")
@@ -108,7 +109,7 @@ export async function GET(request: NextRequest) {
         .limit(8)
     : Promise.resolve({ data: [], error: null });
 
-  const invoicePromise = moneyAllowed
+  const invoicePromise = moneyAllowed && enabledFeatures.has("invoices")
     ? admin
         .from("invoices")
         .select("id,invoice_number,customer_name,status,total")
@@ -117,7 +118,7 @@ export async function GET(request: NextRequest) {
         .limit(8)
     : Promise.resolve({ data: [], error: null });
 
-  const stockPromise = moneyAllowed
+  const stockPromise = moneyAllowed && enabledFeatures.has("stock")
     ? admin
         .from("stock_items")
         .select("id,part_number,description,manufacturer,quantity_in_stock")

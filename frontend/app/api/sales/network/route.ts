@@ -1,3 +1,4 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserContext } from "@/lib/auth/require-permission";
 import { createSupabaseAdmin } from "@/lib/payments/supabase-admin";
@@ -14,6 +15,9 @@ async function access() {
 }
 
 export async function GET() {
+  const moduleGate = await requireApiModule("machinery_sales_crm");
+  if (moduleGate) return moduleGate;
+
   const result = await access(); if (result.error) return result.error; const { auth, admin } = result;
   const [settings, machines, parts, campaigns, stockMachines, stockItems, networkCompanies] = await Promise.all([
     admin.from("enterprise_network_settings").select("*").eq("company_id", auth.companyId).maybeSingle(),
@@ -73,6 +77,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const moduleGate = await requireApiModule("machinery_sales_crm");
+  if (moduleGate) return moduleGate;
+
   const result = await access(); if (result.error) return result.error; const { auth, admin } = result;
   const body = await request.json().catch(() => ({})) as Record<string, unknown>;
   const action = String(body.action ?? "");

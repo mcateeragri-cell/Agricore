@@ -1,8 +1,12 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/require-permission";
 import { createSupabaseAdmin } from "@/lib/payments/supabase-admin";
 export const dynamic="force-dynamic";
 export async function GET(){
+  const moduleGate = await requireApiModule("stock");
+  if (moduleGate) return moduleGate;
+
  try{
   const auth=await requirePermission([]); const admin=createSupabaseAdmin();
   const ids=auth.activeBranchId?[auth.activeBranchId]:auth.accessibleOperationalBranchIds;

@@ -1,3 +1,4 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import { NextRequest, NextResponse } from "next/server";
 
 import { getOfficeAuth } from "../office/_shared";
@@ -104,6 +105,9 @@ function generateInvoiceNumber(): string {
 export async function GET(
   request: NextRequest,
 ) {
+  const moduleGate = await requireApiModule("invoices");
+  if (moduleGate) return moduleGate;
+
   const auth = await getOfficeAuth();
 
   if (!auth.user) {
@@ -215,6 +219,9 @@ export async function GET(
 export async function POST(
   request: NextRequest,
 ) {
+  const moduleGate = await requireApiModule("invoices");
+  if (moduleGate) return moduleGate;
+
   const auth = await getOfficeAuth();
 
   if (!auth.user) {

@@ -1,3 +1,4 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import { NextRequest, NextResponse } from "next/server";
 
 import {
@@ -104,6 +105,9 @@ export async function POST(
   request: NextRequest,
   context: RouteContext,
 ) {
+  const moduleGate = await requireApiModule("invoices");
+  if (moduleGate) return moduleGate;
+
   try {
     const { jobId } = await context.params;
     const auth = await getOfficeAuth();

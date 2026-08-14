@@ -1,3 +1,4 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/require-permission";
 import { createSupabaseAdmin } from "@/lib/payments/supabase-admin";
@@ -6,6 +7,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  const moduleGate = await requireApiModule("communications");
+  if (moduleGate) return moduleGate;
+
   try {
     const user = await requirePermission(["settings.manage"]);
     const limit = Math.min(200, Math.max(1, Number(new URL(request.url).searchParams.get("limit") || 100)));

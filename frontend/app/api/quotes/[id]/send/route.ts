@@ -1,3 +1,4 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/require-permission";
 import { createSupabaseAdmin } from "@/lib/payments/supabase-admin";
@@ -10,6 +11,9 @@ export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function POST(request: NextRequest, context: RouteContext) {
+  const moduleGate = await requireApiModule("quotes");
+  if (moduleGate) return moduleGate;
+
   try {
     const user = await requirePermission(["invoices.manage"]);
     const { id } = await context.params;

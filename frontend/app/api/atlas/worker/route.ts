@@ -1,3 +1,4 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserContext } from "@/lib/auth/require-permission";
 import { processAtlasQueue } from "@/lib/atlas/processor";
@@ -39,5 +40,11 @@ async function run(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) { return run(request); }
-export async function POST(request: NextRequest) { return run(request); }
+export async function GET(request: NextRequest) {
+  const moduleGate = await requireApiModule("atlas_intelligence");
+  if (moduleGate) return moduleGate;
+ return run(request); }
+export async function POST(request: NextRequest) {
+  const moduleGate = await requireApiModule("atlas_intelligence");
+  if (moduleGate) return moduleGate;
+ return run(request); }

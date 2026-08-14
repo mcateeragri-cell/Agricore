@@ -29,9 +29,18 @@ export default function MobileBottomNav({
         { name: "Home", href: "/dashboard", icon: "dashboard" as const },
         { name: "My Jobs", href: "/technician", icon: "jobs" as const },
       ]
-    : mobilePrimaryItems.filter(
-        (item) => canViewMoney || item.href !== "/invoices",
-      );
+    : mobilePrimaryItems.filter((item) => {
+        if (item.href === "/invoices") {
+          return canViewMoney && userState.enabledFeatures.includes("invoices");
+        }
+        if (item.href === "/customers") {
+          return userState.enabledFeatures.includes("customers");
+        }
+        if (item.href === "/jobs") {
+          return userState.enabledFeatures.includes("jobs");
+        }
+        return true;
+      });
   return (
     <nav
       className="agricore-glass fixed inset-x-2 bottom-2 z-40 overflow-hidden rounded-2xl border pb-[env(safe-area-inset-bottom)] shadow-2xl lg:hidden"

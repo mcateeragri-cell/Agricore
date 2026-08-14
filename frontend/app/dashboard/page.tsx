@@ -68,6 +68,7 @@ export default function Home() {
           canViewMoney={canViewMoney}
           enabled={userState.enabledFeatures.includes("dashboard_builder")}
           atlasEnabled={userState.enabledFeatures.includes("atlas_intelligence")}
+          enabledFeatures={userState.enabledFeatures}
         />
       </main>
     </div>

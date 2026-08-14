@@ -1,3 +1,4 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserContext } from "@/lib/auth/require-permission";
 import { createSupabaseAdmin } from "@/lib/payments/supabase-admin";
@@ -8,7 +9,10 @@ const n=(v:unknown)=>Number(v??0)||0; const m=(v:number)=>Math.round((v+Number.E
 function allowed(auth: NonNullable<Awaited<ReturnType<typeof getAuthenticatedUserContext>>>) { return canManageCompany(auth)||auth.permissions.includes("settings.manage")||auth.permissions.includes("finance.reports"); }
 type Account={id:string;code:string;name:string;account_type:"asset"|"liability"|"equity"|"income"|"expense";normal_balance:"debit"|"credit";system_key:string|null};
 type Line={debit:number|string|null;credit:number|string|null;account_id:string;finance_accounts:Account;finance_journals:{journal_date:string;status:string}};
-export async function GET(request:NextRequest){const auth=await getAuthenticatedUserContext();if(!auth)return NextResponse.json({error:"Authentication required."},{status:401});if(!allowed(auth))return NextResponse.json({error:"Finance reporting permission is required."},{status:403});const today=new Date().toISOString().slice(0,10);const from=request.nextUrl.searchParams.get("from")||`${new Date().getUTCFullYear()}-01-01`;const to=request.nextUrl.searchParams.get("to")||today;const admin=createSupabaseAdmin();const branchIds=financeBranchIds(auth);const [periodResult,allResult,purchases]=await Promise.all([
+export async function GET(request:NextRequest){
+  const moduleGate = await requireApiModule("financial_control");
+  if (moduleGate) return moduleGate;
+const auth=await getAuthenticatedUserContext();if(!auth)return NextResponse.json({error:"Authentication required."},{status:401});if(!allowed(auth))return NextResponse.json({error:"Finance reporting permission is required."},{status:403});const today=new Date().toISOString().slice(0,10);const from=request.nextUrl.searchParams.get("from")||`${new Date().getUTCFullYear()}-01-01`;const to=request.nextUrl.searchParams.get("to")||today;const admin=createSupabaseAdmin();const branchIds=financeBranchIds(auth);const [periodResult,allResult,purchases]=await Promise.all([
  admin.from("finance_journal_lines").select("debit,credit,account_id,finance_accounts!inner(id,code,name,account_type,normal_balance,system_key),finance_journals!inner(journal_date,status)").eq("company_id",auth.companyId).in("finance_journals.branch_id",branchIds).eq("finance_journals.status","posted").gte("finance_journals.journal_date",from).lte("finance_journals.journal_date",to),
  admin.from("finance_journal_lines").select("debit,credit,account_id,finance_accounts!inner(id,code,name,account_type,normal_balance,system_key),finance_journals!inner(journal_date,status)").eq("company_id",auth.companyId).in("finance_journals.branch_id",branchIds).eq("finance_journals.status","posted").lte("finance_journals.journal_date",to),
  admin.from("finance_purchase_invoices").select("id,status,total,amount_paid,due_date,invoice_date,invoice_number,stock_suppliers(name)").eq("company_id",auth.companyId).in("branch_id",branchIds).in("status",["posted","part_paid"])

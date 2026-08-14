@@ -56,6 +56,12 @@ export const administrationItems: AdministrationItem[] = [
     permissions: ["roles.manage"],
   },
   {
+    name: "Modules",
+    href: "/settings/modules",
+    icon: "settings",
+    permissions: ["settings.manage"],
+  },
+  {
     name: "Manufacturers",
     href: "/administration/manufacturers",
     icon: "manufacturers",

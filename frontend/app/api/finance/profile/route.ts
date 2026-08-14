@@ -1,3 +1,4 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserContext } from "@/lib/auth/require-permission";
 import { createSupabaseAdmin } from "@/lib/payments/supabase-admin";
@@ -7,6 +8,9 @@ import { normaliseFinanceProfileUpdate } from "@/lib/platform/finance";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const moduleGate = await requireApiModule("financial_control");
+  if (moduleGate) return moduleGate;
+
   const auth = await getAuthenticatedUserContext();
   if (!auth) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   if (!canManageCompany(auth)) return NextResponse.json({ error: "Company administration permission is required." }, { status: 403 });
@@ -38,6 +42,9 @@ export async function GET() {
 }
 
 export async function PUT(request: NextRequest) {
+  const moduleGate = await requireApiModule("financial_control");
+  if (moduleGate) return moduleGate;
+
   const auth = await getAuthenticatedUserContext();
   if (!auth) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   if (!canManageCompany(auth)) return NextResponse.json({ error: "Company administration permission is required." }, { status: 403 });

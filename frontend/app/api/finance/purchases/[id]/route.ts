@@ -1,3 +1,4 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserContext } from "@/lib/auth/require-permission";
 import { createSupabaseAdmin } from "@/lib/payments/supabase-admin";
@@ -10,6 +11,9 @@ function allowed(auth: Awaited<ReturnType<typeof getAuthenticatedUserContext>>) 
 }
 
 export async function GET(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const moduleGate = await requireApiModule("financial_control");
+  if (moduleGate) return moduleGate;
+
   const auth = await getAuthenticatedUserContext();
   if (!auth) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   if (!allowed(auth)) return NextResponse.json({ error: "Finance management permission is required." }, { status: 403 });
@@ -27,6 +31,9 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
 }
 
 export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const moduleGate = await requireApiModule("financial_control");
+  if (moduleGate) return moduleGate;
+
   const auth = await getAuthenticatedUserContext();
   if (!auth) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   if (!allowed(auth)) return NextResponse.json({ error: "Finance management permission is required." }, { status: 403 });

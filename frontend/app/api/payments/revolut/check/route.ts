@@ -1,3 +1,4 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import { NextRequest, NextResponse } from "next/server";
 
 import { getOfficeAuth } from "../../../office/_shared";
@@ -29,6 +30,9 @@ function asNumber(value: unknown): number {
 }
 
 export async function POST(request: NextRequest) {
+  const moduleGate = await requireApiModule("invoices");
+  if (moduleGate) return moduleGate;
+
   try {
     const auth = await getOfficeAuth();
 

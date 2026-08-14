@@ -1,3 +1,4 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import {
   NextRequest,
   NextResponse,
@@ -33,6 +34,9 @@ type AssignmentPayload = {
 export async function GET(
   request: NextRequest,
 ) {
+  const moduleGate = await requireApiModule("dispatch");
+  if (moduleGate) return moduleGate;
+
   try {
     const auth =
       await getAuthenticatedUserContext();
@@ -359,6 +363,9 @@ export async function GET(
 export async function POST(
   request: NextRequest,
 ) {
+  const moduleGate = await requireApiModule("dispatch");
+  if (moduleGate) return moduleGate;
+
   try {
     const auth =
       await getAuthenticatedUserContext();
@@ -751,6 +758,9 @@ export async function POST(
 export async function DELETE(
   request: NextRequest,
 ) {
+  const moduleGate = await requireApiModule("dispatch");
+  if (moduleGate) return moduleGate;
+
   try {
     const auth =
       await getAuthenticatedUserContext();

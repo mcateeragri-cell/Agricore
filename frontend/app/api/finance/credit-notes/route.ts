@@ -1,3 +1,4 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserContext } from "@/lib/auth/require-permission";
 import { createSupabaseAdmin } from "@/lib/payments/supabase-admin";
@@ -10,6 +11,9 @@ function allowed(auth: NonNullable<Awaited<ReturnType<typeof getAuthenticatedUse
 function noteNumber() { const d = new Date(); return `CN-${d.toISOString().slice(0,10).replaceAll("-","")}-${String(d.getTime()).slice(-6)}`; }
 
 export async function GET(request: NextRequest) {
+  const moduleGate = await requireApiModule("financial_control");
+  if (moduleGate) return moduleGate;
+
   const auth = await getAuthenticatedUserContext();
   if (!auth) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   if (!canManageCompany(auth) && !auth.permissions.includes("finance.view")) return NextResponse.json({ error: "Finance permission is required." }, { status: 403 });
@@ -23,6 +27,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const moduleGate = await requireApiModule("financial_control");
+  if (moduleGate) return moduleGate;
+
   const auth = await getAuthenticatedUserContext();
   if (!auth) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   if (!allowed(auth)) return NextResponse.json({ error: "Finance posting permission is required." }, { status: 403 });
@@ -61,6 +68,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const moduleGate = await requireApiModule("financial_control");
+  if (moduleGate) return moduleGate;
+
   const auth = await getAuthenticatedUserContext();
   if (!auth) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   if (!allowed(auth)) return NextResponse.json({ error: "Finance posting permission is required." }, { status: 403 });

@@ -23,18 +23,19 @@ type WidgetDefinition = {
   description: string;
   defaultSize: Size;
   financial?: boolean;
+  requiredFeatures?: string[];
 };
 
 const WIDGETS: WidgetDefinition[] = [
   { id: "executive_summary", label: "Executive summary", description: "Key workload and financial KPI cards.", defaultSize: "full" },
-  { id: "revenue_trend", label: "Revenue trend", description: "Revenue performance over time.", defaultSize: "large", financial: true },
+  { id: "revenue_trend", label: "Revenue trend", description: "Revenue performance over time.", defaultSize: "large", financial: true, requiredFeatures: ["invoices"] },
   { id: "team_status", label: "Team status", description: "Engineer availability and current workload.", defaultSize: "medium" },
   { id: "recent_jobs", label: "Recent jobs", description: "Latest work activity and job status.", defaultSize: "large" },
   { id: "recent_activity", label: "Recent activity", description: "Latest company activity and changes.", defaultSize: "medium" },
-  { id: "service_due", label: "Service due", description: "Upcoming preventative maintenance and services.", defaultSize: "full" },
-  { id: "schedule", label: "Schedule", description: "Upcoming planned work and appointments.", defaultSize: "large" },
+  { id: "service_due", label: "Service due", description: "Upcoming preventative maintenance and services.", defaultSize: "full", requiredFeatures: ["service_programmes"] },
+  { id: "schedule", label: "Schedule", description: "Upcoming planned work and appointments.", defaultSize: "large", requiredFeatures: ["calendar"] },
   { id: "quick_actions", label: "Quick actions", description: "Shortcuts for frequently used actions.", defaultSize: "medium" },
-  { id: "atlas_intelligence", label: "AgriCore Intelligence", description: "Service forecasts, recurring patterns and business advice.", defaultSize: "medium", financial: true },
+  { id: "atlas_intelligence", label: "AgriCore Intelligence", description: "Service forecasts, recurring patterns and business advice.", defaultSize: "medium", financial: true, requiredFeatures: ["atlas_intelligence"] },
 ];
 
 const DEFAULT_LAYOUT: LayoutItem[] = WIDGETS.map((widget) => ({
@@ -63,10 +64,12 @@ export default function CustomisableDashboard({
   canViewMoney,
   enabled,
   atlasEnabled,
+  enabledFeatures,
 }: {
   canViewMoney: boolean;
   enabled: boolean;
   atlasEnabled: boolean;
+  enabledFeatures: string[];
 }) {
   const [layout, setLayout] = useState<LayoutItem[]>(DEFAULT_LAYOUT);
   const [editing, setEditing] = useState(false);
@@ -93,16 +96,18 @@ export default function CustomisableDashboard({
   const availableWidgets = useMemo(
     () => WIDGETS.filter((widget) =>
       (canViewMoney || !widget.financial) &&
-      (widget.id !== "atlas_intelligence" || atlasEnabled),
+      (widget.id !== "atlas_intelligence" || atlasEnabled) &&
+      (widget.requiredFeatures ?? []).every((feature) => enabledFeatures.includes(feature)),
     ),
-    [atlasEnabled, canViewMoney],
+    [atlasEnabled, canViewMoney, enabledFeatures],
   );
 
   const visibleItems = layout.filter((item) => {
     const definition = WIDGETS.find((widget) => widget.id === item.id);
     return item.visible && definition &&
       (canViewMoney || !definition.financial) &&
-      (item.id !== "atlas_intelligence" || atlasEnabled);
+      (item.id !== "atlas_intelligence" || atlasEnabled) &&
+      (definition.requiredFeatures ?? []).every((feature) => enabledFeatures.includes(feature));
   });
 
   function updateItem(id: string, patch: Partial<LayoutItem>) {
@@ -142,14 +147,14 @@ export default function CustomisableDashboard({
   }
 
   function renderWidget(id: string) {
-    if (id === "executive_summary") return <ExecutiveSummary showFinancialCards={canViewMoney} />;
+    if (id === "executive_summary") return <ExecutiveSummary showFinancialCards={canViewMoney && enabledFeatures.includes("invoices")} enabledFeatures={enabledFeatures} />;
     if (id === "revenue_trend") return canViewMoney ? <RevenueTrend /> : null;
     if (id === "team_status") return <TeamStatus />;
     if (id === "recent_jobs") return <RecentJobs />;
-    if (id === "recent_activity") return <RecentActivity />;
+    if (id === "recent_activity") return <RecentActivity enabledFeatures={enabledFeatures} />;
     if (id === "service_due") return <ServiceDueSummary />;
     if (id === "schedule") return <Schedule />;
-    if (id === "quick_actions") return <QuickActions showFinancialActions={canViewMoney} />;
+    if (id === "quick_actions") return <QuickActions showFinancialActions={canViewMoney} enabledFeatures={enabledFeatures} />;
     if (id === "atlas_intelligence") return canViewMoney ? <AtlasIntelligenceSummary /> : null;
     return null;
   }

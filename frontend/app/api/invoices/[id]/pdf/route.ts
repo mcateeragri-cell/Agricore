@@ -1,3 +1,4 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import { NextRequest, NextResponse } from "next/server";
 import { getOfficeAuth } from "../../../office/_shared";
 import { InvoiceNotFoundError, loadInvoicePdfData } from "../_pdf/load-data";
@@ -9,6 +10,9 @@ export const runtime = "nodejs";
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(_request: NextRequest, context: RouteContext) {
+  const moduleGate = await requireApiModule("invoices");
+  if (moduleGate) return moduleGate;
+
   try {
     const { id } = await context.params;
     const auth = await getOfficeAuth();

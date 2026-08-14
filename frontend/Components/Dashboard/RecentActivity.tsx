@@ -28,7 +28,7 @@ function ago(value: string) {
   return `${days}d ago`;
 }
 
-export default function RecentActivity() {
+export default function RecentActivity({ enabledFeatures = [] }: { enabledFeatures?: string[] }) {
   const { userState, loading: companyLoading } = useNavigationUser();
   const companyId = userState.activeCompany?.id ?? "";
   const [items, setItems] = useState<ActivityItem[]>([]);
@@ -43,7 +43,9 @@ export default function RecentActivity() {
       supabase.from("jobs").select("id,job_number,status,engineer_name,updated_at,created_at").eq("company_id", companyId).order("updated_at", { ascending: false }).limit(5),
       supabase.from("customers").select("id,business_name,contact_name,created_at").eq("company_id", companyId).order("created_at", { ascending: false }).limit(3),
       supabase.from("machines").select("id,make,model,created_at").eq("company_id", companyId).order("created_at", { ascending: false }).limit(3),
-      supabase.from("invoices").select("id,invoice_number,status,total,paid_at,updated_at,created_at").eq("company_id", companyId).order("updated_at", { ascending: false }).limit(4),
+      enabledFeatures.includes("invoices")
+        ? supabase.from("invoices").select("id,invoice_number,status,total,paid_at,updated_at,created_at").eq("company_id", companyId).order("updated_at", { ascending: false }).limit(4)
+        : Promise.resolve({ data: [], error: null }),
     ]);
 
     const next: ActivityItem[] = [];
@@ -75,7 +77,7 @@ export default function RecentActivity() {
 
     setItems(next.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, 8));
     setLoading(false);
-  }, [companyId, companyLoading]);
+  }, [companyId, companyLoading, enabledFeatures]);
 
   useEffect(() => { void load(); }, [load]);
 

@@ -1,3 +1,4 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import { NextRequest, NextResponse } from "next/server";
 
 import { getAuthenticatedUserContext } from "@/lib/auth/require-permission";
@@ -96,6 +97,9 @@ async function authorise() {
 }
 
 export async function GET() {
+  const moduleGate = await requireApiModule("ai_diagnostics");
+  if (moduleGate) return moduleGate;
+
   const access = await authorise();
   if (access.error) return access.error;
   const { auth, admin } = access;
@@ -132,6 +136,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const moduleGate = await requireApiModule("ai_diagnostics");
+  if (moduleGate) return moduleGate;
+
   const access = await authorise();
   if (access.error) return access.error;
   const { auth, admin } = access;

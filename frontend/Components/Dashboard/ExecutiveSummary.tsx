@@ -87,8 +87,10 @@ function sameMonth(date: Date, reference = new Date()) {
 
 export default function ExecutiveSummary({
   showFinancialCards = true,
+  enabledFeatures = [],
 }: {
   showFinancialCards?: boolean;
+  enabledFeatures?: string[];
 }) {
   const { userState, loading: companyLoading } = useNavigationUser();
   const { regionalSettings } = useCompanyRegionalSettings();
@@ -111,13 +113,15 @@ export default function ExecutiveSummary({
 
     const [jobsResult, invoiceResult, quoteResult, stockResult] = await Promise.all([
       supabase.from("jobs").select("*").eq("company_id", companyId),
-      showFinancialCards
+      showFinancialCards && enabledFeatures.includes("invoices")
         ? supabase.from("invoices").select("*").eq("company_id", companyId)
         : Promise.resolve({ data: [], error: null }),
-      showFinancialCards
+      showFinancialCards && enabledFeatures.includes("quotes")
         ? supabase.from("quotes").select("id,status,created_at,quote_date,total").eq("company_id", companyId)
         : Promise.resolve({ data: [], error: null }),
-      supabase.from("stock_items").select("id,quantity_in_stock,minimum_stock,active").eq("company_id", companyId).eq("active", true),
+      enabledFeatures.includes("stock")
+        ? supabase.from("stock_items").select("id,quantity_in_stock,minimum_stock,active").eq("company_id", companyId).eq("active", true)
+        : Promise.resolve({ data: [], error: null }),
     ]);
 
     const firstError = jobsResult.error || invoiceResult.error || quoteResult.error || stockResult.error;
@@ -133,7 +137,7 @@ export default function ExecutiveSummary({
     setQuotes((quoteResult.data ?? []) as Row[]);
     setStock((stockResult.data ?? []) as Row[]);
     setLoading(false);
-  }, [companyId, companyLoading, showFinancialCards]);
+  }, [companyId, companyLoading, enabledFeatures, showFinancialCards]);
 
   useEffect(() => {
     void load();
@@ -192,7 +196,7 @@ export default function ExecutiveSummary({
       label: "Jobs today",
       value: String(summary.jobsToday),
       detail: `${summary.jobsThisWeek} scheduled this week`,
-      href: "/calendar",
+      href: enabledFeatures.includes("calendar") ? "/calendar" : "/jobs",
       icon: CalendarDays,
       tone: "bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300",
       financial: false,
@@ -214,6 +218,7 @@ export default function ExecutiveSummary({
       icon: Banknote,
       tone: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
       financial: true,
+      requiredFeature: "invoices",
     },
     {
       label: "Outstanding invoices",
@@ -223,6 +228,7 @@ export default function ExecutiveSummary({
       icon: FileClock,
       tone: "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300",
       financial: true,
+      requiredFeature: "invoices",
     },
     {
       label: "Quotes awaiting action",
@@ -232,6 +238,7 @@ export default function ExecutiveSummary({
       icon: Wrench,
       tone: "bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300",
       financial: true,
+      requiredFeature: "quotes",
     },
     {
       label: "Stock alerts",
@@ -243,8 +250,13 @@ export default function ExecutiveSummary({
         ? "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
         : "bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300",
       financial: false,
+      requiredFeature: "stock",
     },
-  ].filter((card) => showFinancialCards || !card.financial);
+  ].filter(
+    (card) =>
+      (showFinancialCards || !card.financial) &&
+      (!("requiredFeature" in card) || !card.requiredFeature || enabledFeatures.includes(card.requiredFeature)),
+  );
 
   if (loading || companyLoading) {
     return (

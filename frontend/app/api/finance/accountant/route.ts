@@ -1,9 +1,13 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserContext } from "@/lib/auth/require-permission";
 import { createSupabaseAdmin } from "@/lib/payments/supabase-admin";
 import { canManageCompany } from "@/lib/platform/core";
 export const dynamic="force-dynamic"; const n=(v:unknown)=>Number(v??0)||0, m=(v:number)=>Math.round((v+Number.EPSILON)*100)/100;
 export async function GET(request:NextRequest){
+  const moduleGate = await requireApiModule("financial_control");
+  if (moduleGate) return moduleGate;
+
  const auth=await getAuthenticatedUserContext(); if(!auth)return NextResponse.json({error:"Authentication required."},{status:401}); if(!canManageCompany(auth)&&!auth.permissions.includes("finance.reports"))return NextResponse.json({error:"Finance reporting permission is required."},{status:403});
  const admin=createSupabaseAdmin(); const from=request.nextUrl.searchParams.get("from")||`${new Date().getUTCFullYear()}-01-01`; const to=request.nextUrl.searchParams.get("to")||new Date().toISOString().slice(0,10);
  const {data,error}=await admin.from("finance_journal_lines").select("id,debit,credit,tax_amount,description,finance_accounts!inner(code,name,account_type,system_key),finance_journals!inner(id,journal_date,reference,description,source_type,source_id,source_action,status)").eq("company_id",auth.companyId).gte("finance_journals.journal_date",from).lte("finance_journals.journal_date",to).order("id"); if(error)return NextResponse.json({error:error.message},{status:500});

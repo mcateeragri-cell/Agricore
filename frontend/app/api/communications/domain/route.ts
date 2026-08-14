@@ -1,3 +1,4 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import { NextRequest, NextResponse } from "next/server";
 
 import { requirePermission } from "@/lib/auth/require-permission";
@@ -49,6 +50,9 @@ async function saveDomainState(
 }
 
 export async function GET() {
+  const moduleGate = await requireApiModule("communications");
+  if (moduleGate) return moduleGate;
+
   try {
     const user = await requirePermission(["settings.manage"]);
     const admin = createSupabaseAdmin();
@@ -83,6 +87,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const moduleGate = await requireApiModule("communications");
+  if (moduleGate) return moduleGate;
+
   try {
     const user = await requirePermission(["settings.manage"]);
     const body = (await request.json()) as { domain?: unknown };

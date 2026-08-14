@@ -1,3 +1,4 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import { NextRequest, NextResponse } from "next/server";
 import { getOfficeAuth } from "../../../office/_shared";
 import { loadInvoicePdfData } from "../_pdf/load-data";
@@ -20,6 +21,9 @@ type Body = {
 };
 
 export async function POST(request: NextRequest, context: RouteContext) {
+  const moduleGate = await requireApiModule("invoices");
+  if (moduleGate) return moduleGate;
+
   try {
     const { id } = await context.params;
     const auth = await getOfficeAuth();

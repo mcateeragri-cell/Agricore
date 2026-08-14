@@ -1,3 +1,4 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserContext } from "@/lib/auth/require-permission";
 import { createSupabaseAdmin } from "@/lib/payments/supabase-admin";
@@ -7,6 +8,9 @@ import { reverseFinanceJournal } from "@/lib/platform/finance";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
+  const moduleGate = await requireApiModule("financial_control");
+  if (moduleGate) return moduleGate;
+
   const auth = await getAuthenticatedUserContext();
   if (!auth) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   if (!canManageCompany(auth) && !auth.permissions.includes("finance.post")) return NextResponse.json({ error: "Finance posting permission is required." }, { status: 403 });

@@ -1,3 +1,4 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/require-permission";
 import { sendCompanyEmail } from "@/lib/communications/email";
@@ -7,6 +8,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
+  const moduleGate = await requireApiModule("communications");
+  if (moduleGate) return moduleGate;
+
   try {
     const user = await requirePermission(["settings.manage"]);
     const body = await request.json() as { recipient?: unknown; template_key?: unknown };

@@ -1,3 +1,4 @@
+import { requireApiModule } from "@/lib/modules/api-access";
 import { NextRequest, NextResponse } from "next/server";
 
 import { requirePermission } from "@/lib/auth/require-permission";
@@ -20,6 +21,9 @@ async function requireMultiBranch(companyId: string) {
 }
 
 export async function GET() {
+  const moduleGate = await requireApiModule("multi_branch");
+  if (moduleGate) return moduleGate;
+
   try {
     const user = await requirePermission(["settings.manage"]);
     const admin = await requireMultiBranch(user.companyId);
@@ -62,6 +66,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const moduleGate = await requireApiModule("multi_branch");
+  if (moduleGate) return moduleGate;
+
   try {
     const user = await requirePermission(["settings.manage"]);
     const admin = await requireMultiBranch(user.companyId);
@@ -94,6 +101,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const moduleGate = await requireApiModule("multi_branch");
+  if (moduleGate) return moduleGate;
+
   try {
     const user = await requirePermission(["settings.manage"]);
     const admin = await requireMultiBranch(user.companyId);

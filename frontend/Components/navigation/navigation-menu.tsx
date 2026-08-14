@@ -87,28 +87,40 @@ export default function NavigationMenu({
       return items;
     }
 
-    return primaryNavigationItems;
-  }, [canUseAiDiagnostics, canViewServiceProgrammes, fieldRole]);
+    return primaryNavigationItems.filter((item) => {
+      const featureByHref: Record<string, string> = {
+        "/jobs": "jobs",
+        "/customers": "customers",
+        "/machines": "machines",
+        "/calendar": "calendar",
+      };
+      const feature = featureByHref[item.href];
+      return !feature || userState.enabledFeatures.includes(feature);
+    });
+  }, [canUseAiDiagnostics, canViewServiceProgrammes, fieldRole, userState.enabledFeatures]);
 
   const operationsItems = useMemo(
     () =>
       operationsNavigationItems.filter((item) => {
-        if (item.href === "/service-programmes") return canViewServiceProgrammes;
+        if (item.href === "/dispatch") return userState.enabledFeatures.includes("dispatch");
+        if (item.href === "/service-programmes") return userState.enabledFeatures.includes("service_programmes") && canViewServiceProgrammes;
         if (item.href === "/ai-diagnostics") return canUseAiDiagnostics;
-        if (item.href === "/stock") return canViewMoney;
+        if (item.href === "/stock") return userState.enabledFeatures.includes("stock") && canViewMoney;
         return true;
       }),
-    [canUseAiDiagnostics, canViewMoney, canViewServiceProgrammes],
+    [canUseAiDiagnostics, canViewMoney, canViewServiceProgrammes, userState.enabledFeatures],
   );
 
   const commercialItems = useMemo(
     () =>
       commercialNavigationItems.filter((item) => {
         if (!canViewMoney) return false;
+        if (item.href === "/quotes") return userState.enabledFeatures.includes("quotes");
+        if (item.href === "/invoices") return userState.enabledFeatures.includes("invoices");
         if (item.href === "/sales") return canUseMachinerySales;
         return true;
       }),
-    [canUseMachinerySales, canViewMoney],
+    [canUseMachinerySales, canViewMoney, userState.enabledFeatures],
   );
 
   const insightItems = useMemo(
@@ -116,9 +128,10 @@ export default function NavigationMenu({
       insightsNavigationItems.filter((item) => {
         if (!canViewMoney) return false;
         if (item.href === "/intelligence") return canUseAtlas;
+        if (item.href === "/reports") return userState.enabledFeatures.includes("reports");
         return true;
       }),
-    [canUseAtlas, canViewMoney],
+    [canUseAtlas, canViewMoney, userState.enabledFeatures],
   );
 
   const visibleAdministrationItems = useMemo(() => {
@@ -126,6 +139,13 @@ export default function NavigationMenu({
     return administrationItems.filter((item) => {
       const branchFeatureItem = item.href === "/settings/branches" || item.href.startsWith("/enterprise/");
       if (branchFeatureItem && !multiBranchEnabled) return false;
+      if (
+        (item.href === "/administration/manufacturers" ||
+          item.href === "/administration/service-templates") &&
+        !userState.enabledFeatures.includes("service_programmes")
+      ) return false;
+      if (item.href === "/administration/communications" && !userState.enabledFeatures.includes("communications")) return false;
+      if (item.href === "/administration/atlas" && !userState.enabledFeatures.includes("atlas_intelligence")) return false;
       if (hasFullAccess) return true;
       return item.permissions.some((permission) => userState.permissions.includes(permission));
     });
