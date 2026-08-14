@@ -28,7 +28,8 @@ export type BillingStatus = {
     stripeMonthlyPriceId: string | null;
     isPublic: boolean;
   };
-  usage: { users: number; customers: number; machines: number; jobs: number; aiRequestsThisMonth: number };
+  usage: { users: number; customers: number; machines: number; jobs: number; aiRequestsThisMonth: number; branches: number };
+  branchBilling: { includedBranches: number; additionalBranches: number; additionalBranchMonthlyPrice: number; estimatedMonthlyTotal: number };
   subscription: {
     status: string;
     trialStartedAt: string | null;
@@ -74,6 +75,7 @@ export async function loadBillingStatus(companyId: string): Promise<BillingStatu
     { count: machineCount, error: machinesError },
     { count: jobCount, error: jobsError },
     { count: aiUsageCount, error: aiUsageError },
+    { count: branchCount, error: branchesError },
   ] = await Promise.all([
     admin
       .from("companies")
@@ -94,9 +96,10 @@ export async function loadBillingStatus(companyId: string): Promise<BillingStatu
     admin.from("machines").select("id", { count: "exact", head: true }).eq("company_id", companyId),
     admin.from("jobs").select("id", { count: "exact", head: true }).eq("company_id", companyId),
     admin.from("company_ai_usage").select("id", { count: "exact", head: true }).eq("company_id", companyId).gte("created_at", new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)).toISOString()),
+    admin.from("company_branches").select("id", { count: "exact", head: true }).eq("company_id", companyId).eq("active", true),
   ]);
 
-  const firstError = companyError || settingsError || usersError || customersError || machinesError || jobsError || aiUsageError;
+  const firstError = companyError || settingsError || usersError || customersError || machinesError || jobsError || aiUsageError || branchesError;
   if (firstError) throw new Error(firstError.message);
   if (!company) throw new Error("Unable to load the company.");
 
@@ -141,7 +144,13 @@ export async function loadBillingStatus(companyId: string): Promise<BillingStatu
       stripeMonthlyPriceId: plan.stripe_monthly_price_id ?? null,
       isPublic: Boolean(plan.is_public),
     },
-    usage: { users: userCount ?? 0, customers: customerCount ?? 0, machines: machineCount ?? 0, jobs: jobCount ?? 0, aiRequestsThisMonth: aiUsageCount ?? 0 },
+    usage: { users: userCount ?? 0, customers: customerCount ?? 0, machines: machineCount ?? 0, jobs: jobCount ?? 0, aiRequestsThisMonth: aiUsageCount ?? 0, branches: branchCount ?? 1 },
+    branchBilling: {
+      includedBranches: 1,
+      additionalBranches: plan.slug === "enterprise" ? Math.max(0, (branchCount ?? 1) - 1) : 0,
+      additionalBranchMonthlyPrice: plan.slug === "enterprise" ? 30 : 0,
+      estimatedMonthlyTotal: Number(plan.monthly_price ?? 0) + (plan.slug === "enterprise" ? Math.max(0, (branchCount ?? 1) - 1) * 30 : 0),
+    },
     subscription: {
       status: billingMode === "subscription" ? (subscription?.status ?? syntheticStatus) : syntheticStatus,
       trialStartedAt: billingMode === "subscription" ? (subscription?.trial_started_at ?? null) : null,

@@ -4,7 +4,7 @@ import FieldRolePageGate from "@/Components/auth/field-role-page-gate";
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { loadActiveCompany } from "@/lib/company-context-client";
+import { loadClientBranchContext, operationalBranchIds } from "@/lib/branches/client";
 import { supabase } from "@/lib/supabase";
 import Card from "../../../Components/ui/Card";
 
@@ -49,6 +49,7 @@ function NewJobPageContent() {
   const router = useRouter();
 
   const [activeCompanyId, setActiveCompanyId] = useState("");
+  const [activeBranchId, setActiveBranchId] = useState<string | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
   const [engineers, setEngineers] = useState<Engineer[]>([]);
@@ -79,24 +80,23 @@ function NewJobPageContent() {
       setErrorMessage("");
 
       try {
-        const activeCompany = await loadActiveCompany();
-        setActiveCompanyId(activeCompany.id);
+        const branchContext = await loadClientBranchContext();
+        const branchIds = operationalBranchIds(branchContext);
+        setActiveCompanyId(branchContext.companyId);
+        setActiveBranchId(branchContext.activeBranchId);
+
+        let customersQuery = supabase.from("customers").select("id, contact_name, business_name").eq("company_id", branchContext.companyId);
+        let machinesQuery = supabase.from("machines").select("id, customer_id, make, model, registration, serial_number, hours").eq("company_id", branchContext.companyId);
+        if (branchContext.activeBranchId) { customersQuery = customersQuery.eq("branch_id", branchContext.activeBranchId); machinesQuery = machinesQuery.eq("branch_id", branchContext.activeBranchId); }
+        else if (branchContext.operationsScope !== "company" && branchIds.length > 0) { customersQuery = customersQuery.in("branch_id", branchIds); machinesQuery = machinesQuery.in("branch_id", branchIds); }
 
         const [customersResult, machinesResult, engineersResult] = await Promise.all([
-          supabase
-            .from("customers")
-            .select("id, contact_name, business_name")
-            .eq("company_id", activeCompany.id)
-            .order("business_name", { ascending: true }),
-          supabase
-            .from("machines")
-            .select("id, customer_id, make, model, registration, serial_number, hours")
-            .eq("company_id", activeCompany.id)
-            .order("make", { ascending: true }),
+          customersQuery.order("business_name", { ascending: true }),
+          machinesQuery.order("make", { ascending: true }),
           supabase
             .from("company_member_profiles")
             .select("user_id, full_name")
-            .eq("company_id", activeCompany.id)
+            .eq("company_id", branchContext.companyId)
             .eq("is_active", true)
             .order("full_name", { ascending: true }),
         ]);
@@ -171,6 +171,10 @@ function NewJobPageContent() {
       setDrawerError("No active company is available.");
       return;
     }
+    if (!activeBranchId) {
+      setDrawerError("Select a specific depot in the AgriCore sidebar before creating a customer from the All Depots view.");
+      return;
+    }
     if (quickCustomer.email.trim() && !quickCustomer.email.includes("@")) {
       setDrawerError("Enter a valid email address or leave it blank for now.");
       return;
@@ -183,6 +187,7 @@ function NewJobPageContent() {
       .from("customers")
       .insert({
         company_id: activeCompanyId,
+        branch_id: activeBranchId,
         business_name: quickCustomer.businessName.trim() || displayName,
         contact_name: quickCustomer.contactName.trim(),
         customer_type: "Farm",
@@ -229,6 +234,10 @@ function NewJobPageContent() {
       setDrawerError("Create or select a customer first.");
       return;
     }
+    if (!activeBranchId) {
+      setDrawerError("Select a specific depot in the AgriCore sidebar before creating a machine from the All Depots view.");
+      return;
+    }
     if (!quickMachine.make.trim() || !quickMachine.model.trim()) {
       setDrawerError("Enter the machine make and model. The remaining details can be completed later.");
       return;
@@ -247,6 +256,7 @@ function NewJobPageContent() {
       .from("machines")
       .insert({
         company_id: activeCompanyId,
+        branch_id: activeBranchId,
         customer_id: customerId,
         make: quickMachine.make.trim(),
         model: quickMachine.model.trim(),
@@ -309,6 +319,7 @@ function NewJobPageContent() {
     event.preventDefault();
 
     if (!activeCompanyId) return setErrorMessage("No active company is available.");
+    if (!activeBranchId) return setErrorMessage("Select a specific depot in the AgriCore sidebar before creating a job from the All Depots view.");
     if (!customerId) return setErrorMessage("Select or create a customer.");
     if (!machineId) return setErrorMessage("Select or create a machine.");
     if (!faultReported.trim()) return setErrorMessage("Enter the fault reported or reason for the job.");
@@ -325,6 +336,7 @@ function NewJobPageContent() {
       .from("jobs")
       .insert({
         company_id: activeCompanyId,
+        branch_id: activeBranchId,
         customer_id: customerId,
         machine_id: machineId,
         engineer_name: engineerName.trim() || null,

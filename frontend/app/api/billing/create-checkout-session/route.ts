@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/require-permission";
 import { createSupabaseAdmin } from "@/lib/payments/supabase-admin";
 import { loadBillingStatus, trialDaysRemaining } from "@/lib/platform/billing";
-import { applicationUrl, stripePriceIdForPlan, stripeRequest } from "@/lib/platform/stripe";
+import { applicationUrl, enterpriseBranchStripePriceId, stripePriceIdForPlan, stripeRequest } from "@/lib/platform/stripe";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -69,6 +69,11 @@ export async function POST(request: NextRequest) {
       trialDaysRemaining(billing.subscription.trialEndsAt) || Number(requestedPlan.trial_days ?? 14),
     );
 
+    const lineItems: Array<{price:string;quantity:number}> = [{ price: priceId, quantity: 1 }];
+    if (requestedPlan.slug === "enterprise" && billing.branchBilling.additionalBranches > 0) {
+      lineItems.push({ price: enterpriseBranchStripePriceId(), quantity: billing.branchBilling.additionalBranches });
+    }
+
     const session = await stripeRequest("/checkout/sessions", {
       method: "POST",
       body: {
@@ -78,7 +83,7 @@ export async function POST(request: NextRequest) {
         payment_method_collection: "always",
         billing_address_collection: "auto",
         allow_promotion_codes: false,
-        line_items: [{ price: priceId, quantity: 1 }],
+        line_items: lineItems,
         subscription_data: {
           trial_period_days: remainingTrialDays,
           metadata: { company_id: billing.companyId, plan_slug: requestedPlan.slug },

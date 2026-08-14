@@ -32,7 +32,7 @@ export default async function PlatformSubscriptionsPage() {
           {[
             { name: "Starter", price: "£49/month", detail: "For sole traders and small engineering businesses.", badge: "Available" },
             { name: "Professional", price: "£89/month", detail: "The flagship day-to-day AgriCore operating platform for growing workshop and field teams.", badge: "Recommended" },
-            { name: "Enterprise", price: "£225/month", detail: "Professional plus Financial Control, enterprise capabilities, API access and priority support.", badge: "Available" },
+            { name: "Enterprise", price: "£149/month + £30/additional depot", detail: "Professional plus Financial Control, enterprise capabilities, API access and priority support.", badge: "Available" },
           ].map((plan) => (
             <article key={plan.name} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
               <div className="flex items-start justify-between gap-3">

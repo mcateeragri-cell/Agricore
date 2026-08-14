@@ -2,15 +2,16 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUserContext } from "@/lib/auth/require-permission";
 import { createSupabaseAdmin } from "@/lib/payments/supabase-admin";
 import { canManageCompany } from "@/lib/platform/core";
+import { financeBranchIds } from "@/lib/branches/finance";
 export const dynamic = "force-dynamic";
 const n=(v:unknown)=>Number(v??0)||0, m=(v:number)=>Math.round((v+Number.EPSILON)*100)/100;
 export async function GET(){
  const auth=await getAuthenticatedUserContext(); if(!auth)return NextResponse.json({error:"Authentication required."},{status:401}); if(!canManageCompany(auth)&&!auth.permissions.includes("finance.reports"))return NextResponse.json({error:"Finance reporting permission is required."},{status:403});
- const admin=createSupabaseAdmin(); const today=new Date().toISOString().slice(0,10); const yearStart=`${new Date().getUTCFullYear()}-01-01`;
+ const admin=createSupabaseAdmin(); const branchIds=financeBranchIds(auth); const today=new Date().toISOString().slice(0,10); const yearStart=`${new Date().getUTCFullYear()}-01-01`;
  const [invoices,credits,journals,issues]=await Promise.all([
-  admin.from("invoices").select("id,status,total,amount_paid,due_date,issue_date").eq("company_id",auth.companyId),
-  admin.from("finance_credit_notes").select("total,status,issue_date").eq("company_id",auth.companyId).eq("status","issued"),
-  admin.from("finance_journal_lines").select("debit,credit,finance_accounts!inner(system_key,account_type),finance_journals!inner(journal_date,status)").eq("company_id",auth.companyId).gte("finance_journals.journal_date",yearStart),
+  admin.from("invoices").select("id,status,total,amount_paid,due_date,issue_date").eq("company_id",auth.companyId).in("branch_id",branchIds),
+  admin.from("finance_credit_notes").select("total,status,issue_date").eq("company_id",auth.companyId).in("branch_id",branchIds).eq("status","issued"),
+  admin.from("finance_journal_lines").select("debit,credit,finance_accounts!inner(system_key,account_type),finance_journals!inner(journal_date,status)").eq("company_id",auth.companyId).in("finance_journals.branch_id",branchIds).gte("finance_journals.journal_date",yearStart),
   admin.from("finance_validation_issues").select("id",{count:"exact",head:true}).eq("company_id",auth.companyId).eq("status","open")
  ]);
  const error=invoices.error||credits.error||journals.error||issues.error; if(error)return NextResponse.json({error:error.message},{status:500});

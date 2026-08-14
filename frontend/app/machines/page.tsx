@@ -98,7 +98,7 @@ export default function MachinesPage() {
     }
     setErrorMessage("");
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("machines")
       .select(`
         id,
@@ -116,8 +116,14 @@ export default function MachinesPage() {
           contact_name
         )
       `)
-      .eq("company_id", companyId)
-      .order("created_at", { ascending: false });
+      .eq("company_id", companyId);
+
+    if (userState.activeBranchId) query = query.eq("branch_id", userState.activeBranchId);
+    else if (userState.branchAccess?.operationsScope !== "company" && (userState.branchAccess?.accessibleOperationalBranchIds?.length ?? 0) > 0) {
+      query = query.in("branch_id", userState.branchAccess!.accessibleOperationalBranchIds);
+    }
+
+    const { data, error } = await query.order("created_at", { ascending: false });
 
     if (error) {
       console.error("Error loading machines:", error);
@@ -168,7 +174,7 @@ export default function MachinesPage() {
 
     setMachines(loadedMachines);
     setIsLoading(false);
-  }, [companyId, companyLoading]);
+  }, [companyId, companyLoading, userState.activeBranchId, userState.branchAccess]);
 
   useEffect(() => {
     void loadMachines();

@@ -30,11 +30,9 @@ type Customer = {
 };
 
 type CompanyContextResponse = {
-  activeCompany?: {
-    id: string;
-    name: string;
-    slug: string;
-  } | null;
+  activeCompany?: { id: string; name: string; slug: string } | null;
+  activeBranchId?: string | null;
+  branchAccess?: { homeBranchId?: string | null; operationsScope?: string; accessibleOperationalBranchIds?: string[] };
   error?: string;
 };
 
@@ -62,6 +60,7 @@ const emptyForm = {
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [activeCompanyId, setActiveCompanyId] = useState("");
+  const [activeBranchId, setActiveBranchId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -103,14 +102,14 @@ export default function CustomersPage() {
       }
 
       setActiveCompanyId(companyId);
+      const branchId = context.activeBranchId ?? null;
+      const branchIds = context.branchAccess?.accessibleOperationalBranchIds ?? [];
+      setActiveBranchId(branchId);
 
-      const { data, error } = await supabase
-        .from("customers")
-        .select("*")
-        .eq("company_id", companyId)
-        .order("business_name", {
-          ascending: true,
-        });
+      let customerQuery = supabase.from("customers").select("*").eq("company_id", companyId);
+      if (branchId) customerQuery = customerQuery.eq("branch_id", branchId);
+      else if (context.branchAccess?.operationsScope !== "company" && branchIds.length > 0) customerQuery = customerQuery.in("branch_id", branchIds);
+      const { data, error } = await customerQuery.order("business_name", { ascending: true });
 
       if (error) {
         throw new Error(error.message);
@@ -222,6 +221,11 @@ export default function CustomersPage() {
       return;
     }
 
+    if (!activeBranchId) {
+      setErrorMessage("Select a specific depot in the AgriCore sidebar before adding a customer from the All Depots view.");
+      return;
+    }
+
     setIsSaving(true);
     setErrorMessage("");
 
@@ -229,6 +233,7 @@ export default function CustomersPage() {
       .from("customers")
       .insert({
         company_id: activeCompanyId,
+        branch_id: activeBranchId,
         contact_name: form.name.trim(),
         business_name: form.businessName.trim(),
         customer_type: form.customerType,

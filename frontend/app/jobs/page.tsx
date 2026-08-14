@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { loadActiveCompany } from "@/lib/company-context-client";
+import { loadClientBranchContext, operationalBranchIds } from "@/lib/branches/client";
 import { supabase } from "@/lib/supabase";
 
 type Job = {
@@ -153,10 +153,10 @@ function JobsPageContent() {
     setErrorMessage("");
 
     try {
-      const activeCompany =
-        await loadActiveCompany();
+      const branchContext = await loadClientBranchContext();
+      const branchIds = operationalBranchIds(branchContext);
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("jobs")
         .select(`
           id,
@@ -176,13 +176,12 @@ function JobsPageContent() {
             registration
           )
         `)
-        .eq(
-          "company_id",
-          activeCompany.id,
-        )
-        .order("created_at", {
-          ascending: false,
-        });
+        .eq("company_id", branchContext.companyId);
+
+      if (branchContext.activeBranchId) query = query.eq("branch_id", branchContext.activeBranchId);
+      else if (branchContext.operationsScope !== "company" && branchIds.length > 0) query = query.in("branch_id", branchIds);
+
+      const { data, error } = await query.order("created_at", { ascending: false });
 
       if (error) {
         throw error;

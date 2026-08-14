@@ -21,6 +21,13 @@ export function professionalStripePriceId() {
   return value;
 }
 
+
+export function enterpriseBranchStripePriceId() {
+  const value = process.env.STRIPE_PRICE_ENTERPRISE_BRANCH_MONTHLY?.trim();
+  if (!value) throw new Error("STRIPE_PRICE_ENTERPRISE_BRANCH_MONTHLY is not configured.");
+  return value;
+}
+
 export function stripePriceIdForPlan(slug: string, databasePriceId?: string | null) {
   if (databasePriceId?.trim()) return databasePriceId.trim();
   if (slug === "professional") return professionalStripePriceId();

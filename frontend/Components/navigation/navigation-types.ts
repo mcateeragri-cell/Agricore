@@ -57,6 +57,21 @@ export type CompanyOption = {
   slug: string;
 };
 
+export type BranchOption = {
+  id: string;
+  code: string;
+  name: string;
+  isHeadOffice: boolean;
+};
+
+export type BranchAccessState = {
+  homeBranchId: string | null;
+  operationsScope: "own_jobs" | "branch" | "selected" | "company";
+  financeScope: "none" | "branch" | "selected" | "company";
+  accessibleOperationalBranchIds: string[];
+  accessibleFinanceBranchIds: string[];
+};
+
 export type UserNavigationState = {
   fullName: string;
   email: string;
@@ -66,6 +81,10 @@ export type UserNavigationState = {
   enabledFeatures: string[];
   activeCompany: CompanyOption | null;
   companies: CompanyOption[];
+  branches: BranchOption[];
+  activeBranchId: string | null;
+  activeFinanceBranchId: string | null;
+  branchAccess: BranchAccessState | null;
 };
 
 export type CompanyContextResponse = {
@@ -81,6 +100,10 @@ export type CompanyContextResponse = {
   enabledFeatures?: string[];
   billingMode?: "subscription" | "internal" | "demo";
   companies?: CompanyOption[];
+  branches?: BranchOption[];
+  activeBranchId?: string | null;
+  activeFinanceBranchId?: string | null;
+  branchAccess?: BranchAccessState | null;
   error?: string;
 };
 
@@ -113,6 +136,10 @@ export const initialUserState: UserNavigationState = {
   enabledFeatures: [],
   activeCompany: null,
   companies: [],
+  branches: [],
+  activeBranchId: null,
+  activeFinanceBranchId: null,
+  branchAccess: null,
 };
 
 export function isPlatformRole(

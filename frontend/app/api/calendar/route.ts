@@ -4,6 +4,9 @@ import {
   type SupabaseClient,
 } from "@supabase/supabase-js";
 
+import { loadBranchAccessContext } from "@/lib/branches/access";
+import type { CompanyRole } from "@/lib/auth/require-permission";
+
 import type {
   CalendarCustomer,
   CalendarJob,
@@ -23,6 +26,7 @@ type DatabaseRow = Record<string, unknown>;
 type AdminSupabaseClient = SupabaseClient;
 
 const ACTIVE_COMPANY_COOKIE = "agricore_company_id";
+const ACTIVE_BRANCH_COOKIE = "agricore_branch_id";
 
 const TECHNICIAN_COLOURS = [
   "#166534",
@@ -118,6 +122,14 @@ export async function GET(request: NextRequest) {
     }
 
     const canViewCompanyCalendar = calendarAccess.canManageCalendar;
+    const branchContext = await loadBranchAccessContext(
+      adminClient,
+      companyId,
+      user.id,
+      calendarAccess.role as CompanyRole | "",
+      request.cookies.get(ACTIVE_BRANCH_COOKIE)?.value ?? null,
+    );
+    const calendarBranchIds = branchContext.activeBranchId ? [branchContext.activeBranchId] : branchContext.accessibleOperationalBranchIds;
 
     const requestUrl = new URL(request.url);
 
@@ -178,6 +190,7 @@ export async function GET(request: NextRequest) {
       .from("job_assignments")
       .select("*")
       .eq("company_id", companyId)
+      .in("branch_id", calendarBranchIds)
       .lt("scheduled_start", rangeEnd.toISOString())
       .gt("scheduled_end", rangeStart.toISOString())
       .neq("assignment_status", "cancelled");
@@ -186,6 +199,7 @@ export async function GET(request: NextRequest) {
       .from("staff_calendar_events")
       .select("*")
       .eq("company_id", companyId)
+      .in("branch_id", calendarBranchIds)
       .lt("starts_at", rangeEnd.toISOString())
       .gt("ends_at", rangeStart.toISOString());
 
@@ -201,11 +215,15 @@ export async function GET(request: NextRequest) {
       rolesResult,
       assignmentsResult,
       eventsResult,
+      staffScopesResult,
+      staffAccessResult,
     ] = await Promise.all([
       profilesQuery.order("full_name", { ascending: true }),
       rolesQuery,
       assignmentsQuery.order("scheduled_start", { ascending: true }),
       eventsQuery.order("starts_at", { ascending: true }),
+      adminClient.from("company_member_branch_scopes").select("user_id,home_branch_id,operations_scope").eq("company_id", companyId),
+      adminClient.from("company_member_branch_access").select("user_id,branch_id").eq("company_id", companyId),
     ]);
 
     if (profilesResult.error) {
@@ -231,10 +249,29 @@ export async function GET(request: NextRequest) {
         `Unable to load staff events: ${eventsResult.error.message}`,
       );
     }
+    if (staffScopesResult.error) throw new Error(`Unable to load staff depot scopes: ${staffScopesResult.error.message}`);
+    if (staffAccessResult.error) throw new Error(`Unable to load staff depot access: ${staffAccessResult.error.message}`);
+
+    const selectedDepotIds = new Set(calendarBranchIds);
+    const extraAccess = new Map<string, Set<string>>();
+    for (const row of toRows(staffAccessResult.data)) {
+      const userId = readString(row, ["user_id"]);
+      const branchId = readString(row, ["branch_id"]);
+      if (!userId || !branchId) continue;
+      const set = extraAccess.get(userId) ?? new Set<string>(); set.add(branchId); extraAccess.set(userId,set);
+    }
+    const visibleUserIds = new Set<string>();
+    for (const row of toRows(staffScopesResult.data)) {
+      const staffUserId = readString(row,["user_id"]);
+      const scope = normaliseStatus(readString(row,["operations_scope"]));
+      const home = readString(row,["home_branch_id"]);
+      if (!staffUserId) continue;
+      if (scope === "company" || (home && selectedDepotIds.has(home)) || (scope === "selected" && [...(extraAccess.get(staffUserId) ?? [])].some((id)=>selectedDepotIds.has(id)))) visibleUserIds.add(staffUserId);
+    }
 
     const profileRows = toRows(
       profilesResult.data,
-    );
+    ).filter((row) => visibleUserIds.has(readString(row,["user_id"])));
 
     const roleRows = toRows(
       rolesResult.data,
@@ -475,6 +512,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const branchContext = await loadBranchAccessContext(
+      adminClient, companyId, user.id, calendarAccess.role as CompanyRole | "",
+      request.cookies.get(ACTIVE_BRANCH_COOKIE)?.value ?? null,
+    );
+    const allowedBranchIds = branchContext.activeBranchId ? [branchContext.activeBranchId] : branchContext.accessibleOperationalBranchIds;
+
     const body: unknown = await request.json();
 
     if (
@@ -584,7 +627,7 @@ export async function POST(request: NextRequest) {
       await Promise.all([
         adminClient
           .from("jobs")
-          .select("id, status, company_id")
+          .select("id, status, company_id, branch_id")
           .eq("id", jobId)
           .eq("company_id", companyId)
           .maybeSingle(),
@@ -608,6 +651,11 @@ export async function POST(request: NextRequest) {
         { error: "The selected job no longer exists." },
         { status: 404 },
       );
+    }
+
+    const jobBranchId = typeof jobResult.data.branch_id === "string" ? jobResult.data.branch_id : "";
+    if (!jobBranchId || !allowedBranchIds.includes(jobBranchId)) {
+      return NextResponse.json({ error: "You do not have operational access to this job's depot." }, { status: 403 });
     }
 
     if (profileResult.error) {
@@ -753,6 +801,7 @@ export async function POST(request: NextRequest) {
         .from("job_assignments")
         .insert({
           company_id: companyId,
+          branch_id: jobBranchId,
           job_id: jobId,
           user_id: userId,
           scheduled_start:
@@ -845,7 +894,7 @@ export async function PATCH(request: NextRequest) {
       return context;
     }
 
-    const { adminClient, companyId } = context;
+    const { adminClient, companyId, branchContext } = context;
     const body = await readRequestBody(request);
 
     if (body instanceof NextResponse) {
@@ -932,6 +981,12 @@ export async function PATCH(request: NextRequest) {
         { error: "The selected assignment no longer exists." },
         { status: 404 },
       );
+    }
+
+    const assignmentBranchId = typeof assignmentResult.data.branch_id === "string" ? assignmentResult.data.branch_id : "";
+    const allowedBranchIds = branchContext.activeBranchId ? [branchContext.activeBranchId] : branchContext.accessibleOperationalBranchIds;
+    if (!assignmentBranchId || !allowedBranchIds.includes(assignmentBranchId)) {
+      return NextResponse.json({ error: "You do not have operational access to this assignment's depot." }, { status: 403 });
     }
 
     if (profileResult.error) {
@@ -1058,7 +1113,7 @@ export async function DELETE(request: NextRequest) {
       return context;
     }
 
-    const { adminClient, companyId } = context;
+    const { adminClient, companyId, branchContext } = context;
     const body = await readRequestBody(request);
 
     if (body instanceof NextResponse) {
@@ -1077,7 +1132,7 @@ export async function DELETE(request: NextRequest) {
     const { data: existingAssignment, error: loadError } =
       await adminClient
         .from("job_assignments")
-        .select("id, job_id")
+        .select("id, job_id, branch_id")
         .eq("id", assignmentId)
         .eq("company_id", companyId)
         .maybeSingle();
@@ -1093,6 +1148,12 @@ export async function DELETE(request: NextRequest) {
         { error: "The selected assignment no longer exists." },
         { status: 404 },
       );
+    }
+
+    const assignmentBranchId = typeof existingAssignment.branch_id === "string" ? existingAssignment.branch_id : "";
+    const allowedBranchIds = branchContext.activeBranchId ? [branchContext.activeBranchId] : branchContext.accessibleOperationalBranchIds;
+    if (!assignmentBranchId || !allowedBranchIds.includes(assignmentBranchId)) {
+      return NextResponse.json({ error: "You do not have operational access to this assignment's depot." }, { status: 403 });
     }
 
     const jobId =
@@ -1198,6 +1259,7 @@ async function createAuthenticatedAdminClient(
       userId: string;
       companyId: string;
       canManageCalendar: boolean;
+      branchContext: Awaited<ReturnType<typeof loadBranchAccessContext>>;
     }
   | NextResponse
 > {
@@ -1275,11 +1337,17 @@ async function createAuthenticatedAdminClient(
     );
   }
 
+  const branchContext = await loadBranchAccessContext(
+    adminClient, companyId, user.id, calendarAccess.role as CompanyRole | "",
+    request.cookies.get(ACTIVE_BRANCH_COOKIE)?.value ?? null,
+  );
+
   return {
     adminClient,
     userId: user.id,
     companyId,
     canManageCalendar: true,
+    branchContext,
   };
 }
 
@@ -1287,7 +1355,7 @@ async function loadCalendarAccess(
   adminClient: AdminSupabaseClient,
   userId: string,
   companyId: string,
-): Promise<{ isActiveMember: boolean; canManageCalendar: boolean }> {
+): Promise<{ isActiveMember: boolean; canManageCalendar: boolean; role: string }> {
   const [membershipResult, roleResult] = await Promise.all([
     adminClient
       .from("company_members")
@@ -1316,7 +1384,7 @@ async function loadCalendarAccess(
   }
 
   if (membershipResult.data?.is_active !== true) {
-    return { isActiveMember: false, canManageCalendar: false };
+    return { isActiveMember: false, canManageCalendar: false, role: "" };
   }
 
   const role =
@@ -1325,11 +1393,11 @@ async function loadCalendarAccess(
       : "";
 
   if (role === "company_admin" || role === "administrator") {
-    return { isActiveMember: true, canManageCalendar: true };
+    return { isActiveMember: true, canManageCalendar: true, role };
   }
 
   if (!role) {
-    return { isActiveMember: true, canManageCalendar: false };
+    return { isActiveMember: true, canManageCalendar: false, role };
   }
 
   const { data: permissionRow, error: permissionError } = await adminClient
@@ -1350,6 +1418,7 @@ async function loadCalendarAccess(
   return {
     isActiveMember: true,
     canManageCalendar: Boolean(permissionRow),
+    role,
   };
 }
 

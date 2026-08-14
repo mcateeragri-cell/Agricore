@@ -28,7 +28,7 @@ export const AGRICORE_PLAN_POLICY: Record<
   },
   enterprise: {
     name: "Enterprise",
-    monthlyPriceGbp: 225,
+    monthlyPriceGbp: 149,
     aiDiagnosticsPerMonth: 5000,
     maxUsers: null,
     summary: "Professional plus Financial Control, enterprise capabilities, API access and priority support.",

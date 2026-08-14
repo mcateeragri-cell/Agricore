@@ -12,6 +12,7 @@ import { loadEffectiveFeatures } from "@/lib/platform/effective-features";
 
 const ACTIVE_COMPANY_COOKIE =
   "agricore_company_id";
+const ACTIVE_BRANCH_COOKIE = "agricore_branch_id";
 
 type CompanyMembershipRow = {
   company_id: string;
@@ -141,10 +142,28 @@ export async function GET() {
         context.userId,
       );
 
+    const admin = createSupabaseAdmin();
     const featureState = await loadEffectiveFeatures(
-      createSupabaseAdmin(),
+      admin,
       context.companyId,
     );
+
+    const { data: branchRows, error: branchError } = await admin
+      .from("company_branches")
+      .select("id,code,name,is_head_office")
+      .eq("company_id", context.companyId)
+      .eq("active", true)
+      .order("is_head_office", { ascending: false })
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true });
+    if (branchError) throw new Error(branchError.message);
+
+    const branchOptions = (branchRows ?? []).map((branch) => ({
+      id: String(branch.id),
+      code: String(branch.code ?? ""),
+      name: String(branch.name ?? "Depot"),
+      isHeadOffice: Boolean(branch.is_head_office),
+    }));
 
     return NextResponse.json(
       {
@@ -165,6 +184,16 @@ export async function GET() {
         },
         enabledFeatures: featureState.enabledFeatures,
         billingMode: featureState.billingMode,
+        branches: branchOptions,
+        activeBranchId: context.activeBranchId,
+        activeFinanceBranchId: context.activeFinanceBranchId,
+        branchAccess: {
+          homeBranchId: context.homeBranchId,
+          operationsScope: context.operationsScope,
+          financeScope: context.financeScope,
+          accessibleOperationalBranchIds: context.accessibleOperationalBranchIds,
+          accessibleFinanceBranchIds: context.accessibleFinanceBranchIds,
+        },
         companies,
         requiresCompanySelection:
           companies.length > 1,
@@ -276,6 +305,9 @@ export async function POST(
           60 * 60 * 24 * 365,
       },
     );
+
+
+    cookieStore.delete(ACTIVE_BRANCH_COOKIE);
 
     return NextResponse.json(
       {

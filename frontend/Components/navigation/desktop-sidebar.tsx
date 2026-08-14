@@ -3,6 +3,7 @@
 import AgriCoreMark from "@/Components/branding/agricore-mark";
 
 import CompanySwitcher from "./company-switcher";
+import BranchSwitcher from "./branch-switcher";
 import NavigationMenu from "./navigation-menu";
 import UserCard from "./user-card";
 import type { UserNavigationState } from "./navigation-types";
@@ -13,7 +14,9 @@ type DesktopSidebarProps = {
   loading: boolean;
   switchingCompany: boolean;
   companyError: string;
+  switchingBranch: boolean;
   onSwitchCompany: (companyId: string) => Promise<void>;
+  onSwitchBranch: (branchId: string) => Promise<void>;
 };
 
 export default function DesktopSidebar({
@@ -22,7 +25,9 @@ export default function DesktopSidebar({
   loading,
   switchingCompany,
   companyError,
+  switchingBranch,
   onSwitchCompany,
+  onSwitchBranch,
 }: DesktopSidebarProps) {
   const activeCompanyName =
     userState.activeCompany?.name?.trim() ||
@@ -56,6 +61,13 @@ export default function DesktopSidebar({
           switchingCompany={switchingCompany}
           error={companyError}
           onSwitchCompany={onSwitchCompany}
+        />
+
+        <BranchSwitcher
+          userState={userState}
+          loading={loading}
+          switching={switchingBranch}
+          onSwitchBranch={onSwitchBranch}
         />
       </div>
 

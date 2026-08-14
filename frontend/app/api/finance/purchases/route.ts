@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserContext } from "@/lib/auth/require-permission";
 import { createSupabaseAdmin } from "@/lib/payments/supabase-admin";
 import { canManageCompany } from "@/lib/platform/core";
+import { financeBranchIds, financeWriteBranchId } from "@/lib/branches/finance";
 
 export const dynamic = "force-dynamic";
 
@@ -27,11 +28,13 @@ export async function GET() {
   if (!canManageFinance(auth)) return NextResponse.json({ error: "Finance management permission is required." }, { status: 403 });
 
   const admin = createSupabaseAdmin();
+  const branchIds = financeBranchIds(auth);
   const [invoices, suppliers, accounts, taxCodes, bankAccounts, purchaseOrders] = await Promise.all([
     admin
       .from("finance_purchase_invoices")
       .select("id,supplier_id,purchase_order_id,invoice_number,supplier_reference,invoice_date,due_date,status,currency_code,subtotal,tax_amount,total,amount_paid,notes,created_at,stock_suppliers(name)")
       .eq("company_id", auth.companyId)
+      .in("branch_id", branchIds)
       .order("invoice_date", { ascending: false })
       .limit(250),
     admin
@@ -63,6 +66,7 @@ export async function GET() {
       .from("purchase_orders")
       .select("id,order_number,supplier_id,supplier_name,status,total")
       .eq("company_id", auth.companyId)
+      .in("branch_id", branchIds)
       .order("order_date", { ascending: false })
       .limit(100),
   ]);
@@ -112,6 +116,8 @@ export async function POST(request: NextRequest) {
   if (!lines.length) return NextResponse.json({ error: "At least one purchase line is required." }, { status: 400 });
 
   const admin = createSupabaseAdmin();
+  let branchId: string;
+  try { branchId = financeWriteBranchId(auth); } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Select a finance depot." }, { status: 400 }); }
   const [{ data: supplier, error: supplierError }, { data: profile, error: profileError }, { data: taxRows, error: taxError }] = await Promise.all([
     admin.from("stock_suppliers").select("id").eq("company_id", auth.companyId).eq("id", supplierId).eq("active", true).maybeSingle(),
     admin.from("finance_profiles").select("base_currency_code").eq("company_id", auth.companyId).maybeSingle(),
@@ -186,6 +192,7 @@ export async function POST(request: NextRequest) {
     .from("finance_purchase_invoices")
     .insert({
       company_id: auth.companyId,
+      branch_id: branchId,
       supplier_id: supplierId,
       purchase_order_id: purchaseOrderId,
       invoice_number: invoiceNumber,

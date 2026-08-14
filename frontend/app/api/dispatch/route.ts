@@ -100,6 +100,8 @@ export async function GET(
       techniciansResult,
       jobsResult,
       assignmentsResult,
+      technicianScopesResult,
+      technicianAccessResult,
     ] = await Promise.all([
       supabase
         .from("company_member_profiles")
@@ -146,6 +148,7 @@ export async function GET(
           "company_id",
           auth.companyId,
         )
+        .in("branch_id", auth.activeBranchId ? [auth.activeBranchId] : auth.accessibleOperationalBranchIds)
         .not(
           "status",
           "in",
@@ -193,6 +196,7 @@ export async function GET(
           "company_id",
           auth.companyId,
         )
+        .in("branch_id", auth.activeBranchId ? [auth.activeBranchId] : auth.accessibleOperationalBranchIds)
         .gte(
           "scheduled_start",
           startOfDay,
@@ -204,6 +208,16 @@ export async function GET(
         .order("scheduled_start", {
           ascending: true,
         }),
+
+      supabase
+        .from("company_member_branch_scopes")
+        .select("user_id,home_branch_id,operations_scope")
+        .eq("company_id", auth.companyId),
+
+      supabase
+        .from("company_member_branch_access")
+        .select("user_id,branch_id")
+        .eq("company_id", auth.companyId),
     ]);
 
     if (techniciansResult.error) {
@@ -223,6 +237,27 @@ export async function GET(
         `Unable to load assignments: ${assignmentsResult.error.message}`,
       );
     }
+    if (technicianScopesResult.error) throw new Error(`Unable to load technician depot scopes: ${technicianScopesResult.error.message}`);
+    if (technicianAccessResult.error) throw new Error(`Unable to load technician depot access: ${technicianAccessResult.error.message}`);
+
+    const selectedDepotIds = new Set(auth.activeBranchId ? [auth.activeBranchId] : auth.accessibleOperationalBranchIds);
+    const extraAccess = new Map<string, Set<string>>();
+    for (const row of technicianAccessResult.data ?? []) {
+      const key = String(row.user_id);
+      const set = extraAccess.get(key) ?? new Set<string>();
+      set.add(String(row.branch_id));
+      extraAccess.set(key, set);
+    }
+    const visibleTechnicianIds = new Set<string>();
+    for (const row of technicianScopesResult.data ?? []) {
+      const userId = String(row.user_id);
+      const scope = String(row.operations_scope ?? "branch");
+      const home = row.home_branch_id ? String(row.home_branch_id) : "";
+      if (scope === "company") { visibleTechnicianIds.add(userId); continue; }
+      if (home && selectedDepotIds.has(home)) { visibleTechnicianIds.add(userId); continue; }
+      if (scope === "selected" && [...(extraAccess.get(userId) ?? [])].some((id) => selectedDepotIds.has(id))) visibleTechnicianIds.add(userId);
+    }
+    const visibleTechnicians = (techniciansResult.data ?? []).filter((row) => visibleTechnicianIds.has(String(row.user_id)));
 
     const assignmentRows = assignmentsResult.data ?? [];
     const activeUserIds = Array.from(
@@ -289,7 +324,7 @@ export async function GET(
       {
         date: selectedDate,
         technicians:
-          techniciansResult.data ?? [],
+          visibleTechnicians,
         jobs: jobsResult.data ?? [],
         assignments:
           assignmentsWithLocation,

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/require-permission";
 import { loadBillingStatus } from "@/lib/platform/billing";
 import { syncStripeSubscriptionById } from "@/lib/platform/billing-sync";
-import { stripePriceIdForPlan, stripeRequest } from "@/lib/platform/stripe";
+import { enterpriseBranchStripePriceId, stripePriceIdForPlan, stripeRequest } from "@/lib/platform/stripe";
 import { createSupabaseAdmin } from "@/lib/payments/supabase-admin";
 import { AGRICORE_PLAN_ORDER, isAgriCorePlanSlug } from "@/lib/platform/plan-policy";
 
@@ -47,10 +47,15 @@ export async function PATCH(request: NextRequest) {
       if (!itemId) throw new Error("Stripe subscription item could not be found.");
       const priceId = stripePriceIdForPlan(targetPlan.slug, targetPlan.stripe_monthly_price_id);
 
+      const subscriptionItems: Array<Record<string, unknown>> = [{ id: itemId, price: priceId }];
+      if (targetPlan.slug === "enterprise" && billing.branchBilling.additionalBranches > 0) {
+        subscriptionItems.push({ price: enterpriseBranchStripePriceId(), quantity: billing.branchBilling.additionalBranches });
+      }
+
       await stripeRequest(`/subscriptions/${encodeURIComponent(subscriptionId)}`, {
         method: "POST",
         body: {
-          items: [{ id: itemId, price: priceId }],
+          items: subscriptionItems,
           proration_behavior: "always_invoice",
           metadata: { company_id: billing.companyId, plan_slug: targetPlan.slug },
         },

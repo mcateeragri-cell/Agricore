@@ -122,12 +122,14 @@ export default function NavigationMenu({
   );
 
   const visibleAdministrationItems = useMemo(() => {
-    if (hasFullAccess) return administrationItems;
-
-    return administrationItems.filter((item) =>
-      item.permissions.some((permission) => userState.permissions.includes(permission)),
-    );
-  }, [hasFullAccess, userState.permissions]);
+    const multiBranchEnabled = userState.enabledFeatures.includes("multi_branch");
+    return administrationItems.filter((item) => {
+      const branchFeatureItem = item.href === "/settings/branches" || item.href.startsWith("/enterprise/");
+      if (branchFeatureItem && !multiBranchEnabled) return false;
+      if (hasFullAccess) return true;
+      return item.permissions.some((permission) => userState.permissions.includes(permission));
+    });
+  }, [hasFullAccess, userState.enabledFeatures, userState.permissions]);
 
   const sectionIsActive = (items: NavigationItem[]) =>
     items.some((item) => isLinkActive(pathname, item.href));

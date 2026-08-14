@@ -18,7 +18,7 @@ export default function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedPlan = ["starter","professional","enterprise"].includes(searchParams.get("plan") || "") ? String(searchParams.get("plan")) : "professional";
-  const planPrice = requestedPlan === "starter" ? 49 : requestedPlan === "enterprise" ? 225 : 89;
+  const planPrice = requestedPlan === "starter" ? 49 : requestedPlan === "enterprise" ? 149 : 89;
   const planName = requestedPlan === "starter" ? "Starter" : requestedPlan === "enterprise" ? "Enterprise" : "Professional";
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");

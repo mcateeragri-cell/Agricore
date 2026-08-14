@@ -75,6 +75,24 @@ export const administrationItems: AdministrationItem[] = [
     ],
   },
   {
+    name: "Branches & Depots",
+    href: "/settings/branches",
+    icon: "settings",
+    permissions: ["settings.manage"],
+  },
+  {
+    name: "Depot Overview",
+    href: "/enterprise/depots",
+    icon: "reports",
+    permissions: ["settings.manage", "jobs.view_all", "finance.reports"],
+  },
+  {
+    name: "Transfer Centre",
+    href: "/enterprise/transfers",
+    icon: "calendar",
+    permissions: ["settings.manage", "jobs.assign"],
+  },
+  {
     name: "Company Settings",
     href: "/settings/company",
     icon: "settings",

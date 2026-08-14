@@ -4,8 +4,11 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { loadBranchAccessContext } from "@/lib/branches/access";
 
 const ACTIVE_COMPANY_COOKIE = "agricore_company_id";
+const ACTIVE_BRANCH_COOKIE = "agricore_branch_id";
+const ACTIVE_FINANCE_BRANCH_COOKIE = "agricore_finance_branch_id";
 
 export type PlatformRole =
   | "super_admin"
@@ -32,6 +35,13 @@ export type AuthenticatedUserContext = {
   companySlug: string;
   role: CompanyRole | "";
   permissions: string[];
+  activeBranchId: string | null;
+  activeFinanceBranchId: string | null;
+  homeBranchId: string | null;
+  operationsScope: "own_jobs" | "branch" | "selected" | "company";
+  financeScope: "none" | "branch" | "selected" | "company";
+  accessibleOperationalBranchIds: string[];
+  accessibleFinanceBranchIds: string[];
 };
 
 type RequirePermissionOptions = {
@@ -296,6 +306,22 @@ export async function getAuthenticatedUserContext(): Promise<
     user.user_metadata?.full_name,
   );
 
+  const requestedBranchId = cleanText(
+    cookieStore.get(ACTIVE_BRANCH_COOKIE)?.value,
+  );
+  const requestedFinanceBranchId = cleanText(
+    cookieStore.get(ACTIVE_FINANCE_BRANCH_COOKIE)?.value,
+  );
+
+  const branchContext = await loadBranchAccessContext(
+    supabase,
+    companyId,
+    user.id,
+    role,
+    requestedBranchId,
+    requestedFinanceBranchId,
+  );
+
   return {
     userId: user.id,
     email: user.email ?? "",
@@ -310,6 +336,13 @@ export async function getAuthenticatedUserContext(): Promise<
     companySlug: cleanText(company.slug),
     role,
     permissions,
+    activeBranchId: branchContext.activeBranchId,
+    activeFinanceBranchId: branchContext.activeFinanceBranchId,
+    homeBranchId: branchContext.homeBranchId,
+    operationsScope: branchContext.operationsScope,
+    financeScope: branchContext.financeScope,
+    accessibleOperationalBranchIds: branchContext.accessibleOperationalBranchIds,
+    accessibleFinanceBranchIds: branchContext.accessibleFinanceBranchIds,
   };
 }
 

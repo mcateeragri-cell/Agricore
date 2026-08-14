@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import CompanyBrand from "@/Components/branding/company-brand";
 
 import CompanySwitcher from "./company-switcher";
+import BranchSwitcher from "./branch-switcher";
 import NavigationMenu from "./navigation-menu";
 import SidebarIcon from "./sidebar-icon";
 import UserCard from "./user-card";
@@ -17,7 +18,9 @@ type MobileDrawerProps = {
   loading: boolean;
   switchingCompany: boolean;
   companyError: string;
+  switchingBranch: boolean;
   onSwitchCompany: (companyId: string) => Promise<void>;
+  onSwitchBranch: (branchId: string) => Promise<void>;
   onClose: () => void;
 };
 
@@ -28,7 +31,9 @@ export default function MobileDrawer({
   loading,
   switchingCompany,
   companyError,
+  switchingBranch,
   onSwitchCompany,
+  onSwitchBranch,
   onClose,
 }: MobileDrawerProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -100,6 +105,13 @@ export default function MobileDrawer({
             switchingCompany={switchingCompany}
             error={companyError}
             onSwitchCompany={onSwitchCompany}
+          />
+
+          <BranchSwitcher
+            userState={userState}
+            loading={loading}
+            switching={switchingBranch}
+            onSwitchBranch={onSwitchBranch}
           />
         </div>
 

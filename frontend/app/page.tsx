@@ -94,7 +94,7 @@ export default function MarketingHomePage() {
     offers: [
       { "@type": "Offer", name: "Starter", price: "49", priceCurrency: "GBP" },
       { "@type": "Offer", name: "Professional", price: "89", priceCurrency: "GBP" },
-      { "@type": "Offer", name: "Enterprise", price: "225", priceCurrency: "GBP" },
+      { "@type": "Offer", name: "Enterprise", price: "149", priceCurrency: "GBP" },
     ],
   };
 

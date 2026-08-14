@@ -30,7 +30,8 @@ type BillingResponse = {
       maxStorageGb: number;
       currencyCode: string;
     };
-    usage: { users: number; customers: number; machines: number; jobs: number; aiRequestsThisMonth: number };
+    usage: { users: number; customers: number; machines: number; jobs: number; aiRequestsThisMonth: number; branches: number };
+    branchBilling: { includedBranches: number; additionalBranches: number; additionalBranchMonthlyPrice: number; estimatedMonthlyTotal: number };
     subscription: {
       status: string;
       trialEndsAt: string | null;
@@ -262,6 +263,7 @@ export default function BillingCentre() {
               <p className="mt-2 text-slate-600 dark:text-slate-300">
                 {formatCurrency(billing.plan.monthlyPrice, { ...regional, currency_code: billing.plan.currencyCode })} + {regional.tax_name} per month
               </p>
+              {billing.plan.slug === "enterprise" && billing.branchBilling.additionalBranches > 0 ? <p className="mt-1 text-sm font-bold text-slate-700 dark:text-slate-200">Current depot total: {formatCurrency(billing.branchBilling.estimatedMonthlyTotal, { ...regional, currency_code: billing.plan.currencyCode })} + {regional.tax_name}/month</p> : null}
             </div>
             <span className={`rounded-full px-4 py-2 text-sm font-black ${paymentProblem ? "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200" : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"}`}>{statusLabel}</span>
           </div>
@@ -284,6 +286,7 @@ export default function BillingCentre() {
               <p className="text-xs font-bold uppercase text-slate-500">Users</p>
               <p className="mt-2 text-2xl font-black">{billing.usage.users}{billing.plan.maxUsers > 0 && billing.plan.maxUsers < 9000 ? ` / ${billing.plan.maxUsers}` : ""}</p>
             </div>
+            {billing.plan.slug === "enterprise" ? <div className="rounded-2xl bg-slate-50 p-5 dark:bg-slate-950"><p className="text-xs font-bold uppercase text-slate-500">Depots</p><p className="mt-2 text-2xl font-black">{billing.usage.branches}</p><p className="mt-1 text-xs font-semibold text-slate-500">£30/month per depot after the first</p></div> : null}
           </div>
 
           {!hasStripeSubscription ? (

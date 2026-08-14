@@ -71,8 +71,10 @@ export default function AppShell({
     userState,
     loading,
     switchingCompany,
+    switchingBranch,
     error: companyError,
     switchCompany,
+    switchBranch,
   } = useNavigationUser();
 
   const isShelllessRoute =
@@ -114,9 +116,9 @@ export default function AppShell({
           switchingCompany
         }
         companyError={companyError}
-        onSwitchCompany={
-          switchCompany
-        }
+        switchingBranch={switchingBranch}
+        onSwitchCompany={switchCompany}
+        onSwitchBranch={switchBranch}
       />
 
       <div className="w-full min-w-0 flex-1">
@@ -148,9 +150,9 @@ export default function AppShell({
           switchingCompany
         }
         companyError={companyError}
-        onSwitchCompany={
-          switchCompany
-        }
+        switchingBranch={switchingBranch}
+        onSwitchCompany={switchCompany}
+        onSwitchBranch={switchBranch}
         onClose={closeMobileMenu}
       />
 

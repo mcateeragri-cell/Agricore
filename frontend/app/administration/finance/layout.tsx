@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getAuthenticatedUserContext } from "@/lib/auth/require-permission";
 import { createSupabaseAdmin } from "@/lib/payments/supabase-admin";
 import { isCompanyFeatureEnabled } from "@/lib/platform/effective-features";
+import FinanceBranchSwitcher from "@/Components/finance/FinanceBranchSwitcher";
 
 export const dynamic = "force-dynamic";
 
@@ -44,5 +45,8 @@ export default async function FinancialControlLayout({
     }
   }
 
-  return <>{children}</>;
+  const admin = createSupabaseAdmin();
+  const { data: branchRows } = await admin.from("company_branches").select("id,code,name,is_head_office").eq("company_id", auth.companyId).eq("active", true).order("is_head_office", { ascending:false }).order("sort_order");
+  const branches = (branchRows ?? []).map((b) => ({ id:String(b.id), code:String(b.code??""), name:String(b.name??"Depot"), isHeadOffice:Boolean(b.is_head_office) }));
+  return <><div className="flex justify-end px-5 pt-4 lg:px-7"><FinanceBranchSwitcher branches={branches} accessibleIds={auth.accessibleFinanceBranchIds} activeFinanceBranchId={auth.activeFinanceBranchId} financeScope={auth.financeScope}/></div>{children}</>;
 }

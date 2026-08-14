@@ -31,6 +31,8 @@ export function useNavigationUser() {
     setSwitchingCompany,
   ] = useState(false);
 
+  const [switchingBranch, setSwitchingBranch] = useState(false);
+
   const [error, setError] =
     useState("");
 
@@ -110,6 +112,10 @@ export function useNavigationUser() {
 
           companies:
             result.companies ?? [],
+          branches: result.branches ?? [],
+          activeBranchId: result.activeBranchId ?? null,
+          activeFinanceBranchId: result.activeFinanceBranchId ?? null,
+          branchAccess: result.branchAccess ?? null,
         });
       } catch (loadError) {
         console.error(
@@ -220,12 +226,43 @@ export function useNavigationUser() {
       ],
     );
 
+  const switchBranch = useCallback(
+    async (branchId: string) => {
+      const requestedBranchId = branchId.trim();
+      if (!requestedBranchId || requestedBranchId === userState.activeBranchId || switchingBranch) return;
+
+      setSwitchingBranch(true);
+      setError("");
+      try {
+        const response = await fetch("/api/auth/branch-context", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ branchId: requestedBranchId }),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Unable to switch depot.");
+        await loadCurrentUser();
+        router.refresh();
+        window.location.reload();
+      } catch (switchError) {
+        console.error("Unable to switch active depot:", switchError);
+        setError(switchError instanceof Error ? switchError.message : "Unable to switch depot.");
+      } finally {
+        setSwitchingBranch(false);
+      }
+    },
+    [loadCurrentUser, router, switchingBranch, userState.activeBranchId],
+  );
+
   return {
     userState,
     loading,
     switchingCompany,
+    switchingBranch,
     error,
     reload: loadCurrentUser,
     switchCompany,
+    switchBranch,
   };
 }
