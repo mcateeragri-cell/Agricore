@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 
 import AppShell from "../Components/AppShell";
 import OfflineBootstrap from "../Components/offline/offline-bootstrap";
+import NativeAppBootstrap from "../Components/native/native-app-bootstrap";
 import ThemeProvider from "../Components/theme/theme-provider";
 import ThemeInitialiser from "../Components/theme/theme-initialiser";
 
@@ -83,6 +84,7 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: dark)", color: "#06100c" },
   ],
   colorScheme: "light dark",
+  viewportFit: "cover",
 };
 
 type RootLayoutProps = Readonly<{
@@ -102,6 +104,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ThemeProvider>
+          <NativeAppBootstrap />
           <OfflineBootstrap />
           <AppShell>{children}</AppShell>
         </ThemeProvider>

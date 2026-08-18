@@ -3,5 +3,5 @@
     <string name="app_name">AgriCore</string>
     <string name="title_activity_main">AgriCore</string>
     <string name="package_name">uk.co.mcateeragricultural.agricore</string>
-    <string name="custom_url_scheme">uk.co.mcateeragricultural.agricore</string>
+    <string name="custom_url_scheme">agricore</string>
 </resources>

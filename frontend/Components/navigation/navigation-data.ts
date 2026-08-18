@@ -6,6 +6,7 @@ import type {
 export const primaryNavigationItems: NavigationItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: "dashboard" },
   { name: "Jobs", href: "/jobs", icon: "jobs" },
+  { name: "Enquiries", href: "/enquiries", icon: "communications" },
   { name: "Customers", href: "/customers", icon: "customers" },
   { name: "Machines", href: "/machines", icon: "machines" },
   { name: "Calendar", href: "/calendar", icon: "calendar" },
@@ -110,6 +111,12 @@ export const administrationItems: AdministrationItem[] = [
     href: "/enterprise/transfers",
     icon: "calendar",
     permissions: ["settings.manage", "jobs.assign"],
+  },
+  {
+    name: "Website Integrations",
+    href: "/settings/website-integrations",
+    icon: "communications",
+    permissions: ["settings.manage"],
   },
   {
     name: "Company Settings",

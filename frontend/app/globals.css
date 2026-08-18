@@ -631,3 +631,17 @@ a[href],
     padding-right: .8rem !important;
   }
 }
+
+
+/* Native Capacitor shell safe-area support */
+html.agricore-native-app body {
+  padding-top: env(safe-area-inset-top);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  overscroll-behavior-y: none;
+}
+
+html.agricore-native-app {
+  background: #071d18;
+}

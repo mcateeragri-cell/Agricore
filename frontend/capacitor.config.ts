@@ -1,17 +1,43 @@
-import type { CapacitorConfig } from '@capacitor/cli';
+import type { CapacitorConfig } from "@capacitor/cli";
+
+const serverUrl =
+  process.env.CAPACITOR_SERVER_URL?.trim() ||
+  "https://app.getagricore.com";
+
+const isCleartext = serverUrl.startsWith("http://");
 
 const config: CapacitorConfig = {
-  appId: 'uk.co.mcateeragricultural.agricore',
-  appName: 'AgriCore',
-  webDir: 'out',
+  appId: "com.agricore.app",
+  appName: "AgriCore",
+  webDir: "native-shell",
 
+  // AgriCore currently relies on the deployed Next.js application for
+  // authenticated server routes and APIs. Keep this HTTPS in release builds.
   server: {
-    url: 'http://192.168.1.44:3000',
-    cleartext: true,
+    url: serverUrl,
+    cleartext: isCleartext,
+    errorPath: "native-error.html",
   },
 
+  appendUserAgent: " AgriCoreMobile/1.0",
+
   android: {
-    allowMixedContent: true,
+    allowMixedContent: false,
+    loggingBehavior: "production",
+    backgroundColor: "#071d18",
+  },
+
+  ios: {
+    loggingBehavior: "production",
+    backgroundColor: "#071d18",
+    allowsLinkPreview: false,
+  },
+
+  plugins: {
+    SystemBars: {
+      insetsHandling: "css",
+      style: "DARK",
+    },
   },
 };
 

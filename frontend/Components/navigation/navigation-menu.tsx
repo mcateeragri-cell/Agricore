@@ -88,6 +88,16 @@ export default function NavigationMenu({
     }
 
     return primaryNavigationItems.filter((item) => {
+      if (item.href === "/enquiries") {
+        return (
+          hasFullAccess ||
+          userState.role === "service_manager" ||
+          userState.role === "office" ||
+          userState.permissions.includes("jobs.view_all") ||
+          userState.permissions.includes("jobs.edit") ||
+          userState.permissions.includes("jobs.assign")
+        );
+      }
       const featureByHref: Record<string, string> = {
         "/jobs": "jobs",
         "/customers": "customers",
@@ -97,7 +107,7 @@ export default function NavigationMenu({
       const feature = featureByHref[item.href];
       return !feature || userState.enabledFeatures.includes(feature);
     });
-  }, [canUseAiDiagnostics, canViewServiceProgrammes, fieldRole, userState.enabledFeatures]);
+  }, [canUseAiDiagnostics, canViewServiceProgrammes, fieldRole, hasFullAccess, userState.enabledFeatures, userState.permissions, userState.role]);
 
   const operationsItems = useMemo(
     () =>

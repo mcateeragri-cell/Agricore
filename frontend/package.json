@@ -1,11 +1,20 @@
-{ "name": "frontend",
+{
+  "name": "frontend",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "mobile:sync": "cap sync",
+    "mobile:android:sync": "cap sync android",
+    "mobile:android:open": "cap open android",
+    "mobile:android:aab:win": "cap sync android && cd android && gradlew.bat bundleRelease",
+    "mobile:android:aab": "cap sync android && cd android && ./gradlew bundleRelease",
+    "mobile:ios:setup": "node scripts/setup-ios.mjs",
+    "mobile:ios:sync": "cap sync ios",
+    "mobile:ios:open": "cap open ios"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.2",

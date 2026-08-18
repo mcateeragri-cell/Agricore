@@ -1,4 +1,4 @@
-package uk.co.mcateeragricultural.agricore;
+package com.agricore.app;
 
 import com.getcapacitor.BridgeActivity;
 
