@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { createSupabaseAdmin } from "@/lib/payments/supabase-admin";
 import { cleanWebsiteEmail, cleanWebsiteText } from "@/lib/website-enquiries/normalise";
-import { hashWebsiteIntegrationToken } from "@/lib/website-enquiries/token";
+import { hashWebsiteIntegrationToken, normaliseWebsiteIntegrationToken, websiteIntegrationKeyPrefix } from "@/lib/website-enquiries/token";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,23 +41,38 @@ function bearerToken(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const token = bearerToken(request);
+    const rawToken = bearerToken(request);
+    const token = normaliseWebsiteIntegrationToken(rawToken);
     if (!token) {
       return NextResponse.json({ ok: false, error: "Integration token required." }, { status: 401 });
+    }
+
+    const keyPrefix = websiteIntegrationKeyPrefix(token);
+    if (!keyPrefix) {
+      return NextResponse.json({ ok: false, error: "Invalid integration token." }, { status: 401 });
     }
 
     const admin = createSupabaseAdmin();
     const secretHash = hashWebsiteIntegrationToken(token);
 
-    const { data: integration, error: integrationError } = await admin
+    // First narrow the lookup using the non-secret prefix. This also lets us
+    // distinguish a stale/wrong credential from an unrelated malformed token
+    // without ever logging or returning the secret itself.
+    const { data: candidates, error: integrationError } = await admin
       .from("company_website_integrations")
-      .select("id,company_id,default_branch_id,active")
-      .eq("secret_hash", secretHash)
-      .eq("active", true)
-      .maybeSingle();
+      .select("id,company_id,default_branch_id,active,secret_hash")
+      .eq("key_prefix", keyPrefix)
+      .eq("active", true);
 
     if (integrationError) throw new Error(integrationError.message);
+
+    const integration = (candidates ?? []).find((candidate) => candidate.secret_hash === secretHash) ?? null;
+
     if (!integration) {
+      console.warn("Website integration authentication rejected.", {
+        keyPrefix,
+        activeCandidates: candidates?.length ?? 0,
+      });
       return NextResponse.json({ ok: false, error: "Invalid integration token." }, { status: 401 });
     }
 
