@@ -10,6 +10,13 @@ import {
   priorityFromWebsiteUrgency,
 } from "@/lib/website-enquiries/normalise";
 
+type AcceptBody = {
+  customerChoice?: unknown;
+  customerId?: unknown;
+  machineChoice?: unknown;
+  machineId?: unknown;
+};
+
 function enquiryJobDescription(enquiry: Record<string, any>) {
   const lines = [
     enquiry.enquiry_type ? `Website enquiry: ${enquiry.enquiry_type}` : "Website enquiry",
@@ -24,7 +31,7 @@ function enquiryJobDescription(enquiry: Record<string, any>) {
   return lines.join("\n\n").slice(0, 5000);
 }
 
-export async function POST(_request: Request, context: { params: Promise<{ id: string }> }) {
+export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const auth = await getAuthenticatedUserContext();
     if (!auth) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
@@ -32,6 +39,13 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
 
     const { id } = await context.params;
     const admin = createSupabaseAdmin();
+
+    let body: AcceptBody = {};
+    try {
+      body = (await request.json()) as AcceptBody;
+    } catch {
+      body = {};
+    }
 
     const { data: enquiry, error: enquiryError } = await admin
       .from("website_enquiries")
@@ -78,101 +92,105 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
       return NextResponse.json({ error: "This enquiry belongs to a depot outside your operational access." }, { status: 403 });
     }
 
-    let customerId = cleanWebsiteText(enquiry.customer_id, 80);
-    if (!customerId) {
+    const customerChoice = cleanWebsiteText(body.customerChoice, 20);
+    const selectedCustomerId = cleanWebsiteText(body.customerId, 80);
+
+    if (customerChoice !== "existing" && customerChoice !== "new") {
+      return NextResponse.json(
+        { error: "Review the suggested customer matches and choose an existing customer or create a new one." },
+        { status: 400 },
+      );
+    }
+
+    let customerId = "";
+    if (customerChoice === "existing") {
+      if (!selectedCustomerId) return NextResponse.json({ error: "Choose the existing customer to use." }, { status: 400 });
+
+      const { data: customer, error } = await admin
+        .from("customers")
+        .select("id")
+        .eq("company_id", auth.companyId)
+        .eq("id", selectedCustomerId)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!customer) return NextResponse.json({ error: "The selected customer is not available in this company." }, { status: 404 });
+
+      customerId = customer.id;
+    } else {
       const email = cleanWebsiteEmail(enquiry.email);
       const phone = cleanWebsiteText(enquiry.phone, 80);
-      let customer: { id: string } | null = null;
-
-      if (email) {
-        const { data, error } = await admin
-          .from("customers")
-          .select("id")
-          .eq("company_id", auth.companyId)
-          .ilike("email", email)
-          .limit(1)
-          .maybeSingle();
-        if (error) throw new Error(error.message);
-        customer = data;
-      }
-      if (!customer && phone) {
-        const { data, error } = await admin
-          .from("customers")
-          .select("id")
-          .eq("company_id", auth.companyId)
-          .eq("phone", phone)
-          .limit(1)
-          .maybeSingle();
-        if (error) throw new Error(error.message);
-        customer = data;
-      }
-
-      if (!customer) {
-        const { data, error } = await admin
-          .from("customers")
-          .insert({
-            company_id: auth.companyId,
-            branch_id: branchId,
-            business_name: cleanWebsiteText(enquiry.business_name, 160),
-            contact_name: cleanWebsiteText(enquiry.contact_name, 120),
-            customer_type: "Farm",
-            phone,
-            email,
-            address: cleanWebsiteText(enquiry.location, 300),
-            postcode: "",
-            vat_number: "",
-            notes: `Created from website enquiry ${cleanWebsiteText(enquiry.source_reference, 120) || enquiry.id}.`,
-          })
-          .select("id")
-          .single();
-        if (error) throw new Error(`Unable to create customer: ${error.message}`);
-        customer = data;
-      }
+      const { data: customer, error } = await admin
+        .from("customers")
+        .insert({
+          company_id: auth.companyId,
+          branch_id: branchId,
+          business_name: cleanWebsiteText(enquiry.business_name, 160),
+          contact_name: cleanWebsiteText(enquiry.contact_name, 120),
+          customer_type: "Farm",
+          phone,
+          email,
+          address: cleanWebsiteText(enquiry.location, 300),
+          postcode: "",
+          vat_number: "",
+          notes: `Created from website enquiry ${cleanWebsiteText(enquiry.source_reference, 120) || enquiry.id}.`,
+        })
+        .select("id")
+        .single();
+      if (error) throw new Error(`Unable to create customer: ${error.message}`);
       customerId = customer.id;
     }
 
-    let machineId = cleanWebsiteText(enquiry.machine_id, 80);
+    const machineChoice = cleanWebsiteText(body.machineChoice, 20) || "none";
+    const selectedMachineId = cleanWebsiteText(body.machineId, 80);
     const machineDescription = cleanWebsiteText(enquiry.machine_description, 260);
-    if (!machineId && machineDescription) {
-      const { make, model } = machinePartsFromDescription(machineDescription);
-      if (make && model) {
-        const { data: existingMachine, error: machineLookupError } = await admin
-          .from("machines")
-          .select("id")
-          .eq("company_id", auth.companyId)
-          .eq("customer_id", customerId)
-          .ilike("make", make)
-          .ilike("model", model)
-          .limit(1)
-          .maybeSingle();
-        if (machineLookupError) throw new Error(machineLookupError.message);
+    let machineId = "";
 
-        if (existingMachine) {
-          machineId = existingMachine.id;
-        } else {
-          const { data: createdMachine, error: machineError } = await admin
-            .from("machines")
-            .insert({
-              company_id: auth.companyId,
-              branch_id: branchId,
-              customer_id: customerId,
-              make,
-              model,
-              machine_type: "Other",
-              year: null,
-              registration: "",
-              serial_number: "",
-              hours: null,
-              usage_profile: "medium",
-              estimated_hours_per_week: 25,
-              notes: `Created from website enquiry. Original description: ${machineDescription}`,
-            })
-            .select("id")
-            .single();
-          if (machineError) throw new Error(`Unable to create machine: ${machineError.message}`);
-          machineId = createdMachine.id;
-        }
+    if (machineChoice === "existing") {
+      if (!selectedMachineId) return NextResponse.json({ error: "Choose the existing machine to use." }, { status: 400 });
+
+      const { data: machine, error } = await admin
+        .from("machines")
+        .select("id,customer_id")
+        .eq("company_id", auth.companyId)
+        .eq("id", selectedMachineId)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!machine || machine.customer_id !== customerId) {
+        return NextResponse.json({ error: "The selected machine does not belong to the selected customer." }, { status: 409 });
       }
+      machineId = machine.id;
+    } else if (machineChoice === "new" && machineDescription) {
+      const { make, model } = machinePartsFromDescription(machineDescription);
+      if (!make || !model) {
+        return NextResponse.json(
+          { error: "The website machine description is not detailed enough to create a machine automatically. Choose 'No machine' and add it from the job if needed." },
+          { status: 400 },
+        );
+      }
+
+      const { data: createdMachine, error: machineError } = await admin
+        .from("machines")
+        .insert({
+          company_id: auth.companyId,
+          branch_id: branchId,
+          customer_id: customerId,
+          make,
+          model,
+          machine_type: "Other",
+          year: null,
+          registration: "",
+          serial_number: "",
+          hours: null,
+          usage_profile: "medium",
+          estimated_hours_per_week: 25,
+          notes: `Created from website enquiry. Original description: ${machineDescription}`,
+        })
+        .select("id")
+        .single();
+      if (machineError) throw new Error(`Unable to create machine: ${machineError.message}`);
+      machineId = createdMachine.id;
+    } else if (machineChoice !== "none") {
+      return NextResponse.json({ error: "Choose an existing machine, create a new one, or continue without a machine." }, { status: 400 });
     }
 
     const { data: job, error: jobError } = await admin
