@@ -22,6 +22,7 @@ const PUBLIC_ROUTE_PREFIXES = [
   "/api/payments/revolut/webhook",
   "/api/communications/resend-webhook",
   "/api/communications/trial-reminders",
+  "/api/public/website-enquiries",
 ];
 
 const PUBLIC_EXACT_ROUTES = new Set([
