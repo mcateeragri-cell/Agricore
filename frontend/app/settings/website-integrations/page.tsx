@@ -26,7 +26,7 @@ function related<T>(value: T | T[] | null | undefined): T | null {
 export default function WebsiteIntegrationsPage() {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [name, setName] = useState("McAteer website");
+  const [name, setName] = useState("Company website");
   const [branchId, setBranchId] = useState("");
   const [newToken, setNewToken] = useState("");
   const [loading, setLoading] = useState(true);
@@ -97,7 +97,7 @@ export default function WebsiteIntegrationsPage() {
 
         <Card className="mt-6 p-5">
           <h2 className="text-lg font-bold">Create integration</h2>
-          <p className="mt-1 text-sm text-slate-500">For the McAteer website, choose the depot that new enquiries should land against.</p>
+          <p className="mt-1 text-sm text-slate-500">Choose the depot that new website enquiries should land against.</p>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <label className="text-sm font-semibold">Name<input value={name} onChange={(e) => setName(e.target.value)} className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 font-normal" /></label>
             <label className="text-sm font-semibold">Default depot<select value={branchId} onChange={(e) => setBranchId(e.target.value)} className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 font-normal"><option value="">Company default</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name} ({branch.code})</option>)}</select></label>

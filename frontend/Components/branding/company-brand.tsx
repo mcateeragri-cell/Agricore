@@ -23,9 +23,7 @@ export default function CompanyBrand({
   dark = false,
   className = "",
 }: CompanyBrandProps) {
-  const [companyName, setCompanyName] = useState(
-    "McAteer Agricultural Services"
-  );
+  const [companyName, setCompanyName] = useState("Your company");
   const [contactLine, setContactLine] = useState(
     "Agricultural Engineering & Field Service"
   );
@@ -46,7 +44,7 @@ export default function CompanyBrand({
         if (!active) return;
 
         setCompanyName(
-          data.settings?.company_name || "McAteer Agricultural Services"
+          data.settings?.company_name || "Your company"
         );
         setContactLine(
           data.settings?.contact_line ||

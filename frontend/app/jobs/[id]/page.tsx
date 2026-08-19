@@ -19,7 +19,6 @@ import Card from "../../../Components/ui/Card";
 
 const isAdmin = true;
 
-const DEFAULT_ENGINEER = "James McAteer";
 const DEFAULT_HOURLY_RATE = 65;
 
 type RelatedCustomer = {
@@ -58,6 +57,11 @@ type JobRecord = {
   machines: RelatedMachine | RelatedMachine[] | null;
 };
 
+
+type CompanyEngineerRow = {
+  user_id: string;
+  full_name: string | null;
+};
 
 type LinkedInvoice = {
   id: string;
@@ -150,7 +154,7 @@ const emptyPartForm: PartFormState = {
 
 const emptyLabourForm: LabourFormState = {
   id: null,
-  engineerName: DEFAULT_ENGINEER,
+  engineerName: "",
   labourDate: getTodayDate(),
   startTime: "",
   finishTime: "",
@@ -379,14 +383,15 @@ function JobDetailPageContent() {
   const formatCurrency = (value: number) => money(value);
   const demoMode = isDemoCompany(userState.activeCompany);
   const demoIdentity = getDemoPresentationIdentity(userState.activeCompany);
-  const currentEngineer = demoIdentity?.name ?? DEFAULT_ENGINEER;
-  const engineerOptions = demoMode
-    ? getDemoTeam(userState.activeCompany).map((member) => member.name)
-    : ["James McAteer", "Aiden Coady"];
+  const currentEngineer =
+    demoIdentity?.name ??
+    userState.fullName?.trim() ??
+    "AgriCore User";
   const jobId = params.id;
 
   const [job, setJob] = useState<JobRecord | null>(null);
   const [activeCompanyId, setActiveCompanyId] = useState("");
+  const [companyEngineers, setCompanyEngineers] = useState<string[]>([]);
   const [labourEntries, setLabourEntries] = useState<LabourEntry[]>(
     []
   );
@@ -427,6 +432,19 @@ function JobDetailPageContent() {
   const [deletingPartId, setDeletingPartId] = useState<
     string | null
   >(null);
+
+  const engineerOptions = demoMode
+    ? getDemoTeam(userState.activeCompany).map((member) => member.name)
+    : Array.from(
+        new Set(
+          [
+            currentEngineer,
+            ...companyEngineers,
+            job?.engineer_name ?? "",
+            ...labourEntries.map((entry) => entry.engineer_name),
+          ].filter((name) => typeof name === "string" && name.trim().length > 0),
+        ),
+      );
 
   const runningEntry =
     labourEntries.find(
@@ -520,6 +538,7 @@ const totalPartsProfit =
       partsResult,
       stockResult,
       invoiceResult,
+      engineersResult,
     ] = await Promise.all([
       supabase
         .from("jobs")
@@ -605,6 +624,13 @@ const totalPartsProfit =
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
+
+      supabase
+        .from("company_member_profiles")
+        .select("user_id, full_name")
+        .eq("company_id", activeCompany.id)
+        .eq("is_active", true)
+        .order("full_name", { ascending: true }),
     ]);
 
     if (jobResult.error) {
@@ -647,6 +673,14 @@ const totalPartsProfit =
       setErrorMessage(invoiceResult.error.message);
     }
 
+    if (engineersResult.error) {
+      console.error(
+        "Unable to load company engineers:",
+        engineersResult.error
+      );
+      setErrorMessage(engineersResult.error.message);
+    }
+
       const loadedJob = jobResult.data as JobRecord;
 
       setJob(loadedJob);
@@ -663,6 +697,11 @@ const totalPartsProfit =
         invoiceResult.data
           ? (invoiceResult.data as LinkedInvoice)
           : null
+      );
+      setCompanyEngineers(
+        ((engineersResult.data ?? []) as CompanyEngineerRow[])
+          .map((engineer) => engineer.full_name?.trim() ?? "")
+          .filter((name) => name.length > 0)
       );
 
       setStatus(loadedJob.status ?? "open");
