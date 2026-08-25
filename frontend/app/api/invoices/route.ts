@@ -2,6 +2,7 @@ import { requireApiModule } from "@/lib/modules/api-access";
 import { NextRequest, NextResponse } from "next/server";
 
 import { getOfficeAuth } from "../office/_shared";
+import { normaliseCommercialType, roleCommercialScope, type CommercialType } from "@/lib/commercial/department-scope";
 
 type NewInvoiceItem = {
   itemType?: string;
@@ -29,6 +30,7 @@ type CreateInvoiceBody = {
   paymentTerms?: string;
 
   items?: NewInvoiceItem[];
+  commercialType?: CommercialType;
 };
 
 const VALID_ITEM_TYPES = new Set([
@@ -144,6 +146,9 @@ export async function GET(
   const jobId =
     searchParams.get("jobId")?.trim() ?? "";
 
+  const requestedScope = searchParams.get("scope")?.trim() ?? "";
+  const roleScope = roleCommercialScope(auth.role as never);
+
   let query = auth.supabase
     .from("invoices")
     .select(
@@ -151,6 +156,8 @@ export async function GET(
         id,
         invoice_number,
         job_id,
+        commercial_type,
+        created_by,
         customer_id,
         status,
         issue_date,
@@ -191,6 +198,16 @@ export async function GET(
 
   if (jobId) {
     query = query.eq("job_id", jobId);
+  }
+
+  if (roleScope === "none") {
+    return NextResponse.json({ error: "You do not have access to invoices." }, { status: 403 });
+  }
+  if (roleScope !== "all") {
+    query = query.eq("commercial_type", roleScope);
+    if (auth.role === "salesperson") query = query.eq("created_by", auth.user.id);
+  } else if (requestedScope && ["service","machinery_sale","parts","general"].includes(requestedScope)) {
+    query = query.eq("commercial_type", requestedScope);
   }
 
   const { data, error } = await query;
@@ -419,8 +436,16 @@ export async function POST(
     }
   }
 
+  const roleScope = roleCommercialScope(auth.role as never);
+  const requestedCommercialType = normaliseCommercialType(body.commercialType);
+  const commercialType: CommercialType =
+    roleScope === "service" || roleScope === "machinery_sale" || roleScope === "parts"
+      ? roleScope
+      : requestedCommercialType;
+
   const invoiceInsert = {
     company_id: auth.companyId,
+    commercial_type: commercialType,
     invoice_number: invoiceNumber,
 
     job_id: jobId,

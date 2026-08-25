@@ -71,18 +71,29 @@ const GROUPS = [
     ],
   },
   {
-    label: "Machinery sales",
+    label: "Sales & commercial",
     permissions: [
       ["sales.view", "View machinery sales"],
-      ["sales.manage", "Manage sales pipeline, stock and trade-ins"],
+      ["sales.manage", "Manage machinery sales pipeline, dealer stock and trade-ins"],
+      ["quotes.view", "View departmental quotes"],
+      ["quotes.manage", "Create and manage departmental quotes"],
+      ["invoices.view", "View departmental invoices"],
+      ["invoices.manage", "Create and manage departmental invoices"],
+      ["commercial.view_all", "View all departments' quotes and invoices"],
     ],
   },
   {
-    label: "Calendar and invoicing",
+    label: "Parts",
+    permissions: [
+      ["stock.view", "View stock and parts"],
+      ["stock.manage", "Manage stock, suppliers and purchasing"],
+      ["parts.sales", "Create parts-only quotes and invoices"],
+    ],
+  },
+  {
+    label: "Calendar",
     permissions: [
       ["calendar.manage", "Manage calendar"],
-      ["invoices.view", "View invoices"],
-      ["invoices.manage", "Create and manage invoices"],
     ],
   },
 ] as const;

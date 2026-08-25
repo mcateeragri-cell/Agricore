@@ -8,7 +8,7 @@ import { isCompanyFeatureEnabled } from "@/lib/platform/effective-features";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type SalesAction = "create_opportunity" | "create_stock" | "create_trade_in" | "update_opportunity" | "update_stock" | "update_trade_in";
+type SalesAction = "create_opportunity" | "create_stock" | "create_trade_in" | "update_opportunity" | "update_stock" | "update_trade_in" | "sell_stock";
 
 type Body = { action?: unknown; id?: unknown; values?: unknown };
 
@@ -76,7 +76,7 @@ export async function GET() {
       .order("updated_at", { ascending: false }),
     admin
       .from("sales_stock_machines")
-      .select("id,stock_number,make,model,machine_type,year,registration,serial_number,hours,condition,cost_price,asking_price,status,location,description,created_at,updated_at")
+      .select("id,stock_number,make,model,machine_type,year,registration,serial_number,hours,condition,cost_price,asking_price,status,location,description,sold_customer_id,sold_invoice_id,sold_machine_id,sold_at,sale_price,created_at,updated_at")
       .eq("company_id", auth.companyId)
       .order("updated_at", { ascending: false }),
     admin
@@ -205,6 +205,56 @@ export async function POST(request: NextRequest) {
     }).select("id").single();
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ created: true, id: data.id });
+  }
+
+
+  if (action === "sell_stock") {
+    const customerId = clean(values.customer_id, 100);
+    const salePrice = Math.max(0, numberValue(values.sale_price));
+    const vatRate = Math.max(0, numberValue(values.vat_rate, 20));
+    const saleDate = optionalDate(values.sale_date) || new Date().toISOString().slice(0, 10);
+    const warranty = clean(values.warranty, 500);
+    const salesperson = clean(values.salesperson, 160);
+    const notes = clean(values.notes, 4000);
+    if (!customerId) return NextResponse.json({ error: "Choose the customer buying this machine." }, { status: 400 });
+    if (salePrice <= 0) return NextResponse.json({ error: "Enter a sale price greater than zero." }, { status: 400 });
+
+    const [stockResult, customerResult] = await Promise.all([
+      admin.from("sales_stock_machines").select("*").eq("company_id", auth.companyId).eq("id", id).maybeSingle(),
+      admin.from("customers").select("id,business_name,contact_name,email,phone,address,postcode").eq("company_id", auth.companyId).eq("id", customerId).maybeSingle(),
+    ]);
+    if (stockResult.error || !stockResult.data) return NextResponse.json({ error: stockResult.error?.message || "Stock machine not found." }, { status: 404 });
+    if (customerResult.error || !customerResult.data) return NextResponse.json({ error: customerResult.error?.message || "Customer not found." }, { status: 404 });
+    if (stockResult.data.status === "sold" || stockResult.data.sold_invoice_id) return NextResponse.json({ error: "This stock machine has already been sold." }, { status: 409 });
+
+    const stock = stockResult.data, customer = customerResult.data, now = new Date();
+    const invoiceNumber = `INV-${now.getUTCFullYear()}${String(now.getUTCMonth()+1).padStart(2,"0")}${String(now.getUTCDate()).padStart(2,"0")}-${String(now.getTime()).slice(-6)}${Math.floor(Math.random()*90+10)}`;
+    const subtotal = Math.round(salePrice*100)/100, vatAmount = Math.round(subtotal*(vatRate/100)*100)/100, total = Math.round((subtotal+vatAmount)*100)/100;
+    const due = new Date(`${saleDate}T12:00:00Z`); due.setUTCDate(due.getUTCDate()+7);
+    const desc = [`${stock.make} ${stock.model}`, stock.year?`Year: ${stock.year}`:"", stock.registration?`Registration: ${stock.registration}`:"", stock.serial_number?`Serial: ${stock.serial_number}`:"", stock.hours!=null?`Hours: ${stock.hours}`:"", stock.stock_number?`Stock No: ${stock.stock_number}`:""].filter(Boolean).join(" · ");
+
+    const inv = await admin.from("invoices").insert({
+      company_id: auth.companyId, invoice_number: invoiceNumber, job_id:null, customer_id:customerId, commercial_type:"machinery_sale", status:"draft",
+      issue_date:saleDate, due_date:due.toISOString().slice(0,10), subtotal, vat_rate:vatRate, vat_amount:vatAmount, total, amount_paid:0,
+      customer_name:customer.business_name||customer.contact_name||"Customer", customer_email:customer.email||"", customer_phone:customer.phone||"",
+      billing_address:[customer.address,customer.postcode].filter(Boolean).join(", "),
+      notes:["Machinery sale generated from AgriCore Machinery Sales CRM.",warranty?`Warranty: ${warranty}`:"",salesperson?`Salesperson: ${salesperson}`:"",notes].filter(Boolean).join("\n"),
+      payment_terms:"Payment due within 7 days", created_by:auth.userId
+    }).select("id,invoice_number").single();
+    if (inv.error || !inv.data) return NextResponse.json({ error: inv.error?.message || "Unable to create sales invoice." }, { status:500 });
+
+    const item = await admin.from("invoice_items").insert({company_id:auth.companyId,invoice_id:inv.data.id,item_type:"other",source_id:stock.id,description:`Machinery sale: ${desc}`,quantity:1,unit_price:subtotal,line_total:subtotal,sort_order:0});
+    if (item.error) { await admin.from("invoices").delete().eq("company_id",auth.companyId).eq("id",inv.data.id); return NextResponse.json({error:item.error.message},{status:500}); }
+
+    const machine = await admin.from("machines").insert({company_id:auth.companyId,customer_id:customerId,make:stock.make,model:stock.model,machine_type:stock.machine_type,year:stock.year,registration:stock.registration,serial_number:stock.serial_number,hours:stock.hours,notes:[`[AGRICORE SALE] Purchased from dealer stock on ${saleDate}.`,stock.stock_number?`Stock number: ${stock.stock_number}.`:"",warranty?`Warranty: ${warranty}.`:""].filter(Boolean).join(" ")}).select("id").single();
+    if (machine.error || !machine.data) { await admin.from("invoice_items").delete().eq("company_id",auth.companyId).eq("invoice_id",inv.data.id); await admin.from("invoices").delete().eq("company_id",auth.companyId).eq("id",inv.data.id); return NextResponse.json({error:machine.error?.message||"Unable to create customer machine."},{status:500}); }
+
+    const soldAt = new Date().toISOString();
+    const upd = await admin.from("sales_stock_machines").update({status:"sold",sold_customer_id:customerId,sold_invoice_id:inv.data.id,sold_machine_id:machine.data.id,sold_at:soldAt,sale_price:subtotal,updated_at:soldAt}).eq("company_id",auth.companyId).eq("id",stock.id).neq("status","sold").select("id").maybeSingle();
+    if (upd.error || !upd.data) { await admin.from("machines").delete().eq("company_id",auth.companyId).eq("id",machine.data.id); await admin.from("invoice_items").delete().eq("company_id",auth.companyId).eq("invoice_id",inv.data.id); await admin.from("invoices").delete().eq("company_id",auth.companyId).eq("id",inv.data.id); return NextResponse.json({error:upd.error?.message||"Machine could not be marked sold."},{status:409}); }
+
+    await admin.from("sales_machine_sales").insert({company_id:auth.companyId,stock_machine_id:stock.id,customer_id:customerId,customer_machine_id:machine.data.id,invoice_id:inv.data.id,sale_date:saleDate,sale_price:subtotal,vat_rate:vatRate,vat_amount:vatAmount,total,warranty:warranty||null,salesperson:salesperson||null,notes:notes||null,created_by:auth.userId});
+    return NextResponse.json({sold:true,invoiceId:inv.data.id,invoiceNumber:inv.data.invoice_number,machineId:machine.data.id});
   }
 
   if (!id) return NextResponse.json({ error: "Record id is required." }, { status: 400 });

@@ -92,8 +92,13 @@ async function createContext(supabase: SupabaseClient, companyId: string): Promi
 
 async function addInvoice(ctx: Ctx, data: InvoicePdfData) {
   const { invoice, items, job, machine } = data;
+  const commercialType = invoice.commercial_type || (invoice.job_id ? "service" : "general");
+  const title =
+    commercialType === "machinery_sale" ? "MACHINERY SALES INVOICE" :
+    commercialType === "parts" ? "PARTS INVOICE" :
+    "TAX INVOICE";
   let page = ctx.pdf.addPage([W, H]);
-  header(page, ctx, "TAX INVOICE");
+  header(page, ctx, title);
   let y = H - 125;
 
   page.drawText(invoice.invoice_number, {
@@ -118,31 +123,32 @@ async function addInvoice(ctx: Ctx, data: InvoicePdfData) {
     invoice.customer_email || "",
     invoice.customer_phone || "",
   ]);
-  infoBox(page, ctx, M + boxWidth + gap, y, boxWidth, 118, "JOB & MACHINE", [
-    job?.job_number ? `Job: ${job.job_number}` : "Job: Not linked",
-    `Machine: ${machineName(machine)}`,
-    `Registration: ${machine?.registration || "Not recorded"}`,
-    `Serial: ${machine?.serial_number || "Not recorded"}`,
-    `Hours: ${job?.machine_hours ?? "Not recorded"}`,
-  ]);
+  const detailTitle = commercialType === "machinery_sale" ? "MACHINE SALE" : commercialType === "parts" ? "SALE DETAILS" : "JOB & MACHINE";
+  const detailLines =
+    commercialType === "machinery_sale"
+      ? [`Machine: ${machineName(machine)}`, `Registration: ${machine?.registration || "Not recorded"}`, `Serial: ${machine?.serial_number || "Not recorded"}`, "Department: Machinery Sales"]
+      : commercialType === "parts"
+        ? ["Parts-only customer sale", "No workshop job linked", "Department: Parts"]
+        : [job?.job_number ? `Job: ${job.job_number}` : "Job: Not linked", `Machine: ${machineName(machine)}`, `Registration: ${machine?.registration || "Not recorded"}`, `Serial: ${machine?.serial_number || "Not recorded"}`, `Hours: ${job?.machine_hours ?? "Not recorded"}`];
+  infoBox(page, ctx, M + boxWidth + gap, y, boxWidth, 118, detailTitle, detailLines);
   y -= 138;
 
   const printable = items.filter(
     (item) => item.item_type !== "other" || number(item.line_total) !== 0,
   );
   ({ page, y } = invoiceTable(ctx, page, y, printable, invoice.invoice_number));
-  ({ page, y } = ensure(ctx, page, y, 245, "TAX INVOICE", invoice.invoice_number));
+  ({ page, y } = ensure(ctx, page, y, 245, title, invoice.invoice_number));
 
   y = totals(page, ctx, y, invoice);
 
   if (clean(invoice.payment_terms)) {
-    ({ page, y } = ensure(ctx, page, y, 58, "TAX INVOICE", invoice.invoice_number));
+    ({ page, y } = ensure(ctx, page, y, 58, title, invoice.invoice_number));
     y -= 8;
     y = textBlock(page, ctx, y, "Payment terms", invoice.payment_terms || "");
   }
 
   if (clean(invoice.payment_url)) {
-    ({ page, y } = ensure(ctx, page, y, 125, "TAX INVOICE", invoice.invoice_number));
+    ({ page, y } = ensure(ctx, page, y, 125, title, invoice.invoice_number));
     const qr = await makeQr(ctx.pdf, invoice.payment_url || "");
     y -= 8;
     y = paymentPanel(page, ctx, y, invoice, qr);
@@ -156,7 +162,7 @@ async function addInvoice(ctx: Ctx, data: InvoicePdfData) {
       y,
       "Notes",
       invoice.notes || "",
-      "TAX INVOICE",
+      title,
       invoice.invoice_number,
     ));
   }

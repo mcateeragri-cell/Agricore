@@ -3,6 +3,7 @@
 import Link from "next/link";
 import WorkspaceHeader from "@/Components/ui/WorkspaceHeader";
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useRegionalFormatters } from "@/lib/client/use-regional-formatters";
 
 type InvoiceRow = {
@@ -17,6 +18,7 @@ type InvoiceRow = {
   vat_amount: number | string | null;
   total: number | string | null;
   amount_paid: number | string | null;
+  commercial_type: string | null;
 };
 
 type InvoiceResponse = {
@@ -58,6 +60,8 @@ const PERIOD_LABELS: Record<PeriodKey, string> = {
 };
 
 export default function InvoicesPage() {
+  const searchParams = useSearchParams();
+  const scope = searchParams.get("scope") ?? "";
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -78,7 +82,7 @@ export default function InvoicesPage() {
     setError("");
 
     try {
-      const response = await fetch("/api/invoices", {
+      const response = await fetch(scope ? `/api/invoices?scope=${encodeURIComponent(scope)}` : "/api/invoices", {
         cache: "no-store",
       });
 
@@ -154,7 +158,7 @@ export default function InvoicesPage() {
       <div className="mx-auto max-w-7xl">
         <div className="mb-6">
           <WorkspaceHeader
-            eyebrow="Sales"
+            eyebrow={scope === "machinery_sale" ? "Machinery Sales" : scope === "parts" ? "Parts" : scope === "service" ? "Service" : "Commercial"}
             title="Invoices"
             description="Review what is due, open the invoice you need and keep payment follow-up visible without finance clutter."
             actions={

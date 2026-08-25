@@ -3,14 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
-import {
-  administrationItems,
-  commercialNavigationItems,
-  financeNavigationItems,
-  insightsNavigationItems,
-  operationsNavigationItems,
-  primaryNavigationItems,
-} from "./navigation-data";
+import { administrationItems, financeNavigationItems } from "./navigation-data";
 import SidebarIcon from "./sidebar-icon";
 import type {
   AdministrationItem,
@@ -29,7 +22,7 @@ type NavigationMenuProps = {
   onNavigate?: () => void;
 };
 
-type SectionKey = "operations" | "commercial" | "insights" | "finance" | "administration";
+type SectionKey = "work" | "customers" | "sales" | "parts" | "reporting" | "finance" | "administration";
 
 export default function NavigationMenu({
   pathname,
@@ -69,80 +62,68 @@ export default function NavigationMenu({
     userState.platformRole === "platform_admin" ||
     userState.enabledFeatures.includes("financial_control");
 
-  const primaryItems = useMemo(() => {
-    if (fieldRole) {
-      const items: NavigationItem[] = [
-        { name: "Dashboard", href: "/dashboard", icon: "dashboard" },
-        { name: "My Jobs", href: "/technician", icon: "jobs" },
-      ];
+  const role = userState.role;
+  const isAdmin = hasFullAccess;
+  const isService = role === "service_manager";
+  const isSales = role === "sales_manager" || role === "salesperson";
+  const isParts = role === "parts_manager" || role === "parts_advisor";
+  const isOffice = role === "office";
+  const isReadOnly = role === "read_only";
 
-      if (canViewServiceProgrammes) {
-        items.push({ name: "Service Programmes", href: "/service-programmes", icon: "service" });
-      }
+  const primaryItems = useMemo<NavigationItem[]>(
+    () => [{ name: "Dashboard", href: "/dashboard", icon: "dashboard" }],
+    [],
+  );
 
-      if (canUseAiDiagnostics) {
-        items.push({ name: "AI Diagnostics", href: "/ai-diagnostics", icon: "diagnostics" });
-      }
+  const workItems = useMemo<NavigationItem[]>(() => {
+    if (isSales || isParts) return [];
+    const items: NavigationItem[] = [];
+    if (userState.enabledFeatures.includes("jobs")) items.push({ name: "Jobs", href: "/jobs", icon: "jobs" });
+    if (userState.enabledFeatures.includes("dispatch") && (isAdmin || isService || isOffice)) items.push({ name: "Dispatch", href: "/dispatch", icon: "calendar" });
+    if (userState.enabledFeatures.includes("calendar")) items.push({ name: "Calendar", href: "/calendar", icon: "calendar" });
+    if (userState.enabledFeatures.includes("service_programmes") && canViewServiceProgrammes) items.push({ name: "Service Programmes", href: "/service-programmes", icon: "service" });
+    if (canUseAiDiagnostics) items.push({ name: "AI Diagnostics", href: "/ai-diagnostics", icon: "diagnostics" });
+    if (isAdmin || isService || isOffice) items.push({ name: "Quotes", href: "/quotes?scope=service", icon: "quotes" }, { name: "Invoices", href: "/invoices?scope=service", icon: "invoices" });
+    return items;
+  }, [canUseAiDiagnostics, canViewServiceProgrammes, isAdmin, isOffice, isParts, isSales, isService, userState.enabledFeatures]);
 
-      return items;
+  const customerItems = useMemo<NavigationItem[]>(() => {
+    if (fieldRole) return [];
+    return [
+      { name: "Customers", href: "/customers", icon: "customers" },
+      { name: "Machines", href: "/machines", icon: "machines" },
+    ];
+  }, [fieldRole]);
+
+  const salesItems = useMemo<NavigationItem[]>(() => {
+    if (!(isAdmin || isOffice || isSales) || !canUseMachinerySales) return [];
+    const items: NavigationItem[] = [{ name: "Machinery Sales", href: "/sales", icon: "sales" }];
+    if (isSales) items.push({ name: "Quotes", href: "/quotes?scope=machinery_sale", icon: "quotes" }, { name: "Invoices", href: "/invoices?scope=machinery_sale", icon: "invoices" });
+    return items;
+  }, [canUseMachinerySales, isAdmin, isOffice, isSales]);
+
+  const partsItems = useMemo<NavigationItem[]>(() => {
+    if (!(isAdmin || isOffice || isParts || isService)) return [];
+    const items: NavigationItem[] = [];
+    if (userState.enabledFeatures.includes("stock")) {
+      items.push(
+        { name: "Stock", href: "/stock", icon: "stock" },
+        { name: "Suppliers", href: "/stock/suppliers", icon: "stock" },
+        { name: "Purchase Orders", href: "/stock/purchase-orders", icon: "stock" },
+      );
     }
+    if (isParts) items.push({ name: "Quotes", href: "/quotes?scope=parts", icon: "quotes" }, { name: "Invoices", href: "/invoices?scope=parts", icon: "invoices" });
+    return items;
+  }, [isAdmin, isOffice, isParts, isService, userState.enabledFeatures]);
 
-    return primaryNavigationItems.filter((item) => {
-      if (item.href === "/enquiries") {
-        return (
-          hasFullAccess ||
-          userState.role === "service_manager" ||
-          userState.role === "office" ||
-          userState.permissions.includes("jobs.view_all") ||
-          userState.permissions.includes("jobs.edit") ||
-          userState.permissions.includes("jobs.assign")
-        );
-      }
-      const featureByHref: Record<string, string> = {
-        "/jobs": "jobs",
-        "/customers": "customers",
-        "/machines": "machines",
-        "/calendar": "calendar",
-      };
-      const feature = featureByHref[item.href];
-      return !feature || userState.enabledFeatures.includes(feature);
-    });
-  }, [canUseAiDiagnostics, canViewServiceProgrammes, fieldRole, hasFullAccess, userState.enabledFeatures, userState.permissions, userState.role]);
-
-  const operationsItems = useMemo(
-    () =>
-      operationsNavigationItems.filter((item) => {
-        if (item.href === "/dispatch") return userState.enabledFeatures.includes("dispatch");
-        if (item.href === "/service-programmes") return userState.enabledFeatures.includes("service_programmes") && canViewServiceProgrammes;
-        if (item.href === "/ai-diagnostics") return canUseAiDiagnostics;
-        if (item.href === "/stock") return userState.enabledFeatures.includes("stock") && canViewMoney;
-        return true;
-      }),
-    [canUseAiDiagnostics, canViewMoney, canViewServiceProgrammes, userState.enabledFeatures],
-  );
-
-  const commercialItems = useMemo(
-    () =>
-      commercialNavigationItems.filter((item) => {
-        if (!canViewMoney) return false;
-        if (item.href === "/quotes") return userState.enabledFeatures.includes("quotes");
-        if (item.href === "/invoices") return userState.enabledFeatures.includes("invoices");
-        if (item.href === "/sales") return canUseMachinerySales;
-        return true;
-      }),
-    [canUseMachinerySales, canViewMoney, userState.enabledFeatures],
-  );
-
-  const insightItems = useMemo(
-    () =>
-      insightsNavigationItems.filter((item) => {
-        if (!canViewMoney) return false;
-        if (item.href === "/intelligence") return canUseAtlas;
-        if (item.href === "/reports") return userState.enabledFeatures.includes("reports");
-        return true;
-      }),
-    [canUseAtlas, canViewMoney, userState.enabledFeatures],
-  );
+  const reportingItems = useMemo<NavigationItem[]>(() => {
+    if (fieldRole) return [];
+    const items: NavigationItem[] = [];
+    if (userState.enabledFeatures.includes("reports") && (isAdmin || isOffice || isService || isSales || isParts || isReadOnly)) items.push({ name: "Reports", href: "/reports", icon: "reports" });
+    if (canUseAtlas && (isAdmin || isOffice)) items.push({ name: "Intelligence", href: "/intelligence", icon: "diagnostics" });
+    if (isAdmin || isOffice || isReadOnly) items.unshift({ name: "Quotes", href: "/quotes", icon: "quotes" }, { name: "Invoices", href: "/invoices", icon: "invoices" });
+    return items;
+  }, [canUseAtlas, fieldRole, isAdmin, isOffice, isParts, isReadOnly, isSales, isService, userState.enabledFeatures]);
 
   const visibleAdministrationItems = useMemo(() => {
     const multiBranchEnabled = userState.enabledFeatures.includes("multi_branch");
@@ -166,28 +147,27 @@ export default function NavigationMenu({
     items.some((item) => isLinkActive(pathname, item.href));
 
   const [openSections, setOpenSections] = useState<Record<SectionKey, boolean>>({
-    operations: sectionIsActive(operationsItems),
-    commercial: sectionIsActive(commercialItems),
-    insights: sectionIsActive(insightItems),
+    work: sectionIsActive(workItems),
+    customers: sectionIsActive(customerItems),
+    sales: sectionIsActive(salesItems),
+    parts: sectionIsActive(partsItems),
+    reporting: sectionIsActive(reportingItems),
     finance: pathname.startsWith("/administration/finance"),
-    administration:
-      (pathname.startsWith("/administration") && !pathname.startsWith("/administration/finance")) ||
-      pathname.startsWith("/settings/"),
+    administration: (pathname.startsWith("/administration") && !pathname.startsWith("/administration/finance")) || pathname.startsWith("/settings/"),
   });
 
   useEffect(() => {
     setOpenSections((current) => ({
       ...current,
-      operations: current.operations || sectionIsActive(operationsItems),
-      commercial: current.commercial || sectionIsActive(commercialItems),
-      insights: current.insights || sectionIsActive(insightItems),
+      work: current.work || sectionIsActive(workItems),
+      customers: current.customers || sectionIsActive(customerItems),
+      sales: current.sales || sectionIsActive(salesItems),
+      parts: current.parts || sectionIsActive(partsItems),
+      reporting: current.reporting || sectionIsActive(reportingItems),
       finance: current.finance || pathname.startsWith("/administration/finance"),
-      administration:
-        current.administration ||
-        ((pathname.startsWith("/administration") && !pathname.startsWith("/administration/finance")) ||
-          pathname.startsWith("/settings/")),
+      administration: current.administration || ((pathname.startsWith("/administration") && !pathname.startsWith("/administration/finance")) || pathname.startsWith("/settings/")),
     }));
-  }, [pathname, operationsItems, commercialItems, insightItems]);
+  }, [pathname, workItems, customerItems, salesItems, partsItems, reportingItems]);
 
   function toggleSection(section: SectionKey) {
     setOpenSections((current) => ({ ...current, [section]: !current[section] }));
@@ -224,52 +204,12 @@ export default function NavigationMenu({
       </div>
 
       <div className="mt-5 space-y-2 border-t border-white/10 pt-4">
-        <NavigationSection
-          label="Operations"
-          icon="service"
-          items={operationsItems}
-          pathname={pathname}
-          open={openSections.operations}
-          onToggle={() => toggleSection("operations")}
-          onNavigate={onNavigate}
-        />
-
-        {commercialItems.length > 0 ? (
-          <NavigationSection
-            label="Commercial"
-            icon="quotes"
-            items={commercialItems}
-            pathname={pathname}
-            open={openSections.commercial}
-            onToggle={() => toggleSection("commercial")}
-            onNavigate={onNavigate}
-          />
-        ) : null}
-
-        {insightItems.length > 0 ? (
-          <NavigationSection
-            label="Insights"
-            icon="reports"
-            items={insightItems}
-            pathname={pathname}
-            open={openSections.insights}
-            onToggle={() => toggleSection("insights")}
-            onNavigate={onNavigate}
-          />
-        ) : null}
-
-        {!loading && canUseFinancialControl && canViewMoney ? (
-          <NavigationSection
-            label="Finance"
-            icon="billing"
-            items={financeNavigationItems}
-            pathname={pathname}
-            open={openSections.finance}
-            onToggle={() => toggleSection("finance")}
-            onNavigate={onNavigate}
-            badge="Enterprise"
-          />
-        ) : null}
+        {workItems.length > 0 ? <NavigationSection label="Work" icon="jobs" items={workItems} pathname={pathname} open={openSections.work} onToggle={() => toggleSection("work")} onNavigate={onNavigate} /> : null}
+        {customerItems.length > 0 ? <NavigationSection label="Customers & Machinery" icon="machines" items={customerItems} pathname={pathname} open={openSections.customers} onToggle={() => toggleSection("customers")} onNavigate={onNavigate} /> : null}
+        {salesItems.length > 0 ? <NavigationSection label="Machinery Sales" icon="sales" items={salesItems} pathname={pathname} open={openSections.sales} onToggle={() => toggleSection("sales")} onNavigate={onNavigate} badge="Enterprise" /> : null}
+        {partsItems.length > 0 ? <NavigationSection label="Parts & Purchasing" icon="stock" items={partsItems} pathname={pathname} open={openSections.parts} onToggle={() => toggleSection("parts")} onNavigate={onNavigate} /> : null}
+        {reportingItems.length > 0 ? <NavigationSection label="Commercial & Reporting" icon="reports" items={reportingItems} pathname={pathname} open={openSections.reporting} onToggle={() => toggleSection("reporting")} onNavigate={onNavigate} /> : null}
+        {!loading && canUseFinancialControl && canViewMoney ? <NavigationSection label="Finance" icon="billing" items={financeNavigationItems} pathname={pathname} open={openSections.finance} onToggle={() => toggleSection("finance")} onNavigate={onNavigate} badge="Enterprise" /> : null}
       </div>
 
       {!loading &&

@@ -11,6 +11,9 @@ type AppRole =
   | "service_manager"
   | "office"
   | "parts_manager"
+  | "parts_advisor"
+  | "sales_manager"
+  | "salesperson"
   | "technician"
   | "apprentice"
   | "read_only";
@@ -97,6 +100,9 @@ const ROLE_OPTIONS: Array<{
   { value: "service_manager", label: "Service Manager" },
   { value: "office", label: "Office" },
   { value: "parts_manager", label: "Parts Manager" },
+  { value: "parts_advisor", label: "Parts Advisor" },
+  { value: "sales_manager", label: "Sales Manager" },
+  { value: "salesperson", label: "Salesperson" },
   { value: "technician", label: "Technician" },
   { value: "apprentice", label: "Apprentice" },
   { value: "read_only", label: "Read Only" },

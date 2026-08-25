@@ -21,6 +21,9 @@ export type CompanyRole =
   | "service_manager"
   | "office"
   | "parts_manager"
+  | "parts_advisor"
+  | "sales_manager"
+  | "salesperson"
   | "technician"
   | "apprentice"
   | "read_only";
@@ -91,6 +94,9 @@ function asCompanyRole(value: unknown): CompanyRole | "" {
     value === "service_manager" ||
     value === "office" ||
     value === "parts_manager" ||
+    value === "parts_advisor" ||
+    value === "sales_manager" ||
+    value === "salesperson" ||
     value === "technician" ||
     value === "apprentice" ||
     value === "read_only"

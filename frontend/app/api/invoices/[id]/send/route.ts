@@ -35,8 +35,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const body = await request.json() as Body;
     const recipient = typeof body.recipient === "string" ? body.recipient.trim().toLowerCase() : "";
     if (!recipient.includes("@")) return NextResponse.json({ error: "Enter a valid recipient email address." }, { status: 400 });
-    const documentType = body.documentType === "invoice_only" ? "invoice_only" : "combined";
-    const data = await loadInvoicePdfData({ invoiceId: id, auth, includePhotos: documentType === "combined" });
+    let documentType = body.documentType === "invoice_only" ? "invoice_only" : "combined";
+    const previewData = await loadInvoicePdfData({ invoiceId: id, auth, includePhotos: false });
+    const isServiceInvoice = (previewData.invoice.commercial_type || (previewData.invoice.job_id ? "service" : "general")) === "service";
+    if (!isServiceInvoice) documentType = "invoice_only";
+    const data = isServiceInvoice && documentType === "combined"
+      ? await loadInvoicePdfData({ invoiceId: id, auth, includePhotos: true })
+      : previewData;
     const settings = await loadCompanySettings(auth.supabase, auth.companyId);
     const bytes = documentType === "invoice_only"
       ? await renderInvoiceOnlyPdf(data, auth.supabase, auth.companyId)

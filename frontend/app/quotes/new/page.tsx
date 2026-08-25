@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import Card from "@/Components/ui/Card";
 import QuoteCustomer from "@/Components/quotes/QuoteCustomer";
@@ -52,6 +52,8 @@ function addDays(date: string, days: number) {
 }
 
 export default function NewQuotePage() {
+  const searchParams = useSearchParams();
+  const requestedScope = searchParams.get("scope") ?? "";
   const router = useRouter();
 
   const initialDate = getToday();
@@ -252,8 +254,19 @@ export default function NewQuotePage() {
         throw new Error(userError.message);
       }
 
+      const contextResponse = await fetch("/api/auth/company-context", { cache: "no-store" });
+      const context = await contextResponse.json();
+      const role = context?.user?.role as string | undefined;
+      const commercialType =
+        role === "service_manager" ? "service" :
+        ["sales_manager","salesperson"].includes(role || "") ? "machinery_sale" :
+        ["parts_manager","parts_advisor"].includes(role || "") ? "parts" :
+        ["service","machinery_sale","parts","general"].includes(requestedScope) ? requestedScope :
+        "service";
+
       const quotePayload = {
         company_id: activeCompanyId,
+        commercial_type: commercialType,
         customer_id: customerId,
         machine_id: machineId || null,
         status,

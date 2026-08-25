@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { BadgePoundSterling, ClipboardCheck, Handshake, Plus, RefreshCcw, Tractor, TrendingUp } from "lucide-react";
+import { BadgePoundSterling, ClipboardCheck, FileText, Handshake, Plus, RefreshCcw, Tractor, TrendingUp } from "lucide-react";
 
 import { useRegionalFormatters } from "@/lib/client/use-regional-formatters";
 
@@ -37,6 +37,11 @@ type StockMachine = {
   status: string;
   location: string | null;
   description: string | null;
+  sold_customer_id: string | null;
+  sold_invoice_id: string | null;
+  sold_machine_id: string | null;
+  sold_at: string | null;
+  sale_price: number | string | null;
 };
 
 type TradeIn = {
@@ -88,6 +93,7 @@ export default function MachinerySalesClient({ networkEnabled = false }: { netwo
   const [error, setError] = useState("");
   const [tab, setTab] = useState<"pipeline" | "stock" | "tradeins">("pipeline");
   const [modal, setModal] = useState<null | "opportunity" | "stock" | "tradein">(null);
+  const [sellMachine, setSellMachine] = useState<StockMachine | null>(null);
   const [saving, setSaving] = useState(false);
 
   async function load() {
@@ -157,6 +163,17 @@ export default function MachinerySalesClient({ networkEnabled = false }: { netwo
     }
   }
 
+  async function completeSale(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); if (!sellMachine) return;
+    const values = Object.fromEntries(new FormData(event.currentTarget).entries());
+    setSaving(true); setError("");
+    try {
+      const response = await fetch("/api/sales",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"sell_stock",id:sellMachine.id,values})});
+      const body=await response.json(); if(!response.ok) throw new Error(body.error||"Unable to complete machinery sale.");
+      setSellMachine(null); await load(); if(body.invoiceId) window.location.href=`/invoices/${body.invoiceId}`;
+    } catch(caught){setError(caught instanceof Error?caught.message:"Unable to complete machinery sale.");} finally{setSaving(false);}
+  }
+
   return (
     <main className="min-h-dvh bg-slate-50 px-4 py-6 sm:px-6 lg:px-8 dark:bg-slate-950">
       <div className="mx-auto max-w-[1600px]">
@@ -217,7 +234,8 @@ export default function MachinerySalesClient({ networkEnabled = false }: { netwo
               <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-wide text-emerald-700">{row.stock_number || "Stock machine"}</p><h2 className="mt-1 text-xl font-black text-slate-950 dark:text-white">{row.make} {row.model}</h2></div><span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-black text-slate-600 dark:bg-slate-800 dark:text-slate-300">{titleCase(row.status)}</span></div>
               <p className="mt-2 text-sm font-semibold text-slate-500">{[row.year, row.registration, row.hours ? `${row.hours} hrs` : null, titleCase(row.condition)].filter(Boolean).join(" · ")}</p>
               <div className="mt-4 grid grid-cols-2 gap-3 rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/70"><div><p className="text-xs font-black uppercase text-slate-500">Cost</p><p className="mt-1 font-black text-slate-900 dark:text-white">{money(asNumber(row.cost_price))}</p></div><div><p className="text-xs font-black uppercase text-slate-500">Asking</p><p className="mt-1 font-black text-emerald-800 dark:text-emerald-300">{money(asNumber(row.asking_price))}</p></div></div>
-              {data.canManage ? <select value={row.status} onChange={(event) => void update("update_stock", row.id, { status: event.target.value })} className="mt-4 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-black dark:border-slate-700 dark:bg-slate-950">{stockStatuses.map((value) => <option key={value} value={value}>{titleCase(value)}</option>)}</select> : null}
+              {row.status === "sold" && row.sold_invoice_id ? <div className="mt-4 flex flex-wrap gap-2"><Link href={`/invoices/${row.sold_invoice_id}`} className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-black text-emerald-800"><FileText className="h-4 w-4" /> View sales invoice</Link></div> : null}
+              {data.canManage && row.status !== "sold" ? <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_auto]"><select value={row.status} onChange={(event) => void update("update_stock", row.id, { status: event.target.value })} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-black dark:border-slate-700 dark:bg-slate-950">{stockStatuses.filter((value) => value !== "sold").map((value) => <option key={value} value={value}>{titleCase(value)}</option>)}</select><button type="button" onClick={() => setSellMachine(row)} className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-black text-white">Sell machine</button></div> : null}
             </article>)}
             {(data.stock ?? []).length === 0 ? <Empty icon={<Tractor className="h-7 w-7" />} text="No stock machines yet." /> : null}
           </section>
@@ -238,6 +256,7 @@ export default function MachinerySalesClient({ networkEnabled = false }: { netwo
       </div>
 
       {modal ? <SalesModal type={modal} customers={data.customers ?? []} machines={data.machines ?? []} opportunities={data.opportunities ?? []} saving={saving} onClose={() => setModal(null)} onSubmit={create} /> : null}
+      {sellMachine ? <SellMachineModal machine={sellMachine} customers={data.customers ?? []} saving={saving} onClose={() => setSellMachine(null)} onSubmit={completeSale} /> : null}
     </main>
   );
 }
@@ -248,6 +267,24 @@ function Metric({ icon, label, value }: { icon: React.ReactNode; label: string; 
 
 function Empty({ icon, text }: { icon: React.ReactNode; text: string }) {
   return <div className="flex min-h-56 flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-400 dark:border-slate-700 dark:bg-slate-900">{icon}<p className="mt-3 text-sm font-black">{text}</p></div>;
+}
+
+function SellMachineModal({ machine, customers, saving, onClose, onSubmit }: { machine: StockMachine; customers: Customer[]; saving: boolean; onClose: () => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void }) {
+  const today=new Date().toISOString().slice(0,10);
+  return <div className="fixed inset-0 z-[96] flex items-start justify-center overflow-y-auto bg-slate-950/55 px-3 py-10 backdrop-blur-sm" onMouseDown={onClose}><form onSubmit={onSubmit} onMouseDown={e=>e.stopPropagation()} className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900">
+    <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[0.15em] text-emerald-700">Complete machinery sale</p><h2 className="mt-1 text-2xl font-black text-slate-950 dark:text-white">{machine.make} {machine.model}</h2></div><button type="button" onClick={onClose} className="rounded-xl border px-3 py-2 text-sm font-black">Close</button></div>
+    <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-950">Creates a draft sales invoice, marks dealer stock sold and creates the machine under the buyer for future jobs and service history.</div>
+    <div className="mt-6 grid gap-4 sm:grid-cols-2">
+      <label className="sm:col-span-2 text-sm font-black text-slate-700 dark:text-slate-200">Buyer *<select name="customer_id" required className="mt-2 w-full rounded-xl border px-3 py-3 dark:bg-slate-950"><option value="">Choose customer</option>{customers.map(c=><option key={c.id} value={c.id}>{c.business_name||c.contact_name||"Unnamed customer"}</option>)}</select></label>
+      <Field name="sale_price" label="Sale price ex VAT *" type="number" step="0.01" min="0.01" defaultValue={String(machine.asking_price??"")} required />
+      <Field name="vat_rate" label="VAT rate %" type="number" step="0.01" min="0" defaultValue="20" required />
+      <Field name="sale_date" label="Sale date *" type="date" defaultValue={today} required />
+      <Field name="salesperson" label="Salesperson" />
+      <Field name="warranty" label="Warranty" placeholder="e.g. 3 months / 250 hours" />
+      <Area name="notes" label="Sale notes" />
+    </div>
+    <div className="mt-6 flex justify-end gap-3"><button type="button" onClick={onClose} className="rounded-xl border px-5 py-3 text-sm font-black">Cancel</button><button disabled={saving} className="rounded-xl bg-emerald-700 px-5 py-3 text-sm font-black text-white disabled:opacity-50">{saving?"Completing sale…":"Create invoice & complete sale"}</button></div>
+  </form></div>;
 }
 
 function SalesModal({ type, customers, machines, opportunities, saving, onClose, onSubmit }: { type: "opportunity" | "stock" | "tradein"; customers: Customer[]; machines: CustomerMachine[]; opportunities: Opportunity[]; saving: boolean; onClose: () => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void }) {

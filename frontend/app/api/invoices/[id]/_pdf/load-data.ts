@@ -88,6 +88,26 @@ export async function loadInvoicePdfData({
     }
   }
 
+  if (!machine && invoice.commercial_type === "machinery_sale") {
+    const saleResult = await auth.supabase
+      .from("sales_machine_sales")
+      .select("customer_machine_id")
+      .eq("company_id", auth.companyId)
+      .eq("invoice_id", invoiceId)
+      .maybeSingle();
+    if (saleResult.error) throw new Error(saleResult.error.message);
+    if (saleResult.data?.customer_machine_id) {
+      const machineResult = await auth.supabase
+        .from("machines")
+        .select("id, make, model, registration, serial_number")
+        .eq("company_id", auth.companyId)
+        .eq("id", saleResult.data.customer_machine_id)
+        .maybeSingle();
+      if (machineResult.error) throw new Error(machineResult.error.message);
+      machine = machineResult.data as MachineRow | null;
+    }
+  }
+
   return {
     invoice,
     items: (itemResult.data ?? []) as InvoiceItemRow[],

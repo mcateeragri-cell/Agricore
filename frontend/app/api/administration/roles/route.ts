@@ -42,6 +42,12 @@ const PERMISSIONS = [
   "invoices.manage",
   "sales.view",
   "sales.manage",
+  "quotes.view",
+  "quotes.manage",
+  "stock.view",
+  "stock.manage",
+  "parts.sales",
+  "commercial.view_all",
 ] as const;
 
 type PermissionKey = (typeof PERMISSIONS)[number];

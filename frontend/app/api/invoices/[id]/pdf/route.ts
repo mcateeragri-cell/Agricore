@@ -2,7 +2,7 @@ import { requireApiModule } from "@/lib/modules/api-access";
 import { NextRequest, NextResponse } from "next/server";
 import { getOfficeAuth } from "../../../office/_shared";
 import { InvoiceNotFoundError, loadInvoicePdfData } from "../_pdf/load-data";
-import { renderCombinedPdf } from "../_pdf/render";
+import { renderCombinedPdf, renderInvoiceOnlyPdf } from "../_pdf/render";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -25,8 +25,16 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       includePhotos: true,
     });
 
-    const pdfBytes = await renderCombinedPdf(data, auth.supabase, auth.companyId);
-    return pdfResponse(pdfBytes, `${safe(data.invoice.invoice_number)}-service-report-and-invoice.pdf`);
+    const isService = (data.invoice.commercial_type || (data.invoice.job_id ? "service" : "general")) === "service";
+    const pdfBytes = isService
+      ? await renderCombinedPdf(data, auth.supabase, auth.companyId)
+      : await renderInvoiceOnlyPdf(data, auth.supabase, auth.companyId);
+    return pdfResponse(
+      pdfBytes,
+      isService
+        ? `${safe(data.invoice.invoice_number)}-service-report-and-invoice.pdf`
+        : `${safe(data.invoice.invoice_number)}-invoice.pdf`,
+    );
   } catch (error) {
     return errorResponse(error, "Unable to generate service report and invoice PDF.");
   }

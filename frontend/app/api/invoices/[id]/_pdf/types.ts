@@ -1,6 +1,7 @@
 export type InvoiceRow = {
   id: string;
   job_id: string | null;
+  commercial_type: "service" | "machinery_sale" | "parts" | "general" | null;
   invoice_number: string;
   status: string;
 

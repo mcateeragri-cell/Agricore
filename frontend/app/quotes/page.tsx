@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getActiveCompany } from "@/lib/client/active-company";
 import Card from "../../Components/ui/Card";
@@ -32,6 +33,8 @@ type Quote = {
   total: number;
   revision_number: number;
   created_at: string;
+  commercial_type: string | null;
+  created_by: string | null;
 };
 
 type Customer = {
@@ -144,6 +147,8 @@ function formatStatus(status: QuoteStatus) {
 }
 
 export default function QuotesPage() {
+  const searchParams = useSearchParams();
+  const requestedScope = searchParams.get("scope") ?? "";
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [customers, setCustomers] = useState<Record<string, Customer>>({});
   const [machines, setMachines] = useState<Record<string, Machine>>({});
@@ -161,11 +166,16 @@ export default function QuotesPage() {
 
     try {
       const activeCompany = await getActiveCompany();
+      const contextResponse = await fetch("/api/auth/company-context", { cache: "no-store" });
+      const context = await contextResponse.json();
+      const role = context?.user?.role as string | undefined;
+      const roleScope = role === "service_manager" ? "service" : ["sales_manager","salesperson"].includes(role || "") ? "machinery_sale" : ["parts_manager","parts_advisor"].includes(role || "") ? "parts" : "";
+      const effectiveScope = roleScope || requestedScope;
 
     const { data: quoteData, error: quoteError } = await supabase
       .from("quotes")
       .select(
-        "id, quote_number, customer_id, machine_id, converted_job_id, status, title, quote_date, expiry_date, subtotal, vat_total, total, revision_number, created_at",
+        "id, quote_number, customer_id, machine_id, converted_job_id, status, title, quote_date, expiry_date, subtotal, vat_total, total, revision_number, created_at, commercial_type, created_by",
       )
       .eq("company_id", activeCompany.id)
       .order("created_at", { ascending: false });
@@ -288,12 +298,12 @@ export default function QuotesPage() {
   return (
     <div className="w-full space-y-6 px-5 py-5 lg:px-7">
       <WorkspaceHeader
-        eyebrow="Sales & estimating"
+        eyebrow={requestedScope === "machinery_sale" ? "Machinery Sales" : requestedScope === "parts" ? "Parts" : requestedScope === "service" ? "Service" : "Sales & estimating"}
         title="Quotes"
         description="Create, track and convert customer quotations without making the estimating workflow feel heavy."
         actions={
           <Link
-            href="/quotes/new"
+            href={requestedScope ? `/quotes/new?scope=${requestedScope}` : "/quotes/new"}
             className="inline-flex items-center justify-center rounded-xl bg-[var(--brand-strong)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--brand-hover)]"
           >
             + New quote

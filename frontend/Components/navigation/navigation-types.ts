@@ -9,6 +9,9 @@ export type UserRole =
   | "service_manager"
   | "office"
   | "parts_manager"
+  | "parts_advisor"
+  | "sales_manager"
+  | "salesperson"
   | "technician"
   | "apprentice"
   | "read_only";
@@ -113,6 +116,9 @@ export const roleLabels: Record<UserRole, string> = {
   service_manager: "Service Manager",
   office: "Office",
   parts_manager: "Parts Manager",
+  parts_advisor: "Parts Advisor",
+  sales_manager: "Sales Manager",
+  salesperson: "Salesperson",
   technician: "Technician",
   apprentice: "Apprentice",
   read_only: "Read Only",
@@ -159,6 +165,9 @@ export function isUserRole(value: unknown): value is UserRole {
     value === "service_manager" ||
     value === "office" ||
     value === "parts_manager" ||
+    value === "parts_advisor" ||
+    value === "sales_manager" ||
+    value === "salesperson" ||
     value === "technician" ||
     value === "apprentice" ||
     value === "read_only"
