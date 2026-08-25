@@ -8,7 +8,7 @@ export async function GET(){
   if (moduleGate) return moduleGate;
 
  try{
-  const auth=await requirePermission([]); const admin=createSupabaseAdmin();
+  const auth=await requirePermission(["stock.view","stock.manage"], { mode: "any" }); const admin=createSupabaseAdmin();
   const ids=auth.activeBranchId?[auth.activeBranchId]:auth.accessibleOperationalBranchIds;
   const [{data:items,error:ie},{data:balances,error:be},{data:branches,error:bre}]=await Promise.all([
    admin.from("stock_items").select("id,part_number,description,category,manufacturer,supplier,unit_cost,unit_price,barcode,notes,active,created_at,updated_at").eq("company_id",auth.companyId).eq("active",true).order("description"),

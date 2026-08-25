@@ -15,7 +15,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   if (moduleGate) return moduleGate;
 
   try {
-    const user = await requirePermission(["invoices.manage"]);
+    const user = await requirePermission(["quotes.manage"]);
     const { id } = await context.params;
     const body = await request.json() as { recipient?: unknown; message?: unknown };
     const admin = createSupabaseAdmin();
