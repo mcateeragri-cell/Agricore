@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { getActiveCompany } from "@/lib/client/active-company";
 import Card from "../../../Components/ui/Card";
 import { useRegionalFormatters } from "@/lib/client/use-regional-formatters";
+import PartsQuoteReservationActions from "../../../Components/quotes/PartsQuoteReservationActions";
 
 type QuoteStatus =
   | "draft"
@@ -23,6 +24,7 @@ type Quote = {
   customer_id: string;
   machine_id: string | null;
   converted_job_id: string | null;
+  commercial_type: "service" | "machinery_sale" | "parts" | "general" | null;
   status: QuoteStatus;
   title: string | null;
   description: string | null;
@@ -187,6 +189,7 @@ export default function QuoteDetailPage() {
   const [savingStatus, setSavingStatus] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [partsReserved, setPartsReserved] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const { money, date, taxName } = useRegionalFormatters();
   const formatCurrency = money;
@@ -271,6 +274,24 @@ export default function QuoteDetailPage() {
       setItems((itemsResult.data ?? []) as QuoteItem[]);
       setCustomer((customerResult.data ?? null) as Customer | null);
       setMachine((machineResult.data ?? null) as Machine | null);
+
+      if (loadedQuote.commercial_type === "parts") {
+        const { data: reservationRows, error: reservationError } = await supabase
+          .from("parts_quote_reservations")
+          .select("id")
+          .eq("company_id", companyId)
+          .eq("quote_id", quoteId)
+          .eq("status", "reserved")
+          .limit(1);
+
+        if (reservationError) {
+          console.error("Unable to load Parts quote reservation:", reservationError);
+        }
+
+        setPartsReserved((reservationRows ?? []).length > 0);
+      } else {
+        setPartsReserved(false);
+      }
     } catch (error) {
       console.error("Unable to load quote:", error);
       setQuote(null);
@@ -468,7 +489,7 @@ export default function QuoteDetailPage() {
             </button>
           )}
 
-          {["draft", "sent", "viewed"].includes(quote.status) && (
+          {quote.commercial_type !== "parts" && ["draft", "sent", "viewed"].includes(quote.status) && (
             <>
               <button
                 type="button"
@@ -753,6 +774,23 @@ export default function QuoteDetailPage() {
               )}
             </dl>
           </Card>
+
+          {quote.commercial_type === "parts" && !["converted", "accepted", "rejected", "expired"].includes(quote.status) && (
+            <Card>
+              <h2 className="text-lg font-bold text-slate-900">Parts reservation</h2>
+              <p className="mt-2 text-sm text-slate-600">
+                {partsReserved
+                  ? "Stock is reserved against this quote and is unavailable to Counter Sale."
+                  : "Reserve the stock at the active depot before accepting this Parts quote."}
+              </p>
+              <div className="mt-4">
+                <PartsQuoteReservationActions
+                  quoteId={quote.id}
+                  reserved={partsReserved}
+                />
+              </div>
+            </Card>
+          )}
 
           <Card>
             <h2 className="text-lg font-bold text-slate-900">Actions</h2>
