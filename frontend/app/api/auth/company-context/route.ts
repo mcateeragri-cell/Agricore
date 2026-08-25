@@ -125,7 +125,7 @@ async function loadAvailableCompanies(
 export async function GET() {
   try {
     const context =
-      await getAuthenticatedUserContext();
+      await getAuthenticatedUserContext({ skipMfaEnforcement: true });
 
     if (!context) {
       return NextResponse.json(
@@ -176,6 +176,9 @@ export async function GET() {
             context.platformRole,
           permissions:
             context.permissions,
+          assuranceLevel: context.assuranceLevel,
+          mfaEnrolled: context.mfaEnrolled,
+          mfaRequired: context.mfaRequired,
         },
         activeCompany: {
           id: context.companyId,
@@ -225,7 +228,7 @@ export async function POST(
 ) {
   try {
     const context =
-      await getAuthenticatedUserContext();
+      await getAuthenticatedUserContext({ skipMfaEnforcement: true });
 
     if (!context) {
       return NextResponse.json(

@@ -17,6 +17,7 @@ import SubscriptionAccessGate from "./platform/subscription-access-gate";
 import ModuleAccessGate from "./platform/module-access-gate";
 import CompanyThemeProvider from "./theme/company-theme-provider";
 import GlobalSearch from "./search/global-search";
+import MfaAccessGate from "./security/mfa-access-gate";
 import {
   useNavigationUser,
 } from "./navigation/use-navigation-user";
@@ -43,6 +44,7 @@ const shelllessRoutes = [
   "/founding-customers",
   "/industries",
   "/login",
+  "/mfa",
   "/machinery-service-management-software",
   "/mobile-job-sheets-agricultural-engineers",
   "/onboarding",
@@ -138,15 +140,13 @@ export default function AppShell({
         )}
 
         <main className="w-full min-w-0 overflow-x-clip pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0">
-          <SubscriptionAccessGate>
-            <ModuleAccessGate
-              pathname={pathname}
-              enabledFeatures={userState.enabledFeatures}
-              loading={loading}
-            >
-              {children}
-            </ModuleAccessGate>
-          </SubscriptionAccessGate>
+          <MfaAccessGate loading={loading}>
+            <SubscriptionAccessGate>
+              <ModuleAccessGate pathname={pathname} enabledFeatures={userState.enabledFeatures} loading={loading}>
+                {children}
+              </ModuleAccessGate>
+            </SubscriptionAccessGate>
+          </MfaAccessGate>
         </main>
       </div>
 

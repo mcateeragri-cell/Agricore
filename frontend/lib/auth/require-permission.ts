@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { loadBranchAccessContext } from "@/lib/branches/access";
+import { isPlatformMfaRequired, loadCompanyMfaRequiredRoles } from "@/lib/auth/mfa-policy";
 
 const ACTIVE_COMPANY_COOKIE = "agricore_company_id";
 const ACTIVE_BRANCH_COOKIE = "agricore_branch_id";
@@ -45,6 +46,9 @@ export type AuthenticatedUserContext = {
   financeScope: "none" | "branch" | "selected" | "company";
   accessibleOperationalBranchIds: string[];
   accessibleFinanceBranchIds: string[];
+  assuranceLevel: "aal1" | "aal2" | null;
+  mfaEnrolled: boolean;
+  mfaRequired: boolean;
 };
 
 type RequirePermissionOptions = {
@@ -104,7 +108,7 @@ function asCompanyRole(value: unknown): CompanyRole | "" {
     : "";
 }
 
-export async function getAuthenticatedUserContext(): Promise<
+export async function getAuthenticatedUserContext(options: { skipMfaEnforcement?: boolean } = {}): Promise<
   AuthenticatedUserContext | null
 > {
   const supabase = await createSupabaseServerClient();
@@ -308,6 +312,26 @@ export async function getAuthenticatedUserContext(): Promise<
     }
   }
 
+  const [aalResult, factorsResult, requiredRoles] = await Promise.all([
+    supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
+    supabase.auth.mfa.listFactors(),
+    loadCompanyMfaRequiredRoles(supabase, companyId),
+  ]);
+
+  if (aalResult.error) console.error("Unable to determine MFA assurance level:", aalResult.error);
+  if (factorsResult.error) console.error("Unable to load MFA factors:", factorsResult.error);
+
+  const normaliseAssuranceLevel = (value: unknown): "aal1" | "aal2" | null => {
+    if (value === "aal1") return "aal1";
+    if (value === "aal2") return "aal2";
+    return null;
+  };
+  const assuranceLevel = normaliseAssuranceLevel(aalResult.data?.currentLevel);
+  const mfaEnrolled = (factorsResult.data?.totp ?? []).some((factor) => factor.status === "verified");
+  const mfaRequired = isPlatformMfaRequired(platformRole) || (role ? requiredRoles.includes(role) : false) || mfaEnrolled;
+
+  if (mfaRequired && assuranceLevel !== "aal2" && !options.skipMfaEnforcement) return null;
+
   const metadataName = cleanText(
     user.user_metadata?.full_name,
   );
@@ -349,6 +373,9 @@ export async function getAuthenticatedUserContext(): Promise<
     financeScope: branchContext.financeScope,
     accessibleOperationalBranchIds: branchContext.accessibleOperationalBranchIds,
     accessibleFinanceBranchIds: branchContext.accessibleFinanceBranchIds,
+    assuranceLevel,
+    mfaEnrolled,
+    mfaRequired,
   };
 }
 
@@ -359,10 +386,14 @@ export async function requireAuthenticatedUser(
   > = {},
 ): Promise<AuthenticatedUserContext> {
   const userContext =
-    await getAuthenticatedUserContext();
+    await getAuthenticatedUserContext({ skipMfaEnforcement: true });
 
   if (!userContext) {
     redirect(options.loginPath ?? "/login");
+  }
+
+  if (userContext.mfaRequired && userContext.assuranceLevel !== "aal2") {
+    redirect(userContext.mfaEnrolled ? "/mfa" : "/mfa/setup");
   }
 
   return userContext;

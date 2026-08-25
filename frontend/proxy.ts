@@ -45,6 +45,7 @@ const APP_PATH_PREFIXES = [
 
 const APP_AUTH_PREFIXES = [
   "/login",
+  "/mfa",
   "/signup",
   "/forgot-password",
   "/reset-password",

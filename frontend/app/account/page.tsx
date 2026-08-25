@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 
 import { roleLabels, platformRoleLabels, type PlatformRole, type UserRole } from "@/Components/navigation/navigation-types";
@@ -67,6 +68,8 @@ export default function AccountPage() {
         <p className="text-sm font-bold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-400">Personal settings</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">My account</h1>
         <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">Manage your personal profile and password. Company access is managed separately by your company administrator.</p>
+
+        <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-900 dark:bg-emerald-950/30"><p className="font-black">Account security</p><p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Manage authenticator 6-digit verification and company MFA policy.</p><Link href="/account/security" className="mt-3 inline-flex rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-black text-white">Security & two-factor authentication</Link></div>
 
         <form onSubmit={save} className="mt-8 space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           {loading ? (
