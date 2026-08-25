@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const items = [
+  ["Counter Sale", "/stock/counter-sale"],
   ["Inventory", "/stock"],
   ["Movements", "/stock/movements"],
   ["Depot Transfers", "/stock/transfers"],
@@ -17,7 +18,7 @@ export default function StockProNav() {
   return (
     <div className="flex flex-wrap gap-2">
       {items.map(([label, href]) => {
-        const active = href === "/stock" ? pathname === href || pathname.startsWith("/stock/") && !pathname.startsWith("/stock/movements") && !pathname.startsWith("/stock/transfers") && !pathname.startsWith("/stock/purchase-orders") && !pathname.startsWith("/stock/suppliers") : pathname.startsWith(href);
+        const active = href === "/stock" ? pathname === href || pathname.startsWith("/stock/") && !pathname.startsWith("/stock/movements") && !pathname.startsWith("/stock/transfers") && !pathname.startsWith("/stock/purchase-orders") && !pathname.startsWith("/stock/suppliers") && !pathname.startsWith("/stock/counter-sale") : pathname.startsWith(href);
         return (
           <Link
             key={href}

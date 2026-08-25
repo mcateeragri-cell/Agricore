@@ -107,6 +107,7 @@ export default function NavigationMenu({
     const items: NavigationItem[] = [];
     if (userState.enabledFeatures.includes("stock")) {
       items.push(
+        { name: "Counter Sale", href: "/stock/counter-sale", icon: "invoices" },
         { name: "Stock", href: "/stock", icon: "stock" },
         { name: "Suppliers", href: "/stock/suppliers", icon: "stock" },
         { name: "Purchase Orders", href: "/stock/purchase-orders", icon: "stock" },

@@ -19,6 +19,7 @@ export type InvoiceRow = {
   revolut_order_id: string | null;
   revolut_order_state: string | null;
   paid_at: string | null;
+  payment_method: string | null;
 
   issue_date: string | null;
   due_date: string | null;
