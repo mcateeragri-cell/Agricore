@@ -53,6 +53,7 @@ const EMPTY: CompanySettings = {
   timezone: "Europe/London",
   tax_name: "VAT",
   default_tax_rate: 20,
+  default_hourly_rate: 65,
   date_format: "DD/MM/YYYY",
   time_format: "24",
   week_start: "monday",
@@ -676,6 +677,29 @@ export default function CompanyBrandingForm() {
                 spellCheck={false}
               />
             </div>
+          </label>
+        </div>
+      </section>
+
+      <section className={sectionClass}>
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+            Workshop defaults
+          </p>
+          <h2 className="mt-1 text-xl font-bold text-slate-900 dark:text-slate-100">
+            Labour charging
+          </h2>
+          <p className="mt-2 text-sm font-medium leading-6 text-slate-600 dark:text-slate-400">
+            Set the default hourly labour rate used when new labour entries and timers are created.
+            Individual authorised entries can still be adjusted where required.
+          </p>
+        </div>
+        <div className="mt-5 max-w-sm">
+          <label>
+            <span className={labelClass}>Default hourly labour rate</span>
+            <input type="number" min="0" step="0.01" className={inputClass}
+              value={settings.default_hourly_rate}
+              onChange={(event) => update("default_hourly_rate", Math.max(0, Number(event.target.value || 0)))} />
           </label>
         </div>
       </section>

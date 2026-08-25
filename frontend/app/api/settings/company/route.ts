@@ -177,6 +177,7 @@ export async function PUT(
   }
 
   const paymentTerms = Number(body.payment_terms_days);
+  const defaultHourlyRate = Number(body.default_hourly_rate);
 
   const update = {
     company_name: companyName,
@@ -227,6 +228,10 @@ export async function PUT(
       Number.isFinite(paymentTerms) && paymentTerms >= 0
         ? Math.round(paymentTerms)
         : 7,
+    default_hourly_rate:
+      Number.isFinite(defaultHourlyRate) && defaultHourlyRate >= 0
+        ? Math.round(defaultHourlyRate * 100) / 100
+        : 0,
     bank_name: cleanText(body.bank_name),
     account_name: cleanText(body.account_name),
     sort_code: cleanText(body.sort_code),

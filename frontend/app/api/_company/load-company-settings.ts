@@ -35,6 +35,7 @@ const FALLBACK_SETTINGS: CompanySettings = {
   timezone: "Europe/London",
   tax_name: "VAT",
   default_tax_rate: 20,
+  default_hourly_rate: 65,
   date_format: "DD/MM/YYYY",
   time_format: "24",
   week_start: "monday",

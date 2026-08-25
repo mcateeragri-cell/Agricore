@@ -17,10 +17,6 @@ import { useNavigationUser } from "@/Components/navigation/use-navigation-user";
 import { getDemoPresentationIdentity, getDemoTeam, isDemoCompany } from "@/lib/demo-presentation";
 import Card from "../../../Components/ui/Card";
 
-const isAdmin = true;
-
-const DEFAULT_HOURLY_RATE = 65;
-
 type RelatedCustomer = {
   id: string;
   contact_name: string | null;
@@ -159,7 +155,7 @@ const emptyLabourForm: LabourFormState = {
   startTime: "",
   finishTime: "",
   breakMinutes: "0",
-  hourlyRate: String(DEFAULT_HOURLY_RATE),
+  hourlyRate: "0",
   description: "",
   adjustmentReason: "",
 };
@@ -380,6 +376,12 @@ function JobDetailPageContent() {
   const router = useRouter();
   const { userState } = useNavigationUser();
   const { money, currencySymbol } = useRegionalFormatters();
+  const isAdmin =
+    userState.platformRole === "super_admin" ||
+    userState.platformRole === "platform_admin" ||
+    ["company_admin", "administrator", "service_manager", "office"].includes(
+      userState.role ?? "",
+    );
   const formatCurrency = (value: number) => money(value);
   const demoMode = isDemoCompany(userState.activeCompany);
   const demoIdentity = getDemoPresentationIdentity(userState.activeCompany);
@@ -391,6 +393,7 @@ function JobDetailPageContent() {
 
   const [job, setJob] = useState<JobRecord | null>(null);
   const [activeCompanyId, setActiveCompanyId] = useState("");
+  const [defaultHourlyRate, setDefaultHourlyRate] = useState(0);
   const [companyEngineers, setCompanyEngineers] = useState<string[]>([]);
   const [labourEntries, setLabourEntries] = useState<LabourEntry[]>(
     []
@@ -539,6 +542,7 @@ const totalPartsProfit =
       stockResult,
       invoiceResult,
       engineersResult,
+      companySettingsResult,
     ] = await Promise.all([
       supabase
         .from("jobs")
@@ -631,6 +635,12 @@ const totalPartsProfit =
         .eq("company_id", activeCompany.id)
         .eq("is_active", true)
         .order("full_name", { ascending: true }),
+
+      supabase
+        .from("company_settings")
+        .select("default_hourly_rate")
+        .eq("company_id", activeCompany.id)
+        .maybeSingle(),
     ]);
 
     if (jobResult.error) {
@@ -679,6 +689,22 @@ const totalPartsProfit =
         engineersResult.error
       );
       setErrorMessage(engineersResult.error.message);
+    }
+
+    if (companySettingsResult.error) {
+      console.error(
+        "Unable to load company labour rate:",
+        companySettingsResult.error,
+      );
+    } else {
+      const configuredRate = Number(
+        companySettingsResult.data?.default_hourly_rate ?? 0,
+      );
+      setDefaultHourlyRate(
+        Number.isFinite(configuredRate) && configuredRate >= 0
+          ? configuredRate
+          : 0,
+      );
     }
 
       const loadedJob = jobResult.data as JobRecord;
@@ -873,7 +899,7 @@ const totalPartsProfit =
         finish_time: null,
         break_minutes: 0,
         hours: null,
-        hourly_rate: DEFAULT_HOURLY_RATE,
+        hourly_rate: defaultHourlyRate,
         description: null,
         entry_status: "running",
       });
@@ -947,6 +973,7 @@ const totalPartsProfit =
       labourDate: getTodayDate(),
       startTime: getCurrentTime(),
       finishTime: "",
+      hourlyRate: String(defaultHourlyRate),
     });
 
     setErrorMessage("");
@@ -979,7 +1006,7 @@ const totalPartsProfit =
     if (savingLabour) return;
 
     setLabourModalOpen(false);
-    setLabourForm({ ...emptyLabourForm, engineerName: currentEngineer });
+    setLabourForm({ ...emptyLabourForm, engineerName: currentEngineer, hourlyRate: String(defaultHourlyRate) });
   }
 
   async function handleSaveLabour(
@@ -992,7 +1019,7 @@ const totalPartsProfit =
     );
 
     const hourlyRate = Number(
-      labourForm.hourlyRate || DEFAULT_HOURLY_RATE
+      labourForm.hourlyRate || defaultHourlyRate
     );
 
     if (!labourForm.engineerName.trim()) {
@@ -1091,7 +1118,7 @@ const totalPartsProfit =
       hours,
       hourly_rate: isAdmin
         ? hourlyRate
-        : DEFAULT_HOURLY_RATE,
+        : defaultHourlyRate,
       description:
         labourForm.description.trim() || null,
       entry_status: "completed",
@@ -1140,7 +1167,7 @@ const totalPartsProfit =
 
     setSavingLabour(false);
     setLabourModalOpen(false);
-    setLabourForm({ ...emptyLabourForm, engineerName: currentEngineer });
+    setLabourForm({ ...emptyLabourForm, engineerName: currentEngineer, hourlyRate: String(defaultHourlyRate) });
 
     await loadPageData(false);
   }

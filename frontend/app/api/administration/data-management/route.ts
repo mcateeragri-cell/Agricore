@@ -126,13 +126,17 @@ async function listRows(admin: SupabaseClient, companyId: string, entity: Entity
         .limit(1000),
     );
     const ids = rows.map((r) => r.id);
-    const [jobs, quotes] = await Promise.all([
+    const [jobs, quotes, machineSales] = await Promise.all([
       ids.length ? safeRows<any>(admin.from("jobs").select("id,machine_id").eq("company_id", companyId).in("machine_id", ids)) : [],
       ids.length ? safeRows<any>(admin.from("quotes").select("id,machine_id").eq("company_id", companyId).in("machine_id", ids)) : [],
+      ids.length ? safeRows<any>(admin.from("sales_machine_sales").select("id,customer_machine_id").eq("company_id", companyId).in("customer_machine_id", ids)) : [],
     ]);
     const refs = new Map<string, number>();
     for (const item of [...jobs, ...quotes]) {
       if (item.machine_id) refs.set(item.machine_id, (refs.get(item.machine_id) ?? 0) + 1);
+    }
+    for (const sale of machineSales) {
+      if (sale.customer_machine_id) refs.set(sale.customer_machine_id, (refs.get(sale.customer_machine_id) ?? 0) + 1);
     }
     return rows.map((r) => ({
       id: r.id,
@@ -140,7 +144,7 @@ async function listRows(admin: SupabaseClient, companyId: string, entity: Entity
       secondary: [r.registration, r.serial_number].filter(Boolean).join(" · "),
       status: refs.has(r.id) ? "In use" : "Unused",
       protected: refs.has(r.id),
-      protectionReason: refs.has(r.id) ? `${refs.get(r.id)} linked job/quote record(s)` : undefined,
+      protectionReason: refs.has(r.id) ? `${refs.get(r.id)} linked job/quote/machinery-sale record(s)` : undefined,
     }));
   }
 
@@ -166,15 +170,28 @@ async function listRows(admin: SupabaseClient, companyId: string, entity: Entity
     const rows = await safeRows<any>(
       admin.from("invoices").select("id,invoice_number,status,total,customer_name,created_at").eq("company_id", companyId).order("created_at", { ascending: false }).limit(1000),
     );
+    const ids = rows.map((r) => r.id);
+    const [machineSales, counterSales] = await Promise.all([
+      ids.length ? safeRows<any>(admin.from("sales_machine_sales").select("invoice_id").eq("company_id", companyId).in("invoice_id", ids)) : [],
+      ids.length ? safeRows<any>(admin.from("parts_counter_sales").select("invoice_id").eq("company_id", companyId).in("invoice_id", ids)) : [],
+    ]);
+    const transactional = new Set<string>([
+      ...machineSales.map((r) => r.invoice_id).filter(Boolean),
+      ...counterSales.map((r) => r.invoice_id).filter(Boolean),
+    ]);
     return rows.map((r) => {
       const status = String(r.status || "draft").toLowerCase();
+      const transactionProtected = transactional.has(r.id);
+      const protectedRecord = status !== "draft" || transactionProtected;
       return {
         id: r.id,
         primary: r.invoice_number || "Unnumbered invoice",
         secondary: [r.customer_name, r.total != null ? `Total ${r.total}` : ""].filter(Boolean).join(" · "),
         status,
-        protected: status !== "draft",
-        protectionReason: status !== "draft" ? "Only draft invoices can be permanently deleted" : undefined,
+        protected: protectedRecord,
+        protectionReason: transactionProtected
+          ? "Linked to a completed machinery/parts sale transaction"
+          : status !== "draft" ? "Only unlinked draft invoices can be permanently deleted" : undefined,
       };
     });
   }
@@ -246,18 +263,20 @@ async function deleteCustomers(admin: SupabaseClient, companyId: string, ids: st
 }
 
 async function deleteMachines(admin: SupabaseClient, companyId: string, ids: string[]) {
-  const [jobs, quotes] = await Promise.all([
+  const [jobs, quotes, machineSales] = await Promise.all([
     safeRows<any>(admin.from("jobs").select("machine_id").eq("company_id", companyId).in("machine_id", ids)),
     safeRows<any>(admin.from("quotes").select("machine_id").eq("company_id", companyId).in("machine_id", ids)),
+    safeRows<any>(admin.from("sales_machine_sales").select("customer_machine_id").eq("company_id", companyId).in("customer_machine_id", ids)),
   ]);
   const protectedIds = new Set<string>();
   [...jobs, ...quotes].forEach((r) => r.machine_id && protectedIds.add(r.machine_id));
+  machineSales.forEach((r) => r.customer_machine_id && protectedIds.add(r.customer_machine_id));
   const deletable = ids.filter((id) => !protectedIds.has(id));
   if (deletable.length) {
     const { error } = await admin.from("machines").delete().eq("company_id", companyId).in("id", deletable);
     if (error) throw new Error(error.message);
   }
-  return { processed: deletable.length, failed: ids.filter((id) => protectedIds.has(id)).map((id) => ({ id, error: "Machine has linked job or quote history and was not deleted." })) };
+  return { processed: deletable.length, failed: ids.filter((id) => protectedIds.has(id)).map((id) => ({ id, error: "Machine has linked job, quote or machinery-sale history and was not deleted." })) };
 }
 
 export async function GET(request: NextRequest) {
@@ -321,15 +340,24 @@ export async function POST(request: NextRequest) {
 
     if (entity === "invoices" && action === "delete") {
       const rows = await safeRows<any>(admin.from("invoices").select("id,status").eq("company_id", auth.companyId).in("id", ids));
-      const allowed = rows.filter((r) => String(r.status || "draft").toLowerCase() === "draft").map((r) => r.id);
+      const draftIds = rows.filter((r) => String(r.status || "draft").toLowerCase() === "draft").map((r) => r.id);
+      const [machineSales, counterSales] = await Promise.all([
+        draftIds.length ? safeRows<any>(admin.from("sales_machine_sales").select("invoice_id").eq("company_id", auth.companyId).in("invoice_id", draftIds)) : [],
+        draftIds.length ? safeRows<any>(admin.from("parts_counter_sales").select("invoice_id").eq("company_id", auth.companyId).in("invoice_id", draftIds)) : [],
+      ]);
+      const linked = new Set<string>([
+        ...machineSales.map((r) => r.invoice_id).filter(Boolean),
+        ...counterSales.map((r) => r.invoice_id).filter(Boolean),
+      ]);
+      const allowed = draftIds.filter((id) => !linked.has(id));
       const denied = ids.filter((id) => !allowed.includes(id));
       if (allowed.length) {
-        await admin.from("invoice_items").delete().in("invoice_id", allowed);
+        await admin.from("invoice_items").delete().eq("company_id", auth.companyId).in("invoice_id", allowed);
         const { error } = await admin.from("invoices").delete().eq("company_id", auth.companyId).in("id", allowed);
         if (error) throw new Error(error.message);
       }
       await writeBulkPlatformAudit(admin, { companyId: auth.companyId, userId: auth.userId, entityType: "invoice", action: "delete", ids: allowed, processed: allowed.length });
-      return NextResponse.json({ processed: allowed.length, failed: denied.map((id) => ({ id, error: "Only draft invoices can be deleted." })) });
+      return NextResponse.json({ processed: allowed.length, failed: denied.map((id) => ({ id, error: linked.has(id) ? "Invoice is linked to a machinery or parts sale transaction and was not deleted." : "Only unlinked draft invoices can be deleted." })) });
     }
 
     if (entity === "stock" && action === "archive") {

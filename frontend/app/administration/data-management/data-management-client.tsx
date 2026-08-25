@@ -28,9 +28,9 @@ type ActionResponse = {
 const tabs: Array<{ key: EntityKey; label: string; help: string }> = [
   { key: "jobs", label: "Jobs", help: "Bulk-remove test jobs. Jobs linked to invoices are protected." },
   { key: "customers", label: "Customers", help: "Customers with linked business records are protected from permanent deletion." },
-  { key: "machines", label: "Machines", help: "Machines with job, quote or invoice history are protected." },
+  { key: "machines", label: "Machines", help: "Machines with job, quote or machinery-sale history are protected." },
   { key: "quotes", label: "Quotes", help: "Only draft, rejected or cancelled quotations can be permanently deleted." },
-  { key: "invoices", label: "Invoices", help: "Only draft invoices can be deleted. Sent or paid accounting records remain protected." },
+  { key: "invoices", label: "Invoices", help: "Only unlinked draft invoices can be deleted. Sales-linked, sent or paid accounting records remain protected." },
   { key: "stock", label: "Stock", help: "Archive stock items instead of deleting movement history." },
   { key: "users", label: "Users", help: "Deactivate a company membership without deleting the person's authentication account." },
 ];

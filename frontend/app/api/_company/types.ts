@@ -32,6 +32,7 @@ export type CompanySettings = {
   timezone: string;
   tax_name: string;
   default_tax_rate: number;
+  default_hourly_rate: number;
   date_format: string;
   time_format: "12" | "24";
   week_start: "monday" | "sunday" | "saturday";
