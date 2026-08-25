@@ -103,18 +103,23 @@ export default function NavigationMenu({
   }, [canUseMachinerySales, isAdmin, isOffice, isSales]);
 
   const partsItems = useMemo<NavigationItem[]>(() => {
-    // Parts commercial/purchasing navigation belongs to Parts, Office and Admin roles.
-    // Service staff use parts from within their assigned jobs rather than the counter-sales workflow.
-    if (!(isAdmin || isOffice || isParts)) return [];
+    // Dealership principle:
+    // Service management can see operational stock availability for workshop planning,
+    // but Parts commercial, purchasing and stock-control actions remain with Parts/Office/Admin.
+    if (!(isAdmin || isOffice || isParts || isService)) return [];
 
     const items: NavigationItem[] = [];
     if (userState.enabledFeatures.includes("stock")) {
-      items.push(
-        { name: "Counter Sale", href: "/stock/counter-sale", icon: "invoices" },
-        { name: "Stock", href: "/stock", icon: "stock" },
-        { name: "Suppliers", href: "/stock/suppliers", icon: "stock" },
-        { name: "Purchase Orders", href: "/stock/purchase-orders", icon: "stock" },
-      );
+      if (isService) {
+        items.push({ name: "Stock", href: "/stock", icon: "stock" });
+      } else {
+        items.push(
+          { name: "Counter Sale", href: "/stock/counter-sale", icon: "invoices" },
+          { name: "Stock", href: "/stock", icon: "stock" },
+          { name: "Suppliers", href: "/stock/suppliers", icon: "stock" },
+          { name: "Purchase Orders", href: "/stock/purchase-orders", icon: "stock" },
+        );
+      }
     }
 
     if (isParts) {
@@ -125,7 +130,7 @@ export default function NavigationMenu({
     }
 
     return items;
-  }, [isAdmin, isOffice, isParts, userState.enabledFeatures]);
+  }, [isAdmin, isOffice, isParts, isService, userState.enabledFeatures]);
 
   const reportingItems = useMemo<NavigationItem[]>(() => {
     if (fieldRole) return [];
