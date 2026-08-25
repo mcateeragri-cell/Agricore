@@ -33,6 +33,8 @@ type StockMachine = {
   hours: number | string | null;
   condition: string;
   cost_price: number | string | null;
+  preparation_cost: number | string | null;
+  other_costs: number | string | null;
   asking_price: number | string | null;
   status: string;
   location: string | null;
@@ -42,6 +44,9 @@ type StockMachine = {
   sold_machine_id: string | null;
   sold_at: string | null;
   sale_price: number | string | null;
+  warranty_expiry?: string | null;
+  first_service_due_date?: string | null;
+  first_service_due_hours?: number | string | null;
 };
 
 type TradeIn = {
@@ -57,6 +62,8 @@ type TradeIn = {
   valuation: number | string | null;
   allowance: number | string | null;
   status: string;
+  stock_machine_id?: string | null;
+  received_at?: string | null;
   notes: string | null;
 };
 
@@ -120,8 +127,10 @@ export default function MachinerySalesClient({ networkEnabled = false }: { netwo
     const open = (data.opportunities ?? []).filter((item) => !["won", "lost"].includes(item.stage));
     const pipelineValue = open.reduce((total, item) => total + asNumber(item.estimated_value), 0);
     const weighted = open.reduce((total, item) => total + asNumber(item.estimated_value) * (asNumber(item.probability) / 100), 0);
-    const stockValue = (data.stock ?? []).filter((item) => item.status !== "sold").reduce((total, item) => total + asNumber(item.asking_price), 0);
-    return { open: open.length, pipelineValue, weighted, stockValue };
+    const activeStock = (data.stock ?? []).filter((item) => item.status !== "sold");
+    const stockValue = activeStock.reduce((total, item) => total + asNumber(item.asking_price), 0);
+    const potentialMargin = activeStock.reduce((total,item)=>total + Math.max(0,asNumber(item.asking_price)-asNumber(item.cost_price)-asNumber(item.preparation_cost)-asNumber(item.other_costs)),0);
+    return { open: open.length, pipelineValue, weighted, stockValue, potentialMargin };
   }, [data.opportunities, data.stock]);
 
   async function update(action: string, id: string, values: Record<string, unknown>) {
@@ -192,11 +201,12 @@ export default function MachinerySalesClient({ networkEnabled = false }: { netwo
 
         {error ? <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">{error}</div> : null}
 
-        <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           <Metric icon={<Handshake className="h-5 w-5" />} label="Open opportunities" value={String(metrics.open)} />
           <Metric icon={<TrendingUp className="h-5 w-5" />} label="Pipeline value" value={money(metrics.pipelineValue)} />
           <Metric icon={<BadgePoundSterling className="h-5 w-5" />} label="Weighted pipeline" value={money(metrics.weighted)} />
           <Metric icon={<Tractor className="h-5 w-5" />} label="Stock asking value" value={money(metrics.stockValue)} />
+          <Metric icon={<BadgePoundSterling className="h-5 w-5" />} label="Potential stock margin" value={money(metrics.potentialMargin)} />
         </section>
 
         <nav className="mt-6 flex gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-2 dark:border-slate-800 dark:bg-slate-900">
@@ -248,6 +258,8 @@ export default function MachinerySalesClient({ networkEnabled = false }: { netwo
               <p className="mt-2 text-sm font-semibold text-slate-500">{[row.year, row.registration, row.hours ? `${row.hours} hrs` : null].filter(Boolean).join(" · ")}</p>
               {row.opportunity_id ? <p className="mt-3 text-xs font-bold text-slate-500">Linked to: {opportunityById.get(row.opportunity_id)?.title || "Sales opportunity"}</p> : null}
               <div className="mt-4 grid grid-cols-2 gap-3 rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/70"><div><p className="text-xs font-black uppercase text-slate-500">Valuation</p><p className="mt-1 font-black text-slate-900 dark:text-white">{money(asNumber(row.valuation))}</p></div><div><p className="text-xs font-black uppercase text-slate-500">Allowance</p><p className="mt-1 font-black text-emerald-800 dark:text-emerald-300">{money(asNumber(row.allowance))}</p></div></div>
+              {data.canManage && !row.stock_machine_id && row.status !== "declined" ? <button type="button" onClick={() => { const asking = window.prompt("Initial asking price for dealer stock (ex VAT)", String(asNumber(row.allowance || row.valuation))); if (asking !== null) void update("receive_trade_in", row.id, { asking_price: asking }); }} className="mt-4 w-full rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-black text-white">Receive into dealer stock</button> : null}
+              {row.stock_machine_id ? <p className="mt-4 rounded-xl bg-emerald-50 px-3 py-2 text-sm font-black text-emerald-800">Received into dealer stock</p> : null}
               {data.canManage ? <select value={row.status} onChange={(event) => void update("update_trade_in", row.id, { status: event.target.value })} className="mt-4 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-black dark:border-slate-700 dark:bg-slate-950">{tradeStatuses.map((value) => <option key={value} value={value}>{titleCase(value)}</option>)}</select> : null}
             </article>)}
             {(data.tradeIns ?? []).length === 0 ? <Empty icon={<ClipboardCheck className="h-7 w-7" />} text="No trade-ins being appraised." /> : null}
@@ -315,7 +327,9 @@ function SalesModal({ type, customers, machines, opportunities, saving, onClose,
         <label className="text-sm font-black text-slate-700 dark:text-slate-200">Condition<select name="condition" defaultValue="used" className="mt-2 w-full rounded-xl border px-3 py-3 dark:bg-slate-950"><option value="new">New</option><option value="used">Used</option><option value="ex-demo">Ex-demo</option></select></label>
         <label className="text-sm font-black text-slate-700 dark:text-slate-200">Status<select name="status" defaultValue="available" className="mt-2 w-full rounded-xl border px-3 py-3 dark:bg-slate-950">{stockStatuses.map((value) => <option key={value} value={value}>{titleCase(value)}</option>)}</select></label>
         <Field name="cost_price" label="Cost price" type="number" step="0.01" />
-        <Field name="asking_price" label="Asking price" type="number" step="0.01" />
+        <Field name="preparation_cost" label="Preparation / PDI cost" type="number" step="0.01" defaultValue="0" />
+          <Field name="other_costs" label="Other stock costs" type="number" step="0.01" defaultValue="0" />
+          <Field name="asking_price" label="Asking price" type="number" step="0.01" />
         <Field name="location" label="Location" />
         <Area name="description" label="Description" />
       </> : null}
