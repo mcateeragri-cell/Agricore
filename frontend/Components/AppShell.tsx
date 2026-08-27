@@ -47,6 +47,7 @@ const shelllessRoutes = [
   "/mfa",
   "/machinery-service-management-software",
   "/mobile-job-sheets-agricultural-engineers",
+  "/network",
   "/onboarding",
   "/pricing",
   "/privacy",
