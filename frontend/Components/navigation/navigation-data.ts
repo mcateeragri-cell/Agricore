@@ -119,6 +119,12 @@ export const administrationItems: AdministrationItem[] = [
     permissions: ["settings.manage"],
   },
   {
+    name: "AgriCore Network",
+    href: "/network-provider",
+    icon: "sales",
+    permissions: ["settings.manage"],
+  },
+  {
     name: "Company Settings",
     href: "/settings/company",
     icon: "settings",

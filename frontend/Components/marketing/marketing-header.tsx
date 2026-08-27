@@ -7,6 +7,7 @@ const links = [
   { href: "/agricultural-engineering-software", label: "Solutions" },
   { href: "/industries", label: "Industries" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/network", label: "Find a Mechanic" },
   { href: "/roi-calculator", label: "ROI calculator" },
   { href: "/demo", label: "Demo" },
 ];

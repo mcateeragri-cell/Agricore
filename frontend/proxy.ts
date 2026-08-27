@@ -16,6 +16,7 @@ const MARKETING_PATH_PREFIXES = [
   "/cookies",
   "/privacy",
   "/terms",
+  "/network",
 ];
 
 const APP_PATH_PREFIXES = [
@@ -41,6 +42,7 @@ const APP_PATH_PREFIXES = [
   "/unauthorised",
   "/help",
   "/account",
+  "/network-provider",
 ];
 
 const APP_AUTH_PREFIXES = [
