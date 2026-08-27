@@ -12,6 +12,7 @@ const PUBLIC_ROUTE_PREFIXES = [
   "/cookies",
   "/privacy",
   "/terms",
+  "/network",
   "/login",
   "/signup",
   "/forgot-password",
@@ -23,6 +24,7 @@ const PUBLIC_ROUTE_PREFIXES = [
   "/api/communications/resend-webhook",
   "/api/communications/trial-reminders",
   "/api/public/website-enquiries",
+  "/api/public/network",
 ];
 
 const PUBLIC_EXACT_ROUTES = new Set([

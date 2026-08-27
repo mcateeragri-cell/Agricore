@@ -42,7 +42,6 @@ const APP_PATH_PREFIXES = [
   "/unauthorised",
   "/help",
   "/account",
-  "/network-provider",
 ];
 
 const APP_AUTH_PREFIXES = [
