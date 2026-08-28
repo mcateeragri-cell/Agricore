@@ -970,6 +970,7 @@ const totalPartsProfit =
   function openAddLabourModal() {
     setLabourForm({
       ...emptyLabourForm,
+      engineerName: currentEngineer || engineerOptions[0] || "",
       labourDate: getTodayDate(),
       startTime: getCurrentTime(),
       finishTime: "",
