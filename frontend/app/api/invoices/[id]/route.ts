@@ -437,6 +437,12 @@ export async function PATCH(
       );
     }
 
+    const financialAmountChanged =
+      safeMoney(existingInvoice.subtotal) !== subtotal ||
+      safeMoney(existingInvoice.vat_rate) !== vatRate ||
+      safeMoney(existingInvoice.vat_amount) !== vatAmount ||
+      safeMoney(existingInvoice.total) !== total;
+
     const updateData: Record<
       string,
       unknown
@@ -447,6 +453,18 @@ export async function PATCH(
       total,
       updated_at: new Date().toISOString(),
     };
+
+    // A Revolut order is created for a fixed monetary amount. If the invoice
+    // changes after that order was created, keeping the old checkout URL would
+    // allow the UI/customer to open a payment request for the wrong total.
+    // Detach it from the invoice; the next "Create payment link" action will
+    // create a fresh order for the recalculated outstanding balance.
+    if (financialAmountChanged && existingInvoice.revolut_order_id) {
+      updateData.payment_url = null;
+      updateData.payment_provider = null;
+      updateData.revolut_order_id = null;
+      updateData.revolut_order_state = null;
+    }
 
     if (body.status !== undefined) {
       if (!VALID_STATUSES.has(body.status)) {

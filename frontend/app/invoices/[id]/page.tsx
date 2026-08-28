@@ -1132,8 +1132,13 @@ export default function InvoiceDetailPage() {
     }
   }
 
-  function previewInvoice() {
+  async function previewInvoice() {
     if (!invoiceId) {
+      return;
+    }
+
+    const saved = await saveInvoice();
+    if (!saved) {
       return;
     }
 
@@ -1144,8 +1149,13 @@ export default function InvoiceDetailPage() {
     );
   }
 
-  function previewCombinedReport() {
+  async function previewCombinedReport() {
     if (!invoiceId) {
+      return;
+    }
+
+    const saved = await saveInvoice();
+    if (!saved) {
       return;
     }
 
@@ -1297,7 +1307,7 @@ export default function InvoiceDetailPage() {
 
               <button
                 type="button"
-                onClick={previewInvoice}
+                onClick={() => void previewInvoice()}
                 className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-100"
               >
                 Preview invoice
