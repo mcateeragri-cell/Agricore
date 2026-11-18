@@ -165,10 +165,7 @@ function errorResponse(
 
   return NextResponse.json(
     {
-      error:
-        error instanceof Error
-          ? error.message
-          : fallback,
+      error: fallback,
     },
     {
       status: 500,

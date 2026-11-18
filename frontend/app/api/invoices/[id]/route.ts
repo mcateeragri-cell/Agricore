@@ -235,10 +235,7 @@ export async function GET(
 
     return NextResponse.json(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unable to load invoice.",
+        error: "Unable to load invoice.",
       },
       { status: 500 },
     );
@@ -625,10 +622,7 @@ export async function PATCH(
 
     return NextResponse.json(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unable to update invoice.",
+        error: "Unable to update invoice.",
       },
       { status: 500 },
     );

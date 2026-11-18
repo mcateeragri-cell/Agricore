@@ -185,6 +185,55 @@ export default function NavigationMenu({
     }));
   }, [pathname, workItems, customerItems, salesItems, partsItems, reportingItems]);
 
+  // Search only destinations already available to this user's role and enabled modules.
+  // This is a navigation convenience, never an authorisation mechanism.
+  const [navigationQuery, setNavigationQuery] = useState("");
+  const searchableItems = useMemo(() => {
+    const permitted = fieldRole
+      ? primaryItems
+      : [
+          ...primaryItems, ...workItems, ...customerItems, ...salesItems,
+          ...partsItems, ...reportingItems,
+          ...(!loading && canUseFinancialControl && canViewMoney ? financeNavigationItems : []),
+          ...(!loading ? visibleAdministrationItems : []),
+          ...(!loading && (userState.platformRole === "super_admin" || userState.platformRole === "platform_admin")
+            ? [{ name: "Platform", href: "/platform", icon: "platform" as const }] : []),
+        ];
+    return permitted.filter((item, index, all) => all.findIndex((other) => other.href === item.href) === index);
+  }, [fieldRole, primaryItems, workItems, customerItems, salesItems, partsItems, reportingItems,
+      loading, canUseFinancialControl, canViewMoney, visibleAdministrationItems, userState.platformRole]);
+  const matchingItems = navigationQuery.trim()
+    ? searchableItems.filter((item) =>
+        `${item.name} ${item.href}`.toLowerCase().includes(navigationQuery.trim().toLowerCase()),
+      ).slice(0, 12)
+    : [];
+  const navigationSearch = (
+    <div className="mb-4">
+      <label htmlFor="agricore-nav-search" className="sr-only">Find a page</label>
+      <input
+        id="agricore-nav-search"
+        type="search"
+        value={navigationQuery}
+        onChange={(event) => setNavigationQuery(event.target.value)}
+        placeholder="Find a page…"
+        autoComplete="off"
+        className="w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2.5 text-sm text-white placeholder:text-white/60 focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-300/40"
+      />
+      {navigationQuery.trim() && (
+        <div className="mt-2 space-y-1" aria-label="Matching pages">
+          {matchingItems.length ? matchingItems.map((item) => (
+            <NavigationLink
+              key={item.href}
+              item={item}
+              isActive={isLinkActive(pathname, item.href)}
+              onNavigate={() => { setNavigationQuery(""); onNavigate?.(); }}
+            />
+          )) : <p className="px-3 py-2 text-xs text-white/70">No matching pages</p>}
+        </div>
+      )}
+    </div>
+  );
+
   function toggleSection(section: SectionKey) {
     setOpenSections((current) => ({ ...current, [section]: !current[section] }));
   }
@@ -192,7 +241,8 @@ export default function NavigationMenu({
   if (fieldRole) {
     return (
       <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-5">
-        <div className="space-y-1">
+        {navigationSearch}
+        {!navigationQuery.trim() && <div className="space-y-1">
           {primaryItems.map((item) => (
             <NavigationLink
               key={item.name}
@@ -201,14 +251,15 @@ export default function NavigationMenu({
               onNavigate={onNavigate}
             />
           ))}
-        </div>
+        </div>}
       </nav>
     );
   }
 
   return (
     <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-5">
-      <div className="space-y-1">
+      {navigationSearch}
+      {!navigationQuery.trim() && <><div className="space-y-1">
         {primaryItems.map((item) => (
           <NavigationLink
             key={item.name}
@@ -251,7 +302,7 @@ export default function NavigationMenu({
             onNavigate={onNavigate}
           />
         </div>
-      ) : null}
+      ) : null}</>}
     </nav>
   );
 }

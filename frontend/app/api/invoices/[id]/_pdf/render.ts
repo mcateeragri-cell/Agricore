@@ -14,6 +14,54 @@ import {
   loadCompanySettings,
 } from "@/app/api/_company/load-company-settings";
 
+
+// Normalise PDF display strings without changing stored customer/invoice records.
+// Standard Helvetica uses WinAnsi encoding and cannot render Unicode bidi controls.
+// Preserve ordinary supported punctuation/currency symbols; replace other unsupported
+// glyphs rather than allowing a single copied character to crash the whole PDF.
+function sanitisePdfText(value: string, font: PDFFont): string {
+  const replacements: Record<string, string> = {
+    "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2015": "-",
+    "\u2212": "-", "\u00a0": " ", "\u202f": " ", "\u2009": " ",
+    "\u2028": "\n", "\u2029": "\n",
+  };
+  let result = "";
+  for (const char of value) {
+    const codePoint = char.codePointAt(0) ?? 0;
+    if (
+      (codePoint >= 0x202a && codePoint <= 0x202e) ||
+      (codePoint >= 0x2066 && codePoint <= 0x2069) ||
+      codePoint === 0x200e || codePoint === 0x200f ||
+      codePoint === 0xfeff || codePoint === 0x200b
+    ) continue;
+    if (char === "\n" || char === "\r" || char === "\t") {
+      result += char === "\t" ? " " : char;
+      continue;
+    }
+    const candidate = replacements[char] ?? char;
+    try {
+      font.encodeText(candidate);
+      result += candidate;
+    } catch {
+      result += "?";
+    }
+  }
+  return result;
+}
+
+// Clone only: never persist sanitised values to Supabase.
+// Keep binary/photo data and non-plain objects intact.
+function sanitisePdfData<T>(value: T, font: PDFFont): T {
+  if (typeof value === "string") return sanitisePdfText(value, font) as T;
+  if (Array.isArray(value)) return value.map((item) => sanitisePdfData(item, font)) as T;
+  if (value && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, sanitisePdfData(item, font)]),
+    ) as T;
+  }
+  return value;
+}
+
 const W = 595.28;
 const H = 841.89;
 const M = 42;
@@ -43,7 +91,7 @@ export async function renderInvoiceOnlyPdf(
   companyId: string,
 ) {
   const ctx = await createContext(supabase, companyId);
-  await addInvoice(ctx, data);
+  await addInvoice(ctx, sanitisePdfData(data, ctx.regular));
   addPageNumbers(ctx);
   return ctx.pdf.save();
 }
@@ -54,8 +102,9 @@ export async function renderCombinedPdf(
   companyId: string,
 ) {
   const ctx = await createContext(supabase, companyId);
-  await addServiceReport(ctx, data, supabase);
-  await addInvoice(ctx, data);
+  const safeData = sanitisePdfData(data, ctx.regular);
+  await addServiceReport(ctx, safeData, supabase);
+  await addInvoice(ctx, safeData);
   addPageNumbers(ctx);
   return ctx.pdf.save();
 }
@@ -64,7 +113,8 @@ async function createContext(supabase: SupabaseClient, companyId: string): Promi
   const pdf = await PDFDocument.create();
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
-  const company = await loadCompanySettings(supabase, companyId);
+  const rawCompany = await loadCompanySettings(supabase, companyId);
+  const company = sanitisePdfData(rawCompany, regular);
   const logoBytes = await loadCompanyLogoBytes(supabase, company.logo_path);
 
   let companyLogo: PDFImage | null = null;

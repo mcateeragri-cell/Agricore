@@ -1152,6 +1152,30 @@ export default function TechnicianJobPage() {
           />
         </div>
 
+        {/* Technician quick navigation: anchors only, no extra requests or writes. */}
+        <nav aria-label="Jump to job section" className="mt-4 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+          <p className="mb-2 px-1 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-300">Jump to</p>
+          <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "thin" }}>
+            {[
+              { id: "tech-job-fault", label: "Fault" },
+              ...(jobData.job.isServiceJob ? [{ id: "tech-job-service", label: "Checklist" }] : []),
+              ...(fieldFeatures.travelTimeEnabled ? [{ id: "tech-job-travel", label: "Travel" }] : []),
+              { id: "tech-job-labour", label: "Labour" },
+              { id: "technician-parts-used", label: "Parts" },
+              { id: "tech-job-photos", label: "Photos" },
+              { id: "tech-job-completion", label: "Complete" },
+            ].map((item) => (
+              <a
+                key={item.id}
+                href={`#${item.id}`}
+                className="shrink-0 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 transition hover:border-emerald-400 hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:hover:bg-emerald-900"
+              >
+                {item.label}
+              </a>
+            ))}
+          </div>
+        </nav>
+
         <JobWorkflow
           assignmentStatus={
             jobData.assignment.status
@@ -1170,7 +1194,7 @@ export default function TechnicianJobPage() {
           <Alert kind="success">{success}</Alert>
         ) : null}
 
-        <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <section id="tech-job-fault" className="scroll-mt-24 mt-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700">
             Reported fault
           </p>
@@ -1189,6 +1213,7 @@ export default function TechnicianJobPage() {
         <SyncCentre />
 
         {jobData.job.isServiceJob ? (
+          <div id="tech-job-service" className="scroll-mt-24">
           <ServiceChecklistCard
             programmeName={jobData.job.serviceProgrammeName}
             items={serviceChecklist}
@@ -1197,9 +1222,11 @@ export default function TechnicianJobPage() {
             onChange={setServiceChecklist}
             onSave={() => void saveServiceChecklist()}
           />
+          </div>
         ) : null}
 
         {fieldFeatures.travelTimeEnabled ? (
+        <div id="tech-job-travel" className="scroll-mt-24">
         <TravelCard
           jobId={jobId}
           disabled={readOnly}
@@ -1207,6 +1234,7 @@ export default function TechnicianJobPage() {
           refreshToken={travelRefreshToken}
           onChanged={() => void loadJob()}
         />
+        </div>
         ) : null}
 
         <QuickActions
@@ -1248,6 +1276,8 @@ export default function TechnicianJobPage() {
           }
         />
 
+        <div id="tech-job-labour" className="scroll-mt-24">
+
         <LabourCard
           runningLabour={
             jobData.runningLabour
@@ -1264,6 +1294,8 @@ export default function TechnicianJobPage() {
             )
           }
         />
+
+        </div>
 
         <div
           id="technician-parts-used"
@@ -1299,7 +1331,7 @@ export default function TechnicianJobPage() {
         </div>
 
 
-        <section className="mt-4 rounded-2xl border border-white/50 bg-white/80 p-5 shadow-sm backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/75">
+        <section id="tech-job-photos" className="scroll-mt-24 mt-4 rounded-2xl border border-white/50 bg-white/80 p-5 shadow-sm backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/75">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300">
@@ -1433,6 +1465,7 @@ export default function TechnicianJobPage() {
         ) : null}
 
         <button
+          id="tech-job-completion"
           type="button"
           disabled={
             readOnly ||

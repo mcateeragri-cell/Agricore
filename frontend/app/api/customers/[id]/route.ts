@@ -158,7 +158,7 @@ export async function PATCH(
 
     return NextResponse.json(
       {
-        error: `Unable to update customer: ${error.message}`,
+        error: "Unable to update customer. Please try again.",
       },
       {
         status: 500,

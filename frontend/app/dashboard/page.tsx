@@ -1,6 +1,7 @@
 "use client";
 
 import DashboardHeader from "../../Components/Dashboard/DashboardHeader";
+import WorkdayShortcuts from "../../Components/Dashboard/WorkdayShortcuts";
 import SubscriptionBanner from "../../Components/Dashboard/SubscriptionBanner";
 import CustomisableDashboard from "../../Components/Dashboard/CustomisableDashboard";
 import SetupProgressCard from "@/Components/onboarding/SetupProgressCard";
@@ -61,6 +62,8 @@ export default function Home() {
         </section>
 
         {userState.permissions.includes("settings.manage") || userState.role === "company_admin" || userState.role === "administrator" ? <SubscriptionBanner /> : null}
+
+        <WorkdayShortcuts userState={userState} loading={loading} />
 
         <SetupProgressCard />
 

@@ -16,6 +16,7 @@ import EditMachineModal from "./EditMachineModal";
 import HourHistory from "./HourHistory";
 import MachineDetails from "./MachineDetails";
 import MachineHeader from "./MachineHeader";
+import MachineQrSticker from "./MachineQrSticker";
 import MachineInsightsLinks from "./MachineInsightsLinks";
 import MachineIntelligencePanel from "./MachineIntelligencePanel";
 import MachineNotes from "./MachineNotes";
@@ -645,6 +646,14 @@ export default function MachineProfilePage() {
         machine={machine}
         onEdit={openEditForm}
         onRecordHours={openHourForm}
+      />
+      <MachineQrSticker
+        customerId={customerId}
+        machineId={machineId}
+        make={machine.make}
+        model={machine.model}
+        companyLabel={userState.activeCompany?.name || "Your company"}
+        companyId={companyId}
       />
 
       {errorMessage && (

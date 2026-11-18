@@ -148,6 +148,8 @@ function JobsPageContent() {
   const [priorityFilter, setPriorityFilter] =
     useState<PriorityFilter>("all");
 
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest" | "customer">("newest");
+
   const loadJobs = useCallback(async () => {
     setLoading(true);
     setErrorMessage("");
@@ -288,7 +290,7 @@ function JobsPageContent() {
       .trim()
       .toLowerCase();
 
-    return jobs.filter((job) => {
+    const matches = jobs.filter((job) => {
       const matchesSearch =
         !query ||
         [
@@ -317,11 +319,19 @@ function JobsPageContent() {
         matchesPriority
       );
     });
+    if (sortOrder === "customer") {
+      return matches.sort((a, b) => a.customerName.localeCompare(b.customerName));
+    }
+    if (sortOrder === "oldest") {
+      return matches.reverse();
+    }
+    return matches;
   }, [
     jobs,
     priorityFilter,
     searchTerm,
     statusFilter,
+    sortOrder,
   ]);
 
   function clearFilters() {
@@ -405,8 +415,32 @@ function JobsPageContent() {
           />
         </section>
 
-        <section className="mt-5 rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950 p-4 shadow-sm sm:p-5">
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_220px_auto]">
+        <section aria-label="Quick job filters" className="mt-5 flex flex-wrap items-center gap-2">
+          {([
+            { label: "All jobs", value: "all" },
+            { label: "Open", value: "open" },
+            { label: "In progress", value: "in_progress" },
+            { label: "Waiting parts", value: "waiting_parts" },
+            { label: "Waiting customer", value: "waiting_customer" },
+            { label: "Completed", value: "completed" },
+          ] as const).map(({ label, value }) => {
+            const count = value === "all" ? jobs.length : jobs.filter((job) => job.status === value).length;
+            return (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={statusFilter === value}
+                onClick={() => setStatusFilter(value)}
+                className={`rounded-full border px-3 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${statusFilter === value ? "border-emerald-800 bg-[#103d2e] text-white" : "border-slate-200 bg-white text-slate-700 hover:border-emerald-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"}`}
+              >
+                {label} <span className="ml-1 tabular-nums opacity-75">{count}</span>
+              </button>
+            );
+          })}
+        </section>
+
+        <section className="mt-3 rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950 p-4 shadow-sm sm:p-5">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_180px_160px_auto]">
             <div className="relative">
               <SearchIcon />
 
@@ -475,6 +509,17 @@ function JobsPageContent() {
                 Normal
               </option>
               <option value="low">Low</option>
+            </select>
+
+            <select
+              aria-label="Sort jobs"
+              value={sortOrder}
+              onChange={(event) => setSortOrder(event.target.value as "newest" | "oldest" | "customer")}
+              className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-[#103d2e] focus:ring-2 focus:ring-emerald-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            >
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+              <option value="customer">Customer A–Z</option>
             </select>
 
             <button

@@ -55,6 +55,8 @@ function NewJobPageContent() {
   const [engineers, setEngineers] = useState<Engineer[]>([]);
 
   const [customerId, setCustomerId] = useState("");
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [machineSearch, setMachineSearch] = useState("");
   const [machineId, setMachineId] = useState("");
   const [engineerName, setEngineerName] = useState("");
   const [priority, setPriority] = useState("normal");
@@ -139,13 +141,26 @@ function NewJobPageContent() {
     void loadFormData();
   }, []);
 
+  const filteredCustomers = useMemo(() => {
+    const query = customerSearch.trim().toLocaleLowerCase();
+    return customers.filter((customer) => customer.id === customerId || !query ||
+      `${customer.businessName} ${customer.contactName}`.toLocaleLowerCase().includes(query));
+  }, [customers, customerSearch, customerId]);
+
   const availableMachines = useMemo(() => {
     if (!customerId) return [];
     return machines.filter((machine) => machine.customerId === customerId);
   }, [customerId, machines]);
 
+  const filteredMachines = useMemo(() => {
+    const query = machineSearch.trim().toLocaleLowerCase();
+    return availableMachines.filter((machine) => machine.id === machineId || !query ||
+      `${machine.make} ${machine.model} ${machine.registration} ${machine.serialNumber}`.toLocaleLowerCase().includes(query));
+  }, [availableMachines, machineSearch, machineId]);
+
   function handleCustomerChange(newCustomerId: string) {
     setCustomerId(newCustomerId);
+    setMachineSearch("");
     setMachineId("");
     setMachineHours("");
   }
@@ -426,9 +441,10 @@ function NewJobPageContent() {
                     + New customer
                   </button>
                 </div>
+                <input type="search" aria-label="Search customers" placeholder="Find customer by business or contact name" value={customerSearch} onChange={(event) => setCustomerSearch(event.target.value)} className="mb-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-emerald-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
                 <select id="customer" value={customerId} onChange={(event) => handleCustomerChange(event.target.value)} className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" required>
                   <option value="">Select customer</option>
-                  {customers.map((customer) => {
+                  {filteredCustomers.map((customer) => {
                     const displayName = customer.businessName || customer.contactName || "Unnamed customer";
                     return <option key={customer.id} value={customer.id}>{displayName}{customer.businessName && customer.contactName ? ` — ${customer.contactName}` : ""}</option>;
                   })}
@@ -450,9 +466,10 @@ function NewJobPageContent() {
                     + New machine
                   </button>
                 </div>
+                <input type="search" aria-label="Search machines" placeholder="Find by make, model, registration or serial" value={machineSearch} onChange={(event) => setMachineSearch(event.target.value)} disabled={!customerId} className="mb-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-emerald-700 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
                 <select id="machine" value={machineId} onChange={(event) => handleMachineChange(event.target.value)} disabled={!customerId} className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-[#103d2e] focus:ring-2 focus:ring-[#103d2e]/15 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" required>
                   <option value="">{!customerId ? "Select a customer first" : availableMachines.length === 0 ? "No machines recorded for this customer" : "Select machine"}</option>
-                  {availableMachines.map((machine) => {
+                  {filteredMachines.map((machine) => {
                     const machineName = [machine.make, machine.model].filter(Boolean).join(" ") || "Unnamed machine";
                     return <option key={machine.id} value={machine.id}>{machineName}{machine.registration ? ` — ${machine.registration}` : ""}</option>;
                   })}
