@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 const PUBLIC_ROUTE_PREFIXES = [
+  "/passport",
   "/features",
   "/pricing",
   "/contact",

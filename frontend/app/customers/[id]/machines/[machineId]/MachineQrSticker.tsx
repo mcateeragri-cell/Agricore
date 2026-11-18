@@ -40,7 +40,7 @@ function fittedText(ctx: CanvasRenderingContext2D, value: string, x: number, y: 
   ctx.fillText(value, x, y, maxWidth);
 }
 
-/** QR destinations retain the existing login-protected machine URL. */
+/** QR destinations use the public, revocable machine passport token. */
 export default function MachineQrSticker({ customerId, machineId, make, model, companyLabel, companyId }: Props) {
   const [open, setOpen] = useState(false);
   const [qr, setQr] = useState("");
@@ -66,14 +66,46 @@ export default function MachineQrSticker({ customerId, machineId, make, model, c
   }, [companyId, companyLabel]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setQr("");
+      setPreview("");
+      return;
+    }
     let cancelled = false;
-    const url = `${window.location.origin}/customers/${encodeURIComponent(customerId)}/machines/${encodeURIComponent(machineId)}`;
-    QRCode.toDataURL(url, { width: 720, margin: 4, errorCorrectionLevel: "M" })
-      .then(value => { if (!cancelled) { setQr(value); setError(""); } })
-      .catch(() => { if (!cancelled) setError("Unable to generate machine QR code."); });
+    setQr("");
+    setPreview("");
+    setError("");
+
+    async function preparePassportQr() {
+      try {
+        const response = await fetch(`/api/machines/${encodeURIComponent(machineId)}/passport`, {
+          credentials: "same-origin",
+          cache: "no-store",
+        });
+        const data: { url?: string; error?: string } = await response.json();
+        if (!response.ok || !data.url) {
+          throw new Error(data.error || "Unable to issue machine passport.");
+        }
+        const passportUrl = new URL(data.url, window.location.origin);
+        // Prevent an unexpected API response from generating an external QR destination.
+        if (passportUrl.origin !== window.location.origin || !/^\/passport\/[0-9a-f-]{36}$/i.test(passportUrl.pathname)) {
+          throw new Error("Invalid passport URL returned by server.");
+        }
+        const value = await QRCode.toDataURL(passportUrl.toString(), {
+          width: 720, margin: 4, errorCorrectionLevel: "M",
+        });
+        if (!cancelled) setQr(value);
+      } catch (err) {
+        if (!cancelled) {
+          setQr("");
+          setPreview("");
+          setError(err instanceof Error ? err.message : "Unable to generate machine passport QR code.");
+        }
+      }
+    }
+    void preparePassportQr();
     return () => { cancelled = true; };
-  }, [open, customerId, machineId]);
+  }, [open, machineId]);
 
   const drawLabel = async (labelSize: Size): Promise<HTMLCanvasElement> => {
     if (!qr) throw new Error("QR code is not ready.");
@@ -155,6 +187,7 @@ export default function MachineQrSticker({ customerId, machineId, make, model, c
   useEffect(() => {
     if (!open || !qr) return;
     let cancelled = false;
+    setPreview("");
     drawLabel(sheet ? "63x38" : size)
       .then(canvas => { if (!cancelled) setPreview(canvas.toDataURL("image/png")); })
       .catch(err => { if (!cancelled) setError(err instanceof Error ? err.message : "Preview unavailable."); });
@@ -238,7 +271,8 @@ export default function MachineQrSticker({ customerId, machineId, make, model, c
             </label>
           )}
           <p className="text-xs text-slate-600">Print PDFs at 100% / Actual size. For portable Bluetooth label printers, save the individual PNG or PDF and open it in the printer's app. A4 placement must match your label stock.</p>
-          <p className="text-xs text-amber-800">QR codes open the existing login-protected machine record; they do not grant public access.</p>
+          <p className="text-xs text-amber-800">QR codes open the limited public machine passport without login. Private records still require authorised AgriCore access.</p>
+          {open && !qr && !error && <p className="text-sm text-slate-600">Preparing secure machine passport QR code…</p>}
           {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
           {preview && (
             <>
