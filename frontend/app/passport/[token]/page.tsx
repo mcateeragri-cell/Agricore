@@ -1,4 +1,5 @@
 import Link from "next/link";
+import OperatorLogbook from "./operator-logbook";
 import { notFound } from "next/navigation";
 import { createSupabaseAdmin } from "@/lib/payments/supabase-admin";
 
@@ -38,6 +39,7 @@ export default async function MachinePassport({ params }: { params: Promise<{ to
             <div><dt className="text-slate-500">Year</dt><dd className="font-semibold">{m.year ?? "Not recorded"}</dd></div>
           </dl>
           <p className="rounded-lg bg-slate-100 p-4 text-sm text-slate-700">This public passport does not disclose owner details, internal service history, jobs, invoices or private notes.</p>
+          <OperatorLogbook token={token} />
           <Link className="inline-block rounded-lg bg-emerald-900 px-5 py-3 font-semibold text-white" href="/login">AgriCore staff sign in</Link>
         </div>
       </article>
