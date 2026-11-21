@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import FieldRolePageGate from "@/Components/auth/field-role-page-gate";
 import Button from "@/Components/ui/Button";
@@ -91,6 +92,7 @@ function MatchReasons({ reasons }: { reasons: string[] }) {
 }
 
 function EnquiriesPageContent() {
+  const notificationId = useSearchParams().get("notification");
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   const [status, setStatus] = useState("new");
   const [loading, setLoading] = useState(true);
@@ -122,6 +124,8 @@ function EnquiriesPageContent() {
   }, [status]);
 
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => { if(notificationId) setStatus("all"); }, [notificationId]);
+  useEffect(() => { if(!loading&&notificationId){document.getElementById(`enquiry-${notificationId}`)?.scrollIntoView({behavior:"smooth",block:"center"});} }, [loading,notificationId,enquiries]);
 
   const counts = useMemo(() => ({ visible: enquiries.length }), [enquiries]);
 
@@ -264,7 +268,7 @@ function EnquiriesPageContent() {
             const branch = related(enquiry.company_branches);
             const job = related(enquiry.jobs);
             return (
-              <Card key={enquiry.id} className="overflow-hidden p-0">
+              <div id={`enquiry-${enquiry.id}`} key={enquiry.id} className={notificationId===enquiry.id?"rounded-xl ring-4 ring-emerald-500":""}><Card className="overflow-hidden p-0">
                 <div className="border-b border-slate-200 bg-white px-5 py-4 sm:flex sm:items-start sm:justify-between">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -308,7 +312,7 @@ function EnquiriesPageContent() {
                   {job ? <Link className="text-sm font-bold text-[#103d2e] underline" href={`/jobs/${job.id}`}>Open {job.job_number || "job"}</Link> : null}
                   {enquiry.rejection_reason ? <span className="text-sm text-slate-500">Reason: {enquiry.rejection_reason}</span> : null}
                 </div>
-              </Card>
+              </Card></div>
             );
           })}
         </div>
