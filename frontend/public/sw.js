@@ -67,3 +67,16 @@ self.addEventListener("sync", (event) => {
       }),
   );
 });
+
+self.addEventListener("push", event => {
+  let data = {}; try { data = event.data?.json() || {}; } catch {}
+  event.waitUntil(self.registration.showNotification(String(data.title || "AgriCore notification"), {
+    body: String(data.body || "You have an update requiring attention.").slice(0,180),
+    icon: "/icons/icon-192.png",
+    data: { url: "/dashboard" }
+  }));
+});
+self.addEventListener("notificationclick", event => {
+  event.notification.close();
+  event.waitUntil(self.clients.openWindow("/dashboard"));
+});

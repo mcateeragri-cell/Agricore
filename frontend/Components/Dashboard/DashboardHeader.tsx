@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import NotificationCentre from "@/Components/notifications/notification-centre";
 import { CalendarDays, Plus, UserRound } from "lucide-react";
 
 import { useNavigationUser } from "@/Components/navigation/use-navigation-user";
@@ -45,6 +46,7 @@ export default function DashboardHeader() {
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
+          <NotificationCentre compact />
           <Link
             href="/customers"
             className="hidden items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-black text-slate-700 transition hover:border-emerald-300 hover:bg-emerald-50 sm:inline-flex dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"

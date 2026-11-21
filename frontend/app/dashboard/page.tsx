@@ -1,5 +1,6 @@
 "use client";
 
+import NotificationCentre from "@/Components/notifications/notification-centre";
 import DashboardHeader from "../../Components/Dashboard/DashboardHeader";
 import WorkdayShortcuts from "../../Components/Dashboard/WorkdayShortcuts";
 import SubscriptionBanner from "../../Components/Dashboard/SubscriptionBanner";
@@ -62,6 +63,8 @@ export default function Home() {
         </section>
 
         {userState.permissions.includes("settings.manage") || userState.role === "company_admin" || userState.role === "administrator" ? <SubscriptionBanner /> : null}
+
+        <NotificationCentre />
 
         <WorkdayShortcuts userState={userState} loading={loading} />
 
