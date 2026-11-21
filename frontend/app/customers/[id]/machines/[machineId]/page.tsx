@@ -17,6 +17,8 @@ import HourHistory from "./HourHistory";
 import MachineDetails from "./MachineDetails";
 import MachineHeader from "./MachineHeader";
 import MachineQrSticker from "./MachineQrSticker";
+import OperatorPinManager from "@/Components/passport/operator-pin-manager";
+import OperatorReportsPanel from "@/Components/passport/operator-reports-panel";
 import MachineInsightsLinks from "./MachineInsightsLinks";
 import MachineIntelligencePanel from "./MachineIntelligencePanel";
 import MachineNotes from "./MachineNotes";
@@ -716,6 +718,22 @@ export default function MachineProfilePage() {
           customerId={customer.id}
           machineId={machine.id}
         />
+      </section>
+
+      <section aria-labelledby="operator-access-heading" className="space-y-4">
+        <div>
+          <h2 id="operator-access-heading" className="text-xl font-bold text-slate-900 dark:text-slate-100">
+            Digital Machine Passport · Operator Access
+          </h2>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+            Set the machine-specific operator PIN and review daily checks, hour readings and breakdown reports submitted through its QR passport.
+            PIN changes and report reviews are checked against your company permissions on the server.
+          </p>
+        </div>
+        <div className="grid gap-4 xl:grid-cols-2">
+          <OperatorPinManager machineId={machineId} />
+          <OperatorReportsPanel machineId={machineId} />
+        </div>
       </section>
 
       <HourHistory
