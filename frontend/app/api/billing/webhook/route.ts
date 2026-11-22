@@ -116,29 +116,7 @@ export async function POST(request: NextRequest) {
       const companyId = object.metadata?.company_id;
       const subscriptionId = object.id;
       if (typeof subscriptionId === "string") {
-        try {
-          await syncStripeSubscriptionById(subscriptionId, companyId || null);
-        } catch {
-          const update = {
-            status: mapStripeSubscriptionStatus(String(object.status ?? "")),
-            payment_provider: "stripe",
-            payment_customer_id: typeof object.customer === "string" ? object.customer : null,
-            payment_subscription_id: subscriptionId,
-            stripe_price_id: object.items?.data?.[0]?.price?.id ?? null,
-            trial_started_at: isoFromStripeUnix(object.trial_start),
-            trial_ends_at: isoFromStripeUnix(object.trial_end),
-            subscription_started_at: isoFromStripeUnix(object.start_date),
-            current_period_ends_at: stripeSubscriptionPeriodEnd(object),
-            cancel_at_period_end: Boolean(object.cancel_at_period_end),
-            cancelled_at: isoFromStripeUnix(object.canceled_at),
-            last_stripe_sync_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          };
-          const result = companyId
-            ? await admin.from("company_subscriptions").update(update).eq("company_id", companyId)
-            : await admin.from("company_subscriptions").update(update).eq("payment_subscription_id", subscriptionId);
-          if (result.error) throw new Error(result.error.message);
-        }
+        await syncStripeSubscriptionById(subscriptionId, companyId || null);
       }
     }
 

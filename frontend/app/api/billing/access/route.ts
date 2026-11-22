@@ -99,11 +99,14 @@ export async function GET() {
     Boolean(data.grace_ends_at) &&
     new Date(data.grace_ends_at).getTime() < now;
 
-  const blocked =
-    data.status === "expired" ||
-    data.status === "cancelled" ||
-    Boolean(trialEnded) ||
-    Boolean(graceEnded);
+  // Fail closed for unknown statuses and missing/invalid trial or grace dates.
+  const validFutureDate = (value: string | null) =>
+    Boolean(value && Number.isFinite(Date.parse(value)) && Date.parse(value) > now);
+  const allowed =
+    data.status === "active" ||
+    (data.status === "trial" && validFutureDate(data.trial_ends_at)) ||
+    (data.status === "suspended" && validFutureDate(data.grace_ends_at));
+  const blocked = !allowed;
 
   return NextResponse.json({
     access: blocked ? "blocked" : "full",

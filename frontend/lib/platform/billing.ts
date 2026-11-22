@@ -114,6 +114,13 @@ export async function loadBillingStatus(companyId: string): Promise<BillingStatu
     .maybeSingle();
   if (subscriptionError) throw new Error(subscriptionError.message);
 
+  const { data: storageOverride, error: storageOverrideError } = await admin
+    .from("company_storage_overrides")
+    .select("storage_limit_gb")
+    .eq("company_id", companyId)
+    .maybeSingle();
+  if (storageOverrideError) throw new Error(storageOverrideError.message);
+
   const planId = subscription?.plan_id ?? null;
   const planQuery = admin.from("subscription_plans").select(planColumns);
   const { data: plan, error: planError } = planId
@@ -139,7 +146,7 @@ export async function loadBillingStatus(companyId: string): Promise<BillingStatu
       yearlyPrice: Number(plan.yearly_price ?? 0),
       trialDays: Number(plan.trial_days ?? 14),
       maxUsers: Number(plan.max_users ?? 0),
-      maxStorageGb: Number(plan.max_storage_gb ?? 0),
+      maxStorageGb: Number(storageOverride?.storage_limit_gb ?? plan.max_storage_gb ?? 0),
       currencyCode: String(plan.currency_code ?? "GBP"),
       stripeMonthlyPriceId: plan.stripe_monthly_price_id ?? null,
       isPublic: Boolean(plan.is_public),

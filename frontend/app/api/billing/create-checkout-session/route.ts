@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { requirePermission } from "@/lib/auth/require-permission";
 import { createSupabaseAdmin } from "@/lib/payments/supabase-admin";
-import { loadBillingStatus, trialDaysRemaining } from "@/lib/platform/billing";
+import { loadBillingStatus } from "@/lib/platform/billing";
 import { applicationUrl, enterpriseBranchStripePriceId, stripePriceIdForPlan, stripeRequest } from "@/lib/platform/stripe";
 
 export const runtime = "nodejs";
@@ -30,6 +30,10 @@ export async function POST(request: NextRequest) {
 
     if (user.companySlug.includes("demo-") || user.companyName.toLowerCase().includes(" demo ")) {
       return NextResponse.json({ error: "Demo workspaces do not create Stripe subscriptions." }, { status: 409 });
+    }
+
+    if (billing.billingMode !== "subscription") {
+      return NextResponse.json({ error: "This company is not configured for paid subscriptions." }, { status: 409 });
     }
 
     if (billing.subscription.stripeSubscriptionId) {
@@ -64,10 +68,17 @@ export async function POST(request: NextRequest) {
       if (error) throw new Error(error.message);
     }
 
-    const remainingTrialDays = Math.max(
-      1,
-      trialDaysRemaining(billing.subscription.trialEndsAt) || Number(requestedPlan.trial_days ?? 14),
-    );
+    // A company may only use its original trial window. An expired or previously
+    // started trial never resets when the company opens a new Checkout session.
+    // Existing companies without a trial start are treated as ineligible for a
+    // new trial; onboarding must create their trial entitlement explicitly.
+    const trialEndMs = billing.subscription.trialEndsAt
+      ? new Date(billing.subscription.trialEndsAt).getTime()
+      : NaN;
+    const remainingTrialSeconds = Number.isFinite(trialEndMs)
+      ? Math.max(0, Math.floor((trialEndMs - Date.now()) / 1000))
+      : 0;
+    const useTrial = remainingTrialSeconds >= 48 * 60 * 60;
 
     const lineItems: Array<{price:string;quantity:number}> = [{ price: priceId, quantity: 1 }];
     if (requestedPlan.slug === "enterprise" && billing.branchBilling.additionalBranches > 0) {
@@ -85,7 +96,7 @@ export async function POST(request: NextRequest) {
         allow_promotion_codes: false,
         line_items: lineItems,
         subscription_data: {
-          trial_period_days: remainingTrialDays,
+          ...(useTrial ? { trial_end: Math.floor(trialEndMs / 1000) } : {}),
           metadata: { company_id: billing.companyId, plan_slug: requestedPlan.slug },
         },
         metadata: { company_id: billing.companyId, plan_slug: requestedPlan.slug },

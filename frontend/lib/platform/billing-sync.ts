@@ -44,8 +44,30 @@ export async function syncStripeSubscriptionById(
   );
 
   const admin = createSupabaseAdmin();
-  const resolvedCompanyId =
-    companyId || subscription?.metadata?.company_id || null;
+  const metadataCompanyId = typeof subscription?.metadata?.company_id === "string"
+    ? subscription.metadata.company_id : null;
+  if (companyId && metadataCompanyId && companyId !== metadataCompanyId) {
+    throw new Error("Stripe subscription company ownership mismatch.");
+  }
+  const resolvedCompanyId = metadataCompanyId || companyId || null;
+  if (!resolvedCompanyId) {
+    throw new Error("Stripe subscription is missing company ownership metadata.");
+  }
+  const { data: currentRow, error: lookupError } = await admin
+    .from("company_subscriptions")
+    .select("company_id,payment_subscription_id,payment_customer_id")
+    .eq("company_id", resolvedCompanyId)
+    .maybeSingle();
+  if (lookupError) throw new Error(lookupError.message);
+  if (!currentRow) throw new Error("No company subscription row exists for Stripe synchronisation.");
+  if (currentRow.payment_subscription_id && currentRow.payment_subscription_id !== subscription.id) {
+    throw new Error("Company already has a different Stripe subscription.");
+  }
+  const stripeCustomerId = typeof subscription.customer === "string"
+    ? subscription.customer : subscription.customer?.id ?? null;
+  if (currentRow.payment_customer_id && stripeCustomerId && currentRow.payment_customer_id !== stripeCustomerId) {
+    throw new Error("Stripe customer ownership mismatch.");
+  }
 
   const stripePriceId = subscription.items?.data?.[0]?.price?.id ?? null;
   const metadataPlanSlug = typeof subscription?.metadata?.plan_slug === "string" ? subscription.metadata.plan_slug : null;
@@ -78,16 +100,13 @@ export async function syncStripeSubscriptionById(
     updated_at: new Date().toISOString(),
   };
 
-  const result = resolvedCompanyId
-    ? await admin
-        .from("company_subscriptions")
-        .update(update)
-        .eq("company_id", resolvedCompanyId)
-    : await admin
-        .from("company_subscriptions")
-        .update(update)
-        .eq("payment_subscription_id", subscription.id);
-
-  if (result.error) throw new Error(result.error.message);
+  const { data: updated, error: updateError } = await admin
+    .from("company_subscriptions")
+    .update(update)
+    .eq("company_id", resolvedCompanyId)
+    .select("company_id")
+    .maybeSingle();
+  if (updateError) throw new Error(updateError.message);
+  if (!updated) throw new Error("Stripe synchronisation updated no subscription row.");
   return subscription;
 }
