@@ -137,7 +137,8 @@ export default function NavigationMenu({
     const items: NavigationItem[] = [];
     if (userState.enabledFeatures.includes("reports") && (isAdmin || isOffice || isService || isSales || isParts || isReadOnly)) items.push({ name: "Reports", href: "/reports", icon: "reports" });
     if (canUseAtlas && (isAdmin || isOffice)) items.push({ name: "Intelligence", href: "/intelligence", icon: "diagnostics" });
-    if (isAdmin || isOffice || isReadOnly) items.unshift({ name: "Quotes", href: "/quotes", icon: "quotes" }, { name: "Invoices", href: "/invoices", icon: "invoices" });
+    // Service quotes/invoices already live under Work; avoid duplicate destinations.
+    if (isReadOnly) items.unshift({ name: "Quotes", href: "/quotes", icon: "quotes" }, { name: "Invoices", href: "/invoices", icon: "invoices" });
     return items;
   }, [canUseAtlas, fieldRole, isAdmin, isOffice, isParts, isReadOnly, isSales, isService, userState.enabledFeatures]);
 
@@ -239,11 +240,15 @@ export default function NavigationMenu({
   }
 
   if (fieldRole) {
+    const fieldItems: NavigationItem[] = [
+      ...primaryItems,
+      { name: "My Jobs", href: "/technician", icon: "jobs" },
+    ];
     return (
       <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-5">
         {navigationSearch}
         {!navigationQuery.trim() && <div className="space-y-1">
-          {primaryItems.map((item) => (
+          {fieldItems.map((item) => (
             <NavigationLink
               key={item.name}
               item={item}

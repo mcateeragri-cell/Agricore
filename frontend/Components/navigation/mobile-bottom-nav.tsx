@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 
-import { mobilePrimaryItems } from "./navigation-data";
 import { isLinkActive } from "./navigation-menu";
 import SidebarIcon from "./sidebar-icon";
 import {
@@ -22,25 +21,36 @@ export default function MobileBottomNav({
   userState,
   onOpenMore,
 }: MobileBottomNavProps) {
+  const features = userState.enabledFeatures;
+  const role = userState.role;
   const canViewMoney = canViewFinancialInformation(userState);
-  const fieldRole = isFieldRole(userState.role);
-  const visibleItems = fieldRole
-    ? [
-        { name: "Home", href: "/dashboard", icon: "dashboard" as const },
-        { name: "My Jobs", href: "/technician", icon: "jobs" as const },
-      ]
-    : mobilePrimaryItems.filter((item) => {
-        if (item.href === "/invoices") {
-          return canViewMoney && userState.enabledFeatures.includes("invoices");
-        }
-        if (item.href === "/customers") {
-          return userState.enabledFeatures.includes("customers");
-        }
-        if (item.href === "/jobs") {
-          return userState.enabledFeatures.includes("jobs");
-        }
-        return true;
-      });
+  const fieldRole = isFieldRole(role);
+  const has = (feature: string) => features.includes(feature);
+  const shortcuts: Array<{ name: string; href: string; icon: "dashboard" | "jobs" | "customers" | "machines" | "calendar" | "invoices" | "stock" | "sales" | "communications" }> = [
+    { name: "Home", href: "/dashboard", icon: "dashboard" },
+  ];
+  if (fieldRole) {
+    shortcuts.push({ name: "My Jobs", href: "/technician", icon: "jobs" });
+  } else if (role === "parts_manager" || role === "parts_advisor") {
+    if (has("stock")) {
+      shortcuts.push({ name: "Stock", href: "/stock", icon: "stock" });
+      shortcuts.push({ name: "Counter", href: "/stock/counter-sale", icon: "invoices" });
+      shortcuts.push({ name: "Orders", href: "/stock/purchase-orders", icon: "stock" });
+    }
+  } else if (role === "sales_manager" || role === "salesperson") {
+    if (has("machinery_sales_crm")) shortcuts.push({ name: "Sales", href: "/sales", icon: "sales" });
+    if (has("customers")) shortcuts.push({ name: "Customers", href: "/customers", icon: "customers" });
+    if (canViewMoney && has("invoices")) shortcuts.push({ name: "Invoices", href: "/invoices", icon: "invoices" });
+  } else if (role === "service_manager") {
+    if (has("jobs")) shortcuts.push({ name: "Jobs", href: "/jobs", icon: "jobs" });
+    if (has("dispatch")) shortcuts.push({ name: "Dispatch", href: "/dispatch", icon: "calendar" });
+    if (has("calendar")) shortcuts.push({ name: "Calendar", href: "/calendar", icon: "calendar" });
+  } else {
+    if (has("jobs")) shortcuts.push({ name: "Jobs", href: "/jobs", icon: "jobs" });
+    if (has("customers")) shortcuts.push({ name: "Customers", href: "/customers", icon: "customers" });
+    if (canViewMoney && has("invoices")) shortcuts.push({ name: "Invoices", href: "/invoices", icon: "invoices" });
+  }
+  const visibleItems = shortcuts.slice(0, 4);
   return (
     <nav
       className="agricore-glass fixed inset-x-2 bottom-2 z-40 overflow-hidden rounded-2xl border pb-[env(safe-area-inset-bottom)] shadow-2xl lg:hidden"
